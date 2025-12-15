@@ -231,10 +231,11 @@ class AutoMasker:
             part_mask_of(MASK_CLOTH_PARTS[part], schp_atr_mask, ATR_MAPPING)
         background_area = part_mask_of(['Background'], schp_lip_mask, LIP_MAPPING) & part_mask_of(['Background'], schp_atr_mask, ATR_MAPPING)
         mask_dense_area = part_mask_of(MASK_DENSE_PARTS[part], densepose_mask, DENSE_INDEX_MAP)
+        
+        original_shape = mask_dense_area.shape[:2]  # (height, width)
         mask_dense_area = cv2.resize(mask_dense_area.astype(np.uint8), None, fx=0.25, fy=0.25, interpolation=cv2.INTER_NEAREST)
         mask_dense_area = cv2.dilate(mask_dense_area, dilate_kernel, iterations=2)
-        mask_dense_area = cv2.resize(mask_dense_area.astype(np.uint8), None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
-
+        mask_dense_area = cv2.resize(mask_dense_area, (original_shape[1], original_shape[0]), interpolation=cv2.INTER_NEAREST)
 
         mask_area = (np.ones_like(densepose_mask) & (~weak_protect_area) & (~background_area)) | mask_dense_area
 
