@@ -150,6 +150,12 @@ def hull_mask(mask_area: np.ndarray):
         hull = cv2.convexHull(c)
         hull_mask = cv2.fillPoly(np.zeros_like(mask_area), [hull], 255) | hull_mask
     return hull_mask
+
+def clean_binary_mask(mask: np.ndarray, kernel: np.ndarray, close_iterations=2, open_iterations=1):
+    mask = mask.astype(np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=close_iterations)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=open_iterations)
+    return mask > 0
     
 
 class AutoMasker:
@@ -227,27 +233,50 @@ class AutoMasker:
         weak_protect_area = body_protect_area | cloth_protect_area | hair_protect_area | strong_protect_area | accessory_protect_area
         
         # Mask Area
-        strong_mask_area = part_mask_of(MASK_CLOTH_PARTS[part], schp_lip_mask, LIP_MAPPING) | \
-            part_mask_of(MASK_CLOTH_PARTS[part], schp_atr_mask, ATR_MAPPING)
-        background_area = part_mask_of(['Background'], schp_lip_mask, LIP_MAPPING) & part_mask_of(['Background'], schp_atr_mask, ATR_MAPPING)
-        mask_dense_area = part_mask_of(MASK_DENSE_PARTS[part], densepose_mask, DENSE_INDEX_MAP)
+        strong_mask_area = (part_mask_of(MASK_CLOTH_PARTS[part], schp_lip_mask, LIP_MAPPING) | \
+            part_mask_of(MASK_CLOTH_PARTS[part], schp_atr_mask, ATR_MAPPING)).astype(bool)
+        background_area = (part_mask_of(['Background'], schp_lip_mask, LIP_MAPPING) & part_mask_of(['Background'], schp_atr_mask, ATR_MAPPING)).astype(bool)
+        mask_dense_area = part_mask_of(MASK_DENSE_PARTS[part], densepose_mask, DENSE_INDEX_MAP).astype(bool)
         
         original_shape = mask_dense_area.shape[:2]  # (height, width)
         mask_dense_area = cv2.resize(mask_dense_area.astype(np.uint8), None, fx=0.25, fy=0.25, interpolation=cv2.INTER_NEAREST)
         mask_dense_area = cv2.dilate(mask_dense_area, dilate_kernel, iterations=2)
-        mask_dense_area = cv2.resize(mask_dense_area, (original_shape[1], original_shape[0]), interpolation=cv2.INTER_NEAREST)
+        mask_dense_area = cv2.resize(mask_dense_area, (original_shape[1], original_shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
 
-        mask_area = (np.ones_like(densepose_mask) & (~weak_protect_area) & (~background_area)) | mask_dense_area
+        strong_protect_area = strong_protect_area.astype(bool)
+        weak_protect_area = weak_protect_area.astype(bool)
 
-        mask_area = hull_mask(mask_area * 255) // 255  # Convex Hull to expand the mask area
-        mask_area = mask_area & (~weak_protect_area)
-        mask_area = cv2.GaussianBlur(mask_area * 255, (kernal_size, kernal_size), 0)
+        torso_area = part_mask_of('torso', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        upper_arm_area = part_mask_of('big arms', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        lower_body_area = part_mask_of(['thighs', 'legs'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        full_body_area = (torso_area | lower_body_area | upper_arm_area)
+
+        if part in ['upper', 'inner', 'outer']:
+            allowed_area = torso_area | strong_mask_area
+            if part == 'outer':
+                allowed_area = allowed_area | upper_arm_area
+            protect_area = strong_protect_area | background_area | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            mask_area = (allowed_area | (mask_dense_area & torso_area)) & (~protect_area)
+            mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
+            mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1).astype(bool)
+        elif part == 'lower':
+            allowed_area = lower_body_area | strong_mask_area
+            protect_area = strong_protect_area | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            mask_area = (allowed_area | mask_dense_area) & (~protect_area)
+            mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
+        else:
+            allowed_area = full_body_area | strong_mask_area
+            protect_area = strong_protect_area | background_area | hair_protect_area.astype(bool)
+            mask_area = (allowed_area | mask_dense_area) & (~protect_area)
+            mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
+
+        mask_area = cv2.GaussianBlur(mask_area.astype(np.uint8) * 255, (kernal_size, kernal_size), 0)
         mask_area[mask_area < 25] = 0
         mask_area[mask_area >= 25] = 1
-        mask_area = (mask_area | strong_mask_area) & (~strong_protect_area) 
-        mask_area = cv2.dilate(mask_area, dilate_kernel, iterations=1)
+        mask_area = (mask_area.astype(bool) | strong_mask_area) & (~strong_protect_area) & (~background_area)
+        mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1)
 
-        return Image.fromarray(mask_area * 255)
+        return Image.fromarray((mask_area * 255).astype(np.uint8))
         
     def __call__(
         self,

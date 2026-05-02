@@ -170,14 +170,17 @@ def submit_function(
     seed,
     show_type
 ):
-    person_image, mask = person_image["background"], person_image["layers"][0]
-    mask = Image.open(mask).convert("L")
-    if mask_source == "auto" or len(np.unique(np.array(mask))) == 1:
-        mask = None
-    else:
+    person_image_path = person_image["background"]
+    layers = person_image.get("layers") or []
+    mask = None
+    if mask_source == "manual" and layers:
+        mask = Image.open(layers[0]).convert("L")
+    if mask is not None and len(np.unique(np.array(mask))) > 1:
         mask = np.array(mask)
         mask[mask > 0] = 255
         mask = Image.fromarray(mask)
+    else:
+        mask = None
 
     tmp_folder = args.output_dir
     date_str = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -189,7 +192,7 @@ def submit_function(
     if seed != -1:
         generator = torch.Generator(device=device).manual_seed(seed)
 
-    person_image = Image.open(person_image).convert("RGB")
+    person_image = Image.open(person_image_path).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
     person_image = resize_and_crop(person_image, (args.width, args.height))
     cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
@@ -278,18 +281,14 @@ def app_gradio():
                         )
                     with gr.Column(scale=1, min_width=120):
                         gr.Markdown(
-                            '<span style="color: #808080; font-size: small;">Auto mask is recommended. Use manual only when you need precise control; keep the painted area close to the garment region.</span>'
+                            '<span style="color: #808080; font-size: small;">Lookzi automatically detects the target garment area. Choose the clothing type that best matches the garment.</span>'
                         )
                         cloth_type = gr.Radio(
                             label="Try-On Cloth Type",
                             choices=["upper", "lower", "overall"],
                             value="upper",
                         )
-                        mask_source = gr.Radio(
-                            label="Mask Source",
-                            choices=["auto", "manual"],
-                            value="auto",
-                        )
+                        mask_source = gr.State("auto")
 
 
                 submit = gr.Button("Submit")

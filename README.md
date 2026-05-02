@@ -98,9 +98,7 @@ If no CUDA GPU is available, the app automatically falls back to CPU. CPU mode w
 - Better quality: `768x1024`, 30-50 steps.
 - CFG: `2.5`.
 - Use `result only` when you only need the final output.
-- Keep mask source on `auto` for most tests.
-- Use `manual` mask only when auto masking misses the garment area.
-- Avoid very large manual masks; they can distort arms, body shape, and background.
+- Masking is automatic in the main UI.
 - Simple front-facing poses usually work better than raised arms or crossed arms.
 
 ## Known Quality Notes
@@ -108,6 +106,7 @@ If no CUDA GPU is available, the app automatically falls back to CPU. CPU mode w
 - The inherited safety checker can falsely block normal clothing outputs, so it is disabled by default in the app. Run with `--enable_safety_checker` if you need it.
 - Loose cardigans, sleeveless tops, and dresses can behave differently depending on pose and mask area.
 - For personal photos, crop the image so the person is centered and the full body is visible.
+- Automatic masking protects face, hands, feet, background, and unrelated body regions before generation.
 
 ## Model Storage
 

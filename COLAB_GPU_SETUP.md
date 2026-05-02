@@ -51,7 +51,6 @@ snapshot_download("stabilityai/sd-vae-ft-mse", local_dir="hf_models/sd-vae-ft-ms
 ```
 
 In the UI, set inference steps to 10 for the first test.
-Keep `Mask Source` on `auto` unless you need to paint the garment region yourself.
 
 ## 6. Full Quality
 
@@ -65,4 +64,4 @@ Keep `Mask Source` on `auto` unless you need to paint the garment region yoursel
   --server_name 0.0.0.0
 ```
 
-Recommended UI settings: 30-50 inference steps, CFG 2.5, `Mask Source = auto`, and `Show Type = result only`.
+Recommended UI settings: 30-50 inference steps, CFG 2.5, and `Show Type = result only`.
