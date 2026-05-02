@@ -7,7 +7,7 @@ from diffusers.image_processor import VaeImageProcessor
 from tqdm import tqdm
 from PIL import Image, ImageFilter
 
-from model.pipeline import CatVTONPipeline
+from model.pipeline import LookziPipeline
 
 class InferenceDataset(Dataset):
     def __init__(self, args):
@@ -94,7 +94,7 @@ def parse_args():
     parser.add_argument(
         "--resume_path",
         type=str,
-        default="zhengchong/CatVTON",
+        default="hf_models/lookzi-vton",
         help=(
             "The Path to the checkpoint of trained tryon model."
         ),
@@ -252,7 +252,7 @@ def to_pil_image(images):
 def main():
     args = parse_args()
     # Pipeline
-    pipeline = CatVTONPipeline(
+    pipeline = LookziPipeline(
         attn_ckpt_version=args.dataset_name,
         attn_ckpt=args.resume_path,
         base_ckpt=args.base_model_path,

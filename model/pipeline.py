@@ -20,7 +20,7 @@ from utils import (compute_vae_encodings, numpy_to_pil, prepare_image,
                    prepare_mask_image, resize_and_crop, resize_and_padding)
 
 
-class CatVTONPipeline:
+class LookziPipeline:
     def __init__(
         self, 
         base_ckpt, 
@@ -91,7 +91,7 @@ class CatVTONPipeline:
     def prepare_extra_step_kwargs(self, generator, eta):
         # prepare extra kwargs for the scheduler step, since not all schedulers have the same signature
         # eta (η) is only used with the DDIMScheduler, it will be ignored for other schedulers.
-        # eta corresponds to η in DDIM paper: https://arxiv.org/abs/2010.02502
+        # eta follows the scheduler's DDIM formulation.
         # and should be between [0, 1]
 
         accepts_eta = "eta" in set(
@@ -216,7 +216,7 @@ class CatVTONPipeline:
         return image
 
 
-class CatVTONPix2PixPipeline(CatVTONPipeline):
+class LookziPix2PixPipeline(LookziPipeline):
     def auto_attn_ckpt_load(self, attn_ckpt, version):
         # TODO: Temperal fix for the model version
         if os.path.exists(attn_ckpt):

@@ -18,9 +18,9 @@ def parse_args():
     parser.add_argument(
         "--repo_path",
         type=str,
-        default="zhengchong/CatVTON",
+        default="hf_models/lookzi-vton",
         help=(
-            "The Path or repo name of CatVTON. "
+            "The path or repo name for the try-on model files. "
         ),
     )
     args = parser.parse_args()

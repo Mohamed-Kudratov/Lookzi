@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import os
 from datetime import datetime
 
@@ -10,11 +10,11 @@ from huggingface_hub import snapshot_download
 from PIL import Image
 
 from model.cloth_masker import AutoMasker, vis_mask
-from model.pipeline import CatVTONPipeline
+from model.pipeline import LookziPipeline
 from utils import init_weight_dtype, resize_and_crop, resize_and_padding
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Simple example of a training script.")
+    parser = argparse.ArgumentParser(description="Lookzi virtual try-on demo.")
     parser.add_argument(
         "--base_model_path",
         type=str,
@@ -32,9 +32,9 @@ def parse_args():
     parser.add_argument(
         "--resume_path",
         type=str,
-        default="hf_models/CatVTON",
+        default="hf_models/lookzi-vton",
         help=(
-            "The Path to the checkpoint of trained tryon model."
+            "The path to the virtual try-on model files."
         ),
     )
     parser.add_argument(
@@ -73,8 +73,7 @@ def parse_args():
         type=int,
         default=768,
         help=(
-            "The resolution for input images, all the images in the train/validation dataset will be resized to this"
-            " resolution"
+            "Input and output width used by the generation pipeline."
         ),
     )
     parser.add_argument(
@@ -82,8 +81,7 @@ def parse_args():
         type=int,
         default=1024,
         help=(
-            "The resolution for input images, all the images in the train/validation dataset will be resized to this"
-            " resolution"
+            "Input and output height used by the generation pipeline."
         ),
     )
     parser.add_argument(
@@ -96,7 +94,7 @@ def parse_args():
         action="store_true",
         default=True,
         help=(
-            "Whether or not to allow TF32 on Ampere GPUs. Can be used to speed up training. For more information, see"
+            "Whether or not to allow TF32 on Ampere GPUs. Can be used to speed up generation. For more information, see"
             " https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices"
         ),
     )
@@ -107,8 +105,7 @@ def parse_args():
         choices=["no", "fp16", "bf16"],
         help=(
             "Whether to use mixed precision. Choose between fp16 and bf16 (bfloat16). Bf16 requires PyTorch >="
-            " 1.10.and an Nvidia Ampere GPU.  Default to the value of accelerate config of the current system or the"
-            " flag passed with the `accelerate.launch` command. Use this argument to override the accelerate config."
+            " 1.10 and an Nvidia Ampere GPU."
         ),
     )
     
@@ -137,10 +134,10 @@ if device == "auto":
 if device == "cpu" and args.mixed_precision != "no":
     print("CPU detected; switching mixed precision to 'no'.")
     args.mixed_precision = "no"
-print(f"Running CatVTON on {device} with mixed_precision={args.mixed_precision}")
+print(f"Running Lookzi on {device} with mixed_precision={args.mixed_precision}")
 repo_path = args.resume_path if os.path.exists(args.resume_path) else snapshot_download(repo_id=args.resume_path)
 # Pipeline
-pipeline = CatVTONPipeline(
+pipeline = LookziPipeline(
     base_ckpt=args.base_model_path,
     attn_ckpt=repo_path,
     attn_ckpt_version="mix",
@@ -240,39 +237,13 @@ def person_example_fn(image_path):
     return image_path
 
 HEADER = """
-<h1 style="text-align: center;"> 🐈 CatVTON: Concatenation Is All You Need for Virtual Try-On with Diffusion Models </h1>
-<div style="display: flex; justify-content: center; align-items: center;">
-  <a href="http://arxiv.org/abs/2407.15886" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/arXiv-2407.15886-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv'>
-  </a>
-  <a href='https://huggingface.co/zhengchong/CatVTON' style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Hugging Face-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface'>
-  </a>
-  <a href="https://github.com/Zheng-Chong/CatVTON" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/GitHub-Repo-blue?style=flat&logo=GitHub' alt='GitHub'>
-  </a>
-  <a href="http://120.76.142.206:8888" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
-  </a>
-  <a href="https://huggingface.co/spaces/zhengchong/CatVTON" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Space-ZeroGPU-orange?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
-  </a>
-  <a href='https://zheng-chong.github.io/CatVTON/' style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Webpage-Project-silver?style=flat&logo=&logoColor=orange' alt='webpage'>
-  </a>
-  <a href="https://github.com/Zheng-Chong/CatVTON/LICENCE" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/License-CC BY--NC--SA--4.0-lightgreen?style=flat&logo=Lisence' alt='License'>
-  </a>
-</div>
-<br>
-· This demo and our weights are only for <span>Non-commercial Use</span>. <br>
-· You can try CatVTON in our <a href="https://huggingface.co/spaces/zhengchong/CatVTON">HuggingFace Space</a> or our <a href="http://120.76.142.206:8888">online demo</a> (run on 3090). <br>
-· Thanks to <a href="https://huggingface.co/zero-gpu-explorers">ZeroGPU</a> for providing A100 for our <a href="https://huggingface.co/spaces/zhengchong/CatVTON">HuggingFace Space</a>. <br>
-· SafetyChecker is set to filter NSFW content, but it may block normal results too. Please adjust the <span>`seed`</span> for normal outcomes.<br> 
+<h1 style="text-align: center;">Lookzi Virtual Try-On Studio</h1>
+<p style="text-align: center; color: #667085; margin-top: -6px;">
+Upload a person image, choose a garment, select the target clothing area, and generate a try-on preview.
+</p>
 """
-
 def app_gradio():
-    with gr.Blocks(title="CatVTON") as demo:
+    with gr.Blocks(title="Lookzi") as demo:
         gr.Markdown(HEADER)
         with gr.Row():
             with gr.Column(scale=1, min_width=350):
@@ -293,7 +264,7 @@ def app_gradio():
                         )
                     with gr.Column(scale=1, min_width=120):
                         gr.Markdown(
-                            '<span style="color: #808080; font-size: small;">Two ways to provide Mask:<br>1. Upload the person image and use the `🖌️` above to draw the Mask (higher priority)<br>2. Select the `Try-On Cloth Type` to generate automatically </span>'
+                            '<span style="color: #808080; font-size: small;">Mask options:<br>1. Draw the target area on the person image for more control<br>2. Select the clothing type for automatic masking</span>'
                         )
                         cloth_type = gr.Radio(
                             label="Try-On Cloth Type",
@@ -304,11 +275,11 @@ def app_gradio():
 
                 submit = gr.Button("Submit")
                 gr.Markdown(
-                    '<center><span style="color: #FF0000">!!! Click only Once, Wait for Delay !!!</span></center>'
+                    '<center><span style="color: #FF0000">Click once and wait for generation to finish.</span></center>'
                 )
                 
                 gr.Markdown(
-                    '<span style="color: #808080; font-size: small;">Advanced options can adjust details:<br>1. `Inference Step` may enhance details;<br>2. `CFG` is highly correlated with saturation;<br>3. `Random seed` may improve pseudo-shadow.</span>'
+                    '<span style="color: #808080; font-size: small;">Advanced options control detail, color strength, and repeatable variations.</span>'
                 )
                 with gr.Accordion("Advanced Options", open=False):
                     num_inference_steps = gr.Slider(
@@ -316,7 +287,7 @@ def app_gradio():
                     )
                     # Guidence Scale
                     guidance_scale = gr.Slider(
-                        label="CFG Strenth", minimum=0.0, maximum=7.5, step=0.5, value=2.5
+                        label="CFG Strength", minimum=0.0, maximum=7.5, step=0.5, value=2.5
                     )
                     # Random Seed
                     seed = gr.Slider(
@@ -341,7 +312,7 @@ def app_gradio():
                             ],
                             examples_per_page=4,
                             inputs=image_path,
-                            label="Person Examples ①",
+                            label="Person Examples",
                         )
                         women_exm = gr.Examples(
                             examples=[
@@ -350,10 +321,7 @@ def app_gradio():
                             ],
                             examples_per_page=4,
                             inputs=image_path,
-                            label="Person Examples ②",
-                        )
-                        gr.Markdown(
-                            '<span style="color: #808080; font-size: small;">*Person examples come from the demos of <a href="https://huggingface.co/spaces/levihsu/OOTDiffusion">OOTDiffusion</a> and <a href="https://www.outfitanyone.org">OutfitAnyone</a>. </span>'
+                            label="More Person Examples",
                         )
                     with gr.Column():
                         condition_upper_exm = gr.Examples(
@@ -363,7 +331,7 @@ def app_gradio():
                             ],
                             examples_per_page=4,
                             inputs=cloth_image,
-                            label="Condition Upper Examples",
+                            label="Upper Garments",
                         )
                         condition_overall_exm = gr.Examples(
                             examples=[
@@ -372,7 +340,7 @@ def app_gradio():
                             ],
                             examples_per_page=4,
                             inputs=cloth_image,
-                            label="Condition Overall Examples",
+                            label="Full Outfit Garments",
                         )
                         condition_person_exm = gr.Examples(
                             examples=[
@@ -381,10 +349,7 @@ def app_gradio():
                             ],
                             examples_per_page=4,
                             inputs=cloth_image,
-                            label="Condition Reference Person Examples",
-                        )
-                        gr.Markdown(
-                            '<span style="color: #808080; font-size: small;">*Condition examples come from the Internet. </span>'
+                            label="Reference Garments",
                         )
 
             image_path.change(
@@ -414,3 +379,4 @@ def app_gradio():
 
 if __name__ == "__main__":
     app_gradio()
+
