@@ -131,6 +131,55 @@ def image_grid(imgs, rows, cols):
         grid.paste(img, box=(i % cols * w, i // cols * h))
     return grid
 
+def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> str:
+    image = np.array(cloth_image.convert("RGB").resize((256, 256))).astype(np.int16)
+    edge_pixels = np.concatenate([image[:8].reshape(-1, 3), image[-8:].reshape(-1, 3), image[:, :8].reshape(-1, 3), image[:, -8:].reshape(-1, 3)])
+    bg = np.median(edge_pixels, axis=0)
+    distance = np.linalg.norm(image - bg, axis=2)
+    foreground = distance > 28
+    foreground[:4, :] = False
+    foreground[-4:, :] = False
+    foreground[:, :4] = False
+    foreground[:, -4:] = False
+    ys, xs = np.where(foreground)
+    if len(xs) < 100:
+        return "auto"
+
+    x0, x1 = xs.min(), xs.max()
+    y0, y1 = ys.min(), ys.max()
+    h = max(1, y1 - y0 + 1)
+    w = max(1, x1 - x0 + 1)
+
+    def band_width(start, end):
+        yy0 = y0 + int(h * start)
+        yy1 = y0 + int(h * end)
+        band = foreground[yy0:yy1 + 1]
+        by, bx = np.where(band)
+        if len(bx) < 10:
+            return 0
+        return bx.max() - bx.min() + 1
+
+    shoulder_w = band_width(0.12, 0.32)
+    chest_w = band_width(0.34, 0.56)
+    hem_w = band_width(0.72, 0.95)
+    shoulder_ratio = shoulder_w / max(chest_w, 1)
+    hem_ratio = hem_w / max(chest_w, 1)
+    upper = foreground[y0 + int(h * 0.12):y0 + int(h * 0.58), x0:x1 + 1]
+    side_band = max(1, int(w * 0.25))
+    left_mass = upper[:, :side_band].mean() if upper.size else 0
+    right_mass = upper[:, -side_band:].mean() if upper.size else 0
+    side_mass = (left_mass + right_mass) / 2
+
+    if side_mass > 0.58:
+        return "sleeved"
+    if cloth_type == "overall" and hem_ratio > 0.75 and h > w * 1.15:
+        return "sleeveless" if side_mass < 0.48 else "sleeved"
+    if shoulder_ratio < 1.15 and side_mass < 0.50:
+        return "sleeveless"
+    if shoulder_ratio > 1.55:
+        return "sleeved"
+    return "short_sleeve"
+
 
 args = parse_args()
 device = "cuda" if args.device == "auto" and torch.cuda.is_available() else args.device
@@ -194,6 +243,8 @@ def submit_function(
 
     person_image = Image.open(person_image_path).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
+    garment_style = infer_garment_style(cloth_image, cloth_type)
+    print(f"Detected garment_style={garment_style} for cloth_type={cloth_type}")
     person_image = resize_and_crop(person_image, (args.width, args.height))
     cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
     
@@ -205,12 +256,14 @@ def submit_function(
             gr.Warning("Manual mask is too large. Lookzi used automatic masking instead.")
             mask = automasker(
                 person_image,
-                cloth_type
+                cloth_type,
+                garment_style=garment_style,
             )['mask']
     else:
         mask = automasker(
             person_image,
-            cloth_type
+            cloth_type,
+            garment_style=garment_style,
         )['mask']
     mask = mask_processor.blur(mask, blur_factor=9)
 
@@ -301,7 +354,7 @@ def app_gradio():
                 )
                 with gr.Accordion("Advanced Options", open=False):
                     num_inference_steps = gr.Slider(
-                        label="Inference Step", minimum=10, maximum=100, step=5, value=30
+                        label="Inference Step", minimum=10, maximum=100, step=5, value=50
                     )
                     # Guidence Scale
                     guidance_scale = gr.Slider(

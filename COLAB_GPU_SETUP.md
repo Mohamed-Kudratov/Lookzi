@@ -64,4 +64,4 @@ In the UI, set inference steps to 10 for the first test.
   --server_name 0.0.0.0
 ```
 
-Recommended UI settings: 30-50 inference steps, CFG 2.5, and `Show Type = result only`.
+Recommended UI settings: 50 inference steps, CFG 2.5, and `Show Type = result only`.

@@ -196,6 +196,7 @@ class AutoMasker:
         schp_lip_mask: Image.Image,
         schp_atr_mask: Image.Image,
         part: str='overall',
+        garment_style: str='auto',
         **kwargs
     ):
         assert part in ['upper', 'lower', 'overall', 'inner', 'outer'], f"part should be one of ['upper', 'lower', 'overall', 'inner', 'outer'], but got {part}"
@@ -248,14 +249,16 @@ class AutoMasker:
 
         torso_area = part_mask_of('torso', densepose_mask, DENSE_INDEX_MAP).astype(bool)
         upper_arm_area = part_mask_of('big arms', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        forearm_area = part_mask_of('forearms', densepose_mask, DENSE_INDEX_MAP).astype(bool)
         lower_body_area = part_mask_of(['thighs', 'legs'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
         full_body_area = (torso_area | lower_body_area | upper_arm_area)
+        arms_protect_area = forearm_area | part_mask_of(['hands'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
 
         if part in ['upper', 'inner', 'outer']:
             allowed_area = torso_area | strong_mask_area
-            if part == 'outer':
+            if part == 'outer' or garment_style in ['sleeveless', 'short_sleeve', 'sleeved']:
                 allowed_area = allowed_area | upper_arm_area
-            protect_area = strong_protect_area | background_area | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            protect_area = strong_protect_area | background_area | arms_protect_area | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | (mask_dense_area & torso_area)) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
             mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1).astype(bool)
@@ -266,7 +269,9 @@ class AutoMasker:
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
         else:
             allowed_area = full_body_area | strong_mask_area
-            protect_area = strong_protect_area | background_area | hair_protect_area.astype(bool)
+            if garment_style == 'sleeveless':
+                allowed_area = allowed_area | upper_arm_area
+            protect_area = strong_protect_area | background_area | hair_protect_area.astype(bool) | arms_protect_area
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
 
@@ -282,6 +287,7 @@ class AutoMasker:
         self,
         image: Union[str, Image.Image],
         mask_type: str = "upper",
+        garment_style: str = "auto",
     ):
         assert mask_type in ['upper', 'lower', 'overall', 'inner', 'outer'], f"mask_type should be one of ['upper', 'lower', 'overall', 'inner', 'outer'], but got {mask_type}"
         preprocess_results = self.preprocess_image(image)
@@ -290,6 +296,7 @@ class AutoMasker:
             preprocess_results['schp_lip'], 
             preprocess_results['schp_atr'], 
             part=mask_type,
+            garment_style=garment_style,
         )
         return {
             'mask': mask,

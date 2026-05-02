@@ -95,7 +95,7 @@ If no CUDA GPU is available, the app automatically falls back to CPU. CPU mode w
 ## Recommended Settings
 
 - Fast smoke test: `384x512`, 10 steps.
-- Better quality: `768x1024`, 30-50 steps.
+- Better quality: `768x1024`, 50 steps.
 - CFG: `2.5`.
 - Use `result only` when you only need the final output.
 - Masking is automatic in the main UI.
@@ -107,6 +107,7 @@ If no CUDA GPU is available, the app automatically falls back to CPU. CPU mode w
 - Loose cardigans, sleeveless tops, and dresses can behave differently depending on pose and mask area.
 - For personal photos, crop the image so the person is centered and the full body is visible.
 - Automatic masking protects face, hands, feet, background, and unrelated body regions before generation.
+- Lookzi estimates whether the garment is sleeveless, short-sleeved, or sleeved and adjusts the automatic mask.
 
 ## Model Storage
 
