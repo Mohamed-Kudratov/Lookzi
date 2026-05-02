@@ -62,6 +62,11 @@ def parse_args():
         help="Port for the Gradio server.",
     )
     parser.add_argument(
+        "--enable_safety_checker",
+        action="store_true",
+        help="Enable the inherited NSFW safety checker. Disabled by default to avoid false positives on try-on outputs.",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="resource/demo/output",
@@ -145,6 +150,7 @@ pipeline = LookziPipeline(
     use_tf32=args.allow_tf32,
     device=device,
     vae_ckpt=args.vae_model_path,
+    skip_safety_check=not args.enable_safety_checker,
 )
 # AutoMasker
 mask_processor = VaeImageProcessor(vae_scale_factor=8, do_normalize=False, do_binarize=True, do_convert_grayscale=True)
@@ -158,6 +164,7 @@ def submit_function(
     person_image,
     cloth_image,
     cloth_type,
+    mask_source,
     num_inference_steps,
     guidance_scale,
     seed,
@@ -165,7 +172,7 @@ def submit_function(
 ):
     person_image, mask = person_image["background"], person_image["layers"][0]
     mask = Image.open(mask).convert("L")
-    if len(np.unique(np.array(mask))) == 1:
+    if mask_source == "auto" or len(np.unique(np.array(mask))) == 1:
         mask = None
     else:
         mask = np.array(mask)
@@ -190,6 +197,13 @@ def submit_function(
     # Process mask
     if mask is not None:
         mask = resize_and_crop(mask, (args.width, args.height))
+        mask_array = np.array(mask) > 0
+        if mask_array.mean() > 0.70:
+            gr.Warning("Manual mask is too large. Lookzi used automatic masking instead.")
+            mask = automasker(
+                person_image,
+                cloth_type
+            )['mask']
     else:
         mask = automasker(
             person_image,
@@ -264,12 +278,17 @@ def app_gradio():
                         )
                     with gr.Column(scale=1, min_width=120):
                         gr.Markdown(
-                            '<span style="color: #808080; font-size: small;">Mask options:<br>1. Draw the target area on the person image for more control<br>2. Select the clothing type for automatic masking</span>'
+                            '<span style="color: #808080; font-size: small;">Auto mask is recommended. Use manual only when you need precise control; keep the painted area close to the garment region.</span>'
                         )
                         cloth_type = gr.Radio(
                             label="Try-On Cloth Type",
                             choices=["upper", "lower", "overall"],
                             value="upper",
+                        )
+                        mask_source = gr.Radio(
+                            label="Mask Source",
+                            choices=["auto", "manual"],
+                            value="auto",
                         )
 
 
@@ -283,7 +302,7 @@ def app_gradio():
                 )
                 with gr.Accordion("Advanced Options", open=False):
                     num_inference_steps = gr.Slider(
-                        label="Inference Step", minimum=10, maximum=100, step=5, value=50
+                        label="Inference Step", minimum=10, maximum=100, step=5, value=30
                     )
                     # Guidence Scale
                     guidance_scale = gr.Slider(
@@ -296,7 +315,7 @@ def app_gradio():
                     show_type = gr.Radio(
                         label="Show Type",
                         choices=["result only", "input & result", "input & mask & result"],
-                        value="input & mask & result",
+                        value="result only",
                     )
 
             with gr.Column(scale=2, min_width=500):
@@ -362,6 +381,7 @@ def app_gradio():
                     person_image,
                     cloth_image,
                     cloth_type,
+                    mask_source,
                     num_inference_steps,
                     guidance_scale,
                     seed,
