@@ -45,6 +45,23 @@ def parse_args():
         help="Device to run the demo on. Auto uses CUDA when available, otherwise CPU.",
     )
     parser.add_argument(
+        "--share",
+        action="store_true",
+        help="Create a public Gradio link. Use this in Colab.",
+    )
+    parser.add_argument(
+        "--server_name",
+        type=str,
+        default="127.0.0.1",
+        help="Host for the Gradio server. Use 0.0.0.0 when needed in hosted notebooks.",
+    )
+    parser.add_argument(
+        "--server_port",
+        type=int,
+        default=7860,
+        help="Port for the Gradio server.",
+    )
+    parser.add_argument(
         "--output_dir",
         type=str,
         default="resource/demo/output",
@@ -120,6 +137,7 @@ if device == "auto":
 if device == "cpu" and args.mixed_precision != "no":
     print("CPU detected; switching mixed precision to 'no'.")
     args.mixed_precision = "no"
+print(f"Running CatVTON on {device} with mixed_precision={args.mixed_precision}")
 repo_path = args.resume_path if os.path.exists(args.resume_path) else snapshot_download(repo_id=args.resume_path)
 # Pipeline
 pipeline = CatVTONPipeline(
@@ -386,7 +404,12 @@ def app_gradio():
                 ],
                 result_image,
             )
-    demo.queue().launch(server_name="127.0.0.1", server_port=7860, share=False, show_error=True)
+    demo.queue().launch(
+        server_name=args.server_name,
+        server_port=args.server_port,
+        share=args.share,
+        show_error=True,
+    )
 
 
 if __name__ == "__main__":
