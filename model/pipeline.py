@@ -31,13 +31,14 @@ class CatVTONPipeline:
         compile=False,
         skip_safety_check=False,
         use_tf32=True,
+        vae_ckpt="stabilityai/sd-vae-ft-mse",
     ):
         self.device = device
         self.weight_dtype = weight_dtype
         self.skip_safety_check = skip_safety_check
 
         self.noise_scheduler = DDIMScheduler.from_pretrained(base_ckpt, subfolder="scheduler")
-        self.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device, dtype=weight_dtype)
+        self.vae = AutoencoderKL.from_pretrained(vae_ckpt).to(device, dtype=weight_dtype)
         if not skip_safety_check:
             self.feature_extractor = CLIPImageProcessor.from_pretrained(base_ckpt, subfolder="feature_extractor")
             self.safety_checker = StableDiffusionSafetyChecker.from_pretrained(base_ckpt, subfolder="safety_checker").to(device, dtype=weight_dtype)

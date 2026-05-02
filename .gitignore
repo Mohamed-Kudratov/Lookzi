@@ -4,6 +4,9 @@ model/DensePose/__pycache__
 model/SCHP/__pycache__
 model/SCHP/*/__pycache__
 resource/demo/output
+hf_models
+gradio_stdout.log
+gradio_stderr.log
 resource/demo/example/.DS_Store
 Models
 Datasets

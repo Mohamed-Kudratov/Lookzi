@@ -18,18 +18,31 @@ def parse_args():
     parser.add_argument(
         "--base_model_path",
         type=str,
-        default="booksforcharlie/stable-diffusion-inpainting",  # Change to a copy repo as runawayml delete original repo
+        default="hf_models/stable-diffusion-inpainting",  # Local download avoids Windows symlink privileges.
         help=(
             "The path to the base model to use for evaluation. This can be a local path or a model identifier from the Model Hub."
         ),
     )
     parser.add_argument(
+        "--vae_model_path",
+        type=str,
+        default="hf_models/sd-vae-ft-mse",
+        help="The path or model identifier for the VAE checkpoint.",
+    )
+    parser.add_argument(
         "--resume_path",
         type=str,
-        default="zhengchong/CatVTON",
+        default="hf_models/CatVTON",
         help=(
             "The Path to the checkpoint of trained tryon model."
         ),
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        choices=["auto", "cuda", "cpu"],
+        help="Device to run the demo on. Auto uses CUDA when available, otherwise CPU.",
     )
     parser.add_argument(
         "--output_dir",
@@ -101,7 +114,13 @@ def image_grid(imgs, rows, cols):
 
 
 args = parse_args()
-repo_path = snapshot_download(repo_id=args.resume_path)
+device = "cuda" if args.device == "auto" and torch.cuda.is_available() else args.device
+if device == "auto":
+    device = "cpu"
+if device == "cpu" and args.mixed_precision != "no":
+    print("CPU detected; switching mixed precision to 'no'.")
+    args.mixed_precision = "no"
+repo_path = args.resume_path if os.path.exists(args.resume_path) else snapshot_download(repo_id=args.resume_path)
 # Pipeline
 pipeline = CatVTONPipeline(
     base_ckpt=args.base_model_path,
@@ -109,14 +128,15 @@ pipeline = CatVTONPipeline(
     attn_ckpt_version="mix",
     weight_dtype=init_weight_dtype(args.mixed_precision),
     use_tf32=args.allow_tf32,
-    device='cuda'
+    device=device,
+    vae_ckpt=args.vae_model_path,
 )
 # AutoMasker
 mask_processor = VaeImageProcessor(vae_scale_factor=8, do_normalize=False, do_binarize=True, do_convert_grayscale=True)
 automasker = AutoMasker(
     densepose_ckpt=os.path.join(repo_path, "DensePose"),
     schp_ckpt=os.path.join(repo_path, "SCHP"),
-    device='cuda', 
+    device=device, 
 )
 
 def submit_function(
@@ -145,7 +165,7 @@ def submit_function(
 
     generator = None
     if seed != -1:
-        generator = torch.Generator(device='cuda').manual_seed(seed)
+        generator = torch.Generator(device=device).manual_seed(seed)
 
     person_image = Image.open(person_image).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
@@ -245,7 +265,7 @@ def app_gradio():
                         visible=False,
                     )
                     person_image = gr.ImageEditor(
-                        interactive=True, label="Person Image", type="filepath"
+                        interactive=True, label="Person Image", type="filepath", image_mode="RGB", format="png"
                     )
 
                 with gr.Row():
@@ -366,7 +386,7 @@ def app_gradio():
                 ],
                 result_image,
             )
-    demo.queue().launch(share=True, show_error=True)
+    demo.queue().launch(server_name="127.0.0.1", server_port=7860, share=False, show_error=True)
 
 
 if __name__ == "__main__":
