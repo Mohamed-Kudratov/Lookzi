@@ -284,10 +284,21 @@ def submit_function(
     
     # Post-process
     masked_person = vis_mask(person_image, mask)
+    mask_array = np.array(mask) > 127
+    coverage = float(mask_array.mean() * 100)
+    debug_text = (
+        f"Garment style: {garment_style}\n"
+        f"Clothing type: {cloth_type}\n"
+        f"Mask coverage: {coverage:.2f}%\n"
+        f"Resolution: {args.width}x{args.height}\n"
+        f"Steps: {num_inference_steps}\n"
+        f"CFG: {guidance_scale}\n"
+        f"Seed: {seed}"
+    )
     save_result_image = image_grid([person_image, masked_person, cloth_image, result_image], 1, 4)
     save_result_image.save(result_save_path)
     if show_type == "result only":
-        return result_image
+        return result_image, mask, masked_person, debug_text
     else:
         width, height = person_image.size
         if show_type == "input & result":
@@ -300,7 +311,7 @@ def submit_function(
         new_result_image = Image.new("RGB", (width + condition_width + 5, height))
         new_result_image.paste(conditions, (0, 0))
         new_result_image.paste(result_image, (condition_width + 5, 0))
-    return new_result_image
+    return new_result_image, mask, masked_person, debug_text
 
 
 def person_example_fn(image_path):
@@ -372,6 +383,11 @@ def app_gradio():
 
             with gr.Column(scale=2, min_width=500):
                 result_image = gr.Image(interactive=False, label="Result")
+                with gr.Accordion("Developer Debug", open=False):
+                    debug_info = gr.Textbox(label="Diagnostics", interactive=False, lines=7)
+                    with gr.Row():
+                        debug_mask = gr.Image(interactive=False, label="Auto Mask")
+                        debug_masked_person = gr.Image(interactive=False, label="Masked Person")
                 with gr.Row():
                     # Photo Examples
                     root_path = "resource/demo/example"
@@ -439,7 +455,7 @@ def app_gradio():
                     seed,
                     show_type,
                 ],
-                result_image,
+                [result_image, debug_mask, debug_masked_person, debug_info],
             )
     demo.queue().launch(
         server_name=args.server_name,

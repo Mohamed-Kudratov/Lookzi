@@ -108,6 +108,7 @@ If no CUDA GPU is available, the app automatically falls back to CPU. CPU mode w
 - For personal photos, crop the image so the person is centered and the full body is visible.
 - Automatic masking protects face, hands, feet, background, and unrelated body regions before generation.
 - Lookzi estimates whether the garment is sleeveless, short-sleeved, or sleeved and adjusts the automatic mask.
+- Open `Developer Debug` after a generation to inspect the auto mask, masked person, garment style, and mask coverage.
 
 ## Model Storage
 
