@@ -46,11 +46,19 @@ class LookziPipeline:
         init_adapter(self.unet, cross_attn_cls=SkipAttnProcessor)  # Skip Cross-Attention
         self.attn_modules = get_trainable_module(self.unet, "attention")
         self.auto_attn_ckpt_load(attn_ckpt, attn_ckpt_version)
+        # xformers: memory-efficient attention (~20-25% faster on T4)
+        try:
+            import xformers  # noqa: F401
+            self.unet.enable_xformers_memory_efficient_attention()
+            print("xformers: memory-efficient attention enabled")
+        except ImportError:
+            print("xformers not installed — using default attention")
+
         # Pytorch 2.0 Compile
         if compile:
             self.unet = torch.compile(self.unet)
             self.vae = torch.compile(self.vae, mode="reduce-overhead")
-            
+
         # Enable TF32 for faster training on Ampere GPUs (A100 and RTX 30 series).
         if use_tf32:
             torch.set_float32_matmul_precision("high")

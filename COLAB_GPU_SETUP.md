@@ -1,60 +1,94 @@
 # Lookzi Colab GPU Setup
 
-Use this notebook flow when running Lookzi on Google Colab with a GPU runtime.
+Bu setup modellarni **Google Drive**'ga bir marta saqlaydi.
+Keyingi sessionlarda Drive'dan yuklanadi — HuggingFace'dan qayta yuklanmaydi.
 
-## 1. Enable GPU
+---
 
-Runtime -> Change runtime type -> Hardware accelerator -> GPU
+## 1. GPU ni yoqish
 
-Verify:
+Runtime → Change runtime type → T4 GPU → Save
 
-```bash
+```python
 !nvidia-smi
 ```
 
-## 2. Clone The Project
+---
 
-```bash
+## 2. Google Drive mount qilish
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+```
+
+---
+
+## 3. Repo clone
+
+```python
 %cd /content
 !rm -rf /content/Lookzi
 !git clone https://github.com/Mohamed-Kudratov/Lookzi.git /content/Lookzi
 %cd /content/Lookzi
 ```
 
-## 3. Install Dependencies
+---
 
-```bash
-!pip install torch==2.4.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu121
-!pip install -r requirements.txt
-```
-
-## 4. Download Model Files
+## 4. Dependencies o'rnatish
 
 ```python
+!pip install torch==2.4.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu121 -q
+!pip install xformers --index-url https://download.pytorch.org/whl/cu121 -q
+!pip install -r requirements.txt -q
+```
+
+---
+
+## 5. Modellarni Drive'dan yuklab olish (bir marta)
+
+```python
+import os, shutil
 from huggingface_hub import snapshot_download
 
-snapshot_download("zhengchong/CatVTON", local_dir="hf_models/lookzi-vton")
-snapshot_download("booksforcharlie/stable-diffusion-inpainting", local_dir="hf_models/stable-diffusion-inpainting")
-snapshot_download("stabilityai/sd-vae-ft-mse", local_dir="hf_models/sd-vae-ft-mse")
+DRIVE_MODELS = "/content/drive/MyDrive/Lookzi/hf_models"
+LOCAL_MODELS  = "/content/Lookzi/hf_models"
+
+models = {
+    "lookzi-vton":                    "zhengchong/CatVTON",
+    "stable-diffusion-inpainting":    "booksforcharlie/stable-diffusion-inpainting",
+    "sd-vae-ft-mse":                  "stabilityai/sd-vae-ft-mse",
+}
+
+os.makedirs(DRIVE_MODELS, exist_ok=True)
+os.makedirs(LOCAL_MODELS, exist_ok=True)
+
+for folder, repo_id in models.items():
+    drive_path = os.path.join(DRIVE_MODELS, folder)
+    local_path = os.path.join(LOCAL_MODELS, folder)
+
+    if not os.path.exists(drive_path):
+        print(f"⬇ Birinchi marta yuklanmoqda: {repo_id} → Drive")
+        snapshot_download(repo_id, local_dir=drive_path)
+    else:
+        print(f"✓ Drive'da mavjud: {folder}")
+
+    # Drive → /content symlink (tez kirish uchun)
+    if os.path.islink(local_path):
+        os.unlink(local_path)
+    if os.path.exists(local_path) and not os.path.islink(local_path):
+        shutil.rmtree(local_path)
+    os.symlink(drive_path, local_path)
+    print(f"  → symlink: {local_path}")
+
+print("\nBarcha modellar tayyor.")
 ```
 
-## 5. Fast GPU Test
+---
 
-```bash
-!python app.py \
-  --device cuda \
-  --mixed_precision fp16 \
-  --width 384 \
-  --height 512 \
-  --share \
-  --server_name 0.0.0.0
-```
+## 6. Appni ishga tushirish
 
-In the UI, set inference steps to 10 for the first test.
-
-## 6. Full Quality
-
-```bash
+```python
 !python app.py \
   --device cuda \
   --mixed_precision fp16 \
@@ -64,4 +98,17 @@ In the UI, set inference steps to 10 for the first test.
   --server_name 0.0.0.0
 ```
 
-Recommended UI settings: 50 inference steps, CFG 2.5, and `Show Type = result only`.
+Tavsiya: Steps=50, CFG=2.5, Show Type=result only
+
+---
+
+## Muhim eslatmalar
+
+| | Birinchi sessiya | Keyingi sessionlar |
+|---|---|---|
+| Model yuklash | 15-20 daqiqa (Drive'ga saqlaydi) | 1-2 daqiqa (Drive'dan o'qiydi) |
+| pip install | 3-5 daqiqa | 3-5 daqiqa |
+| Render (50 steps) | ~120-130s (xformers bilan) | ~120-130s |
+
+Drive'dagi model papkasi: `MyDrive/Lookzi/hf_models/`
+Bu papkani o'chirmang — keyingi barcha sessionlarda ishlatiladi.
