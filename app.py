@@ -132,7 +132,7 @@ def image_grid(imgs, rows, cols):
     return grid
 
 def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
-    """Returns (style_str, debug_info_str)."""
+    """Returns (style_str, covers_lower_legs: bool, debug_info_str)."""
     image = np.array(cloth_image.convert("RGB").resize((256, 256))).astype(np.int16)
     edge_pixels = np.concatenate([image[:8].reshape(-1, 3), image[-8:].reshape(-1, 3), image[:, :8].reshape(-1, 3), image[:, -8:].reshape(-1, 3)])
     bg = np.median(edge_pixels, axis=0)
@@ -144,12 +144,15 @@ def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
     foreground[:, -4:] = False
     ys, xs = np.where(foreground)
     if len(xs) < 100:
-        return "auto", "fg_pixels<100 → auto"
+        return "auto", False, "fg_pixels<100 → auto"
 
     x0, x1 = xs.min(), xs.max()
     y0, y1 = ys.min(), ys.max()
     h = max(1, y1 - y0 + 1)
     w = max(1, x1 - x0 + 1)
+
+    # Garment covers lower legs if it's tall enough (pants, maxi dress, jumpsuit)
+    covers_lower_legs = (h / 256.0) > 0.65
 
     def band_width(start, end):
         yy0 = y0 + int(h * start)
@@ -165,24 +168,36 @@ def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
     hem_w = band_width(0.72, 0.95)
     shoulder_ratio = shoulder_w / max(chest_w, 1)
     hem_ratio = hem_w / max(chest_w, 1)
-    upper = foreground[y0 + int(h * 0.12):y0 + int(h * 0.58), x0:x1 + 1]
+
+    # Upper side mass: shoulder/upper-arm zone (y 12%–38%)
+    upper = foreground[y0 + int(h * 0.12):y0 + int(h * 0.38), x0:x1 + 1]
     side_band = max(1, int(w * 0.25))
     left_mass = upper[:, :side_band].mean() if upper.size else 0
     right_mass = upper[:, -side_band:].mean() if upper.size else 0
     side_mass = (left_mass + right_mass) / 2
 
-    dbg = f"side_mass={side_mass:.3f} shoulder_ratio={shoulder_ratio:.3f} hem_ratio={hem_ratio:.3f}"
+    # Lower side mass: elbow/forearm zone (y 38%–65%)
+    # Sleeve fabric must extend here; wide sleeveless bodies do not
+    lower = foreground[y0 + int(h * 0.38):y0 + int(h * 0.65), x0:x1 + 1]
+    lower_left = lower[:, :side_band].mean() if lower.size else 0
+    lower_right = lower[:, -side_band:].mean() if lower.size else 0
+    lower_side_mass = (lower_left + lower_right) / 2
 
-    if side_mass > 0.58:
-        return "sleeved", dbg + " → sleeved(side_mass>0.58)"
+    dbg = (f"side={side_mass:.3f} lower_side={lower_side_mass:.3f} "
+           f"sho_ratio={shoulder_ratio:.3f} hem_ratio={hem_ratio:.3f} "
+           f"covers_legs={covers_lower_legs}")
+
+    # Long sleeve: fabric on sides in BOTH upper AND lower zone
+    if side_mass > 0.55 and lower_side_mass > 0.42:
+        return "sleeved", covers_lower_legs, dbg + " → sleeved"
     if cloth_type == "overall" and hem_ratio > 0.75 and h > w * 1.15:
         style = "sleeveless" if side_mass < 0.48 else "sleeved"
-        return style, dbg + f" → {style}(overall+hem)"
-    if shoulder_ratio < 1.15 and side_mass < 0.50:
-        return "sleeveless", dbg + " → sleeveless(ratio<1.15,mass<0.50)"
-    if shoulder_ratio > 1.55:
-        return "sleeved", dbg + " → sleeved(ratio>1.55)"
-    return "short_sleeve", dbg + " → short_sleeve(default)"
+        return style, covers_lower_legs, dbg + f" → {style}(overall+hem)"
+    if shoulder_ratio < 1.15 and side_mass < 0.52:
+        return "sleeveless", covers_lower_legs, dbg + " → sleeveless"
+    if shoulder_ratio > 1.55 or lower_side_mass > 0.35:
+        return "sleeved", covers_lower_legs, dbg + " → sleeved(ratio/lower)"
+    return "short_sleeve", covers_lower_legs, dbg + " → short_sleeve"
 
 
 args = parse_args()
@@ -247,8 +262,8 @@ def submit_function(
 
     person_image = Image.open(person_image_path).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
-    garment_style, style_debug = infer_garment_style(cloth_image, cloth_type)
-    print(f"Detected garment_style={garment_style} for cloth_type={cloth_type} | {style_debug}")
+    garment_style, covers_lower_legs, style_debug = infer_garment_style(cloth_image, cloth_type)
+    print(f"Detected garment_style={garment_style} covers_lower_legs={covers_lower_legs} | {style_debug}")
     person_image = resize_and_crop(person_image, (args.width, args.height))
     cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
     
@@ -262,12 +277,14 @@ def submit_function(
                 person_image,
                 cloth_type,
                 garment_style=garment_style,
+                covers_lower_legs=covers_lower_legs,
             )['mask']
     else:
         mask = automasker(
             person_image,
             cloth_type,
             garment_style=garment_style,
+            covers_lower_legs=covers_lower_legs,
         )['mask']
     mask = mask_processor.blur(mask, blur_factor=9)
 
@@ -291,7 +308,7 @@ def submit_function(
     mask_array = np.array(mask) > 127
     coverage = float(mask_array.mean() * 100)
     debug_text = (
-        f"Garment style: {garment_style}\n"
+        f"Garment style: {garment_style} | covers_legs: {covers_lower_legs}\n"
         f"Style detection: {style_debug}\n"
         f"Clothing type: {cloth_type}\n"
         f"Mask coverage: {coverage:.2f}%\n"

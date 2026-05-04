@@ -197,6 +197,7 @@ class AutoMasker:
         schp_atr_mask: Image.Image,
         part: str='overall',
         garment_style: str='auto',
+        covers_lower_legs: bool=True,
         **kwargs
     ):
         assert part in ['upper', 'lower', 'overall', 'inner', 'outer'], f"part should be one of ['upper', 'lower', 'overall', 'inner', 'outer'], but got {part}"
@@ -254,12 +255,21 @@ class AutoMasker:
         full_body_area = (torso_area | lower_body_area | upper_arm_area)
         arms_protect_area = forearm_area | part_mask_of(['hands'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
 
+        lower_leg_area = part_mask_of('legs', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        thigh_area = part_mask_of('thighs', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+
         if part in ['upper', 'inner', 'outer']:
             allowed_area = torso_area | strong_mask_area
-            # Sleeveless garments: do NOT mask upper arms (model would otherwise add sleeves)
             if part == 'outer' or garment_style in ['short_sleeve', 'sleeved']:
                 allowed_area = allowed_area | upper_arm_area
-            protect_area = strong_protect_area | background_area | arms_protect_area | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            # Fix 2: sleeved garments must also mask forearms (cardigan sleeve cut issue)
+            if garment_style == 'sleeved':
+                allowed_area = allowed_area | forearm_area
+                local_arm_protect = part_mask_of(['hands'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
+            else:
+                local_arm_protect = arms_protect_area
+            protect_area = strong_protect_area | background_area | local_arm_protect | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            # Fix 1 result: sleeveless → protect upper arms so model won't add sleeves
             if garment_style == 'sleeveless':
                 protect_area = protect_area | upper_arm_area
             mask_area = (allowed_area | (mask_dense_area & torso_area)) & (~protect_area)
@@ -271,14 +281,19 @@ class AutoMasker:
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
         else:
-            # Overall: mask torso + lower body; protect upper arms for sleeveless
-            torso_lower_area = torso_area | lower_body_area | strong_mask_area
+            # Overall: torso + thighs always masked; lower legs only when garment covers them
+            allowed_area = torso_area | thigh_area | strong_mask_area
+            if covers_lower_legs:
+                allowed_area = allowed_area | lower_leg_area
             if garment_style != 'sleeveless':
-                torso_lower_area = torso_lower_area | upper_arm_area
+                allowed_area = allowed_area | upper_arm_area
             protect_area = strong_protect_area | background_area | hair_protect_area.astype(bool) | arms_protect_area
             if garment_style == 'sleeveless':
                 protect_area = protect_area | upper_arm_area
-            mask_area = (torso_lower_area | mask_dense_area) & (~protect_area)
+            # Fix 3: short garments → protect lower legs to prevent hallucinated socks
+            if not covers_lower_legs:
+                protect_area = protect_area | lower_leg_area
+            mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
 
         mask_area = cv2.GaussianBlur(mask_area.astype(np.uint8) * 255, (kernal_size, kernal_size), 0)
@@ -294,15 +309,17 @@ class AutoMasker:
         image: Union[str, Image.Image],
         mask_type: str = "upper",
         garment_style: str = "auto",
+        covers_lower_legs: bool = True,
     ):
         assert mask_type in ['upper', 'lower', 'overall', 'inner', 'outer'], f"mask_type should be one of ['upper', 'lower', 'overall', 'inner', 'outer'], but got {mask_type}"
         preprocess_results = self.preprocess_image(image)
         mask = self.cloth_agnostic_mask(
-            preprocess_results['densepose'], 
-            preprocess_results['schp_lip'], 
-            preprocess_results['schp_atr'], 
+            preprocess_results['densepose'],
+            preprocess_results['schp_lip'],
+            preprocess_results['schp_atr'],
             part=mask_type,
             garment_style=garment_style,
+            covers_lower_legs=covers_lower_legs,
         )
         return {
             'mask': mask,
