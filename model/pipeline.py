@@ -46,13 +46,20 @@ class LookziPipeline:
         init_adapter(self.unet, cross_attn_cls=SkipAttnProcessor)  # Skip Cross-Attention
         self.attn_modules = get_trainable_module(self.unet, "attention")
         self.auto_attn_ckpt_load(attn_ckpt, attn_ckpt_version)
-        # xformers: memory-efficient attention (~20-25% faster on T4)
+        # Memory-efficient attention: xformers (Ampere+) yoki PyTorch SDPA (T4 ham ishlaydi)
         try:
             import xformers  # noqa: F401
             self.unet.enable_xformers_memory_efficient_attention()
             print("xformers: memory-efficient attention enabled")
-        except ImportError:
-            print("xformers not installed — using default attention")
+        except Exception:
+            # T4 kabi eski GPU'larda xformers ishlamaydi — PyTorch SDPA ishlatamiz
+            try:
+                self.unet.set_attn_processor(
+                    __import__('diffusers').models.attention_processor.AttnProcessor2_0()
+                )
+                print("PyTorch SDPA attention enabled (T4 compatible)")
+            except Exception:
+                print("Default attention — xformers va SDPA ishlamadi")
 
         # Pytorch 2.0 Compile
         if compile:

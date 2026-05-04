@@ -38,9 +38,9 @@ drive.mount('/content/drive')
 ## 4. Dependencies o'rnatish
 
 ```python
-!pip install torch==2.4.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu121 -q
-!pip install xformers --index-url https://download.pytorch.org/whl/cu121 -q
-!pip install -r requirements.txt -q
+# Colab'da torch allaqachon o'rnatilgan — qayta o'rnatmang!
+# faqat qolgan kutubxonalar:
+!pip install -r requirements.txt --ignore-installed torch torchvision torchaudio -q
 ```
 
 ---
@@ -107,8 +107,8 @@ Tavsiya: Steps=50, CFG=2.5, Show Type=result only
 | | Birinchi sessiya | Keyingi sessionlar |
 |---|---|---|
 | Model yuklash | 15-20 daqiqa (Drive'ga saqlaydi) | 1-2 daqiqa (Drive'dan o'qiydi) |
-| pip install | 3-5 daqiqa | 3-5 daqiqa |
-| Render (50 steps) | ~120-130s (xformers bilan) | ~120-130s |
+| pip install | 2-3 daqiqa | 2-3 daqiqa |
+| Render (50 steps) | ~130-150s (PyTorch SDPA bilan) | ~130-150s |
 
 Drive'dagi model papkasi: `MyDrive/Lookzi/hf_models/`
 Bu papkani o'chirmang — keyingi barcha sessionlarda ishlatiladi.
