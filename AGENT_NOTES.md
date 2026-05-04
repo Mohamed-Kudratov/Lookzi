@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-04 v2] Lower garment mask fix
+
+### Muammo
+Lower garment test natijasi: pink pants o'rniga ko'k/jigarrang shim chiqardi.
+Debug info: mask coverage = 6.40% (erkak) va 13.27% (ayol). Normal: 30-40%.
+
+### Sabab
+`hands_protect_area` ichida DensePose feet (indeks 5,6) bor.
+Bu area dilate qilinib SCHP Left-leg/Right-leg bilan kesishadi →
+lower leg zona protected → `lower_body_area` ning katta qismi yo'q bo'ladi →
+mask 6% ga tushadi → model condition garmentni ignore qilib o'zi "shim to'qiydi".
+
+### Fix (model/cloth_masker.py, lower branch, ~278-287-qator)
+```python
+# Shoes (DensePose 5,6) are OUTSIDE lower_body_area → stay protected
+local_strong_protect = strong_protect_area & ~lower_body_area
+# hull_mask: closes gap between legs (inner thigh zone)
+lower_hull = hull_mask((lower_body_area | strong_mask_area).astype(np.uint8) * 255).astype(bool)
+allowed_area = lower_hull | lower_body_area | strong_mask_area
+protect_area = local_strong_protect | background_area | Left-arm/Right-arm/Face
+```
+
+### Hali test qilinmagan
+Bu fix GitHub'ga push qilindi lekin Colab'da test qilinmadi (torch versiyasi muammo tufayli).
+**Keyingi agentga: Colab'da lower garment qayta test qilib natijani shu yerga yozing.**
+
+---
+
 ## [2026-05-04] Mask fixes + Colab stabilization
 
 ### Nima qilindi
