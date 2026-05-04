@@ -122,38 +122,22 @@ print("\nBarcha modellar tayyor.")
 
 ---
 
-## 6. Appni ishga tushirish (ngrok'siz, Colab proxy orqali)
+## 6. Appni ishga tushirish
 
 ```python
-import subprocess, time
-from google.colab.output import eval_js
-
-# Avval proxy URL'ni olamiz — rasmlar to'g'ri yuklanishi uchun
-proxy_url = eval_js("google.colab.kernel.proxyPort(7860, {'cache': false})")
-print(f"Proxy URL: {proxy_url}")
-
-proc = subprocess.Popen([
-    "python", "app.py",
-    "--resume_path", "/content/Lookzi/hf_models/lookzi-vton",
-    "--base_model_path", "/content/Lookzi/hf_models/stable-diffusion-inpainting",
-    "--vae_model_path", "/content/Lookzi/hf_models/sd-vae-ft-mse",
-    "--device", "cuda",
-    "--mixed_precision", "fp16",
-    "--width", "768",
-    "--height", "1024",
-    "--server_name", "0.0.0.0",
-    "--server_port", "7860",
-    "--root_path", proxy_url,   # rasmlar va static fayllar to'g'ri URL bilan yuklanadi
-])
-
-print("App yuklanmoqda, 40 soniya kuting...")
-time.sleep(40)
-print(f"\nApp tayyor — shu linkni oching: {proxy_url}")
+!python app.py \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --device cuda \
+  --mixed_precision fp16 \
+  --width 768 \
+  --height 1024 \
+  --share \
+  --server_name 0.0.0.0
 ```
 
 Tavsiya: Steps=50, CFG=2.5, Show Type=result only
-
-> Agar 40 soniyadan keyin app ochilmasa, `time.sleep(60)` ga o'zgartiring.
 
 ---
 
