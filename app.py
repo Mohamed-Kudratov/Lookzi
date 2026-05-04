@@ -131,7 +131,8 @@ def image_grid(imgs, rows, cols):
         grid.paste(img, box=(i % cols * w, i // cols * h))
     return grid
 
-def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> str:
+def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
+    """Returns (style_str, debug_info_str)."""
     image = np.array(cloth_image.convert("RGB").resize((256, 256))).astype(np.int16)
     edge_pixels = np.concatenate([image[:8].reshape(-1, 3), image[-8:].reshape(-1, 3), image[:, :8].reshape(-1, 3), image[:, -8:].reshape(-1, 3)])
     bg = np.median(edge_pixels, axis=0)
@@ -143,7 +144,7 @@ def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> str:
     foreground[:, -4:] = False
     ys, xs = np.where(foreground)
     if len(xs) < 100:
-        return "auto"
+        return "auto", "fg_pixels<100 → auto"
 
     x0, x1 = xs.min(), xs.max()
     y0, y1 = ys.min(), ys.max()
@@ -170,15 +171,18 @@ def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> str:
     right_mass = upper[:, -side_band:].mean() if upper.size else 0
     side_mass = (left_mass + right_mass) / 2
 
+    dbg = f"side_mass={side_mass:.3f} shoulder_ratio={shoulder_ratio:.3f} hem_ratio={hem_ratio:.3f}"
+
     if side_mass > 0.58:
-        return "sleeved"
+        return "sleeved", dbg + " → sleeved(side_mass>0.58)"
     if cloth_type == "overall" and hem_ratio > 0.75 and h > w * 1.15:
-        return "sleeveless" if side_mass < 0.48 else "sleeved"
+        style = "sleeveless" if side_mass < 0.48 else "sleeved"
+        return style, dbg + f" → {style}(overall+hem)"
     if shoulder_ratio < 1.15 and side_mass < 0.50:
-        return "sleeveless"
+        return "sleeveless", dbg + " → sleeveless(ratio<1.15,mass<0.50)"
     if shoulder_ratio > 1.55:
-        return "sleeved"
-    return "short_sleeve"
+        return "sleeved", dbg + " → sleeved(ratio>1.55)"
+    return "short_sleeve", dbg + " → short_sleeve(default)"
 
 
 args = parse_args()
@@ -243,8 +247,8 @@ def submit_function(
 
     person_image = Image.open(person_image_path).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
-    garment_style = infer_garment_style(cloth_image, cloth_type)
-    print(f"Detected garment_style={garment_style} for cloth_type={cloth_type}")
+    garment_style, style_debug = infer_garment_style(cloth_image, cloth_type)
+    print(f"Detected garment_style={garment_style} for cloth_type={cloth_type} | {style_debug}")
     person_image = resize_and_crop(person_image, (args.width, args.height))
     cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
     
@@ -288,6 +292,7 @@ def submit_function(
     coverage = float(mask_array.mean() * 100)
     debug_text = (
         f"Garment style: {garment_style}\n"
+        f"Style detection: {style_debug}\n"
         f"Clothing type: {cloth_type}\n"
         f"Mask coverage: {coverage:.2f}%\n"
         f"Resolution: {args.width}x{args.height}\n"

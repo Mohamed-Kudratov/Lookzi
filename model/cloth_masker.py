@@ -256,9 +256,12 @@ class AutoMasker:
 
         if part in ['upper', 'inner', 'outer']:
             allowed_area = torso_area | strong_mask_area
-            if part == 'outer' or garment_style in ['sleeveless', 'short_sleeve', 'sleeved']:
+            # Sleeveless garments: do NOT mask upper arms (model would otherwise add sleeves)
+            if part == 'outer' or garment_style in ['short_sleeve', 'sleeved']:
                 allowed_area = allowed_area | upper_arm_area
             protect_area = strong_protect_area | background_area | arms_protect_area | part_mask_of(['Left-leg', 'Right-leg'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            if garment_style == 'sleeveless':
+                protect_area = protect_area | upper_arm_area
             mask_area = (allowed_area | (mask_dense_area & torso_area)) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
             mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1).astype(bool)
@@ -268,11 +271,14 @@ class AutoMasker:
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
         else:
-            allowed_area = full_body_area | strong_mask_area
-            if garment_style == 'sleeveless':
-                allowed_area = allowed_area | upper_arm_area
+            # Overall: mask torso + lower body; protect upper arms for sleeveless
+            torso_lower_area = torso_area | lower_body_area | strong_mask_area
+            if garment_style != 'sleeveless':
+                torso_lower_area = torso_lower_area | upper_arm_area
             protect_area = strong_protect_area | background_area | hair_protect_area.astype(bool) | arms_protect_area
-            mask_area = (allowed_area | mask_dense_area) & (~protect_area)
+            if garment_style == 'sleeveless':
+                protect_area = protect_area | upper_arm_area
+            mask_area = (torso_lower_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
 
         mask_area = cv2.GaussianBlur(mask_area.astype(np.uint8) * 255, (kernal_size, kernal_size), 0)
