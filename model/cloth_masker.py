@@ -276,10 +276,17 @@ class AutoMasker:
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
             mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1).astype(bool)
         elif part == 'lower':
-            allowed_area = lower_body_area | strong_mask_area
-            protect_area = strong_protect_area | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            # hands_protect_area includes feet, dilated upward into leg zone → mask shrinks to 6-13%.
+            # Fix: remove strong_protect from pixels that belong to the lower body itself.
+            # Actual shoe pixels (DensePose 5,6) are NOT in lower_body_area, so shoes stay protected.
+            local_strong_protect = strong_protect_area & ~lower_body_area
+            # Hull fill: close the gap between legs so pants/skirt cover inner thigh area too
+            lower_base = (lower_body_area | strong_mask_area).astype(np.uint8) * 255
+            lower_hull = hull_mask(lower_base).astype(bool)
+            allowed_area = lower_hull | lower_body_area | strong_mask_area
+            protect_area = local_strong_protect | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
-            mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=2, open_iterations=1)
+            mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
         else:
             # Overall: torso + thighs always masked; lower legs only when garment covers them
             allowed_area = torso_area | thigh_area | strong_mask_area
