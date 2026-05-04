@@ -19,7 +19,7 @@ Runtime → Change runtime type → T4 GPU → Save
 
 ```python
 from google.colab import drive
-drive.mount('/content/drive')
+drive.mount('/content/drive', force_remount=True)
 ```
 
 ---
@@ -67,16 +67,14 @@ drive.mount('/content/drive')
   pydantic==2.8.2 \
   typer==0.12.3
 
-# Agar biror paket torch'ni eski versiyaga tushirib qo'ygan bo'lsa — qayta tiklash
+# Torch versiyasini oxirida qayta tiklash (boshqa paketlar tushirib qo'ymasligi uchun)
+!pip install -q torch==2.5.1+cu121 torchvision==0.20.1 \
+  --index-url https://download.pytorch.org/whl/cu121
+
 import torch
-if not torch.__version__.startswith("2.5"):
-    import subprocess
-    subprocess.run(["pip", "install", "-q", "--upgrade",
-                    "torch", "torchvision",
-                    "--index-url", "https://download.pytorch.org/whl/cu121"])
-    print("torch qayta o'rnatildi — runtime restart kerak!")
-else:
-    print(f"torch OK: {torch.__version__}")
+print(f"torch: {torch.__version__}")
+assert torch.__version__.startswith("2.5"), "XATO: torch versiyasi noto'g'ri, runtime restart qiling!"
+print("OK — keyingi cellga o'ting")
 ```
 
 ---
@@ -125,6 +123,9 @@ print("\nBarcha modellar tayyor.")
 ## 6. Appni ishga tushirish
 
 ```python
+# Eski app jarayonini o'ldirish (port band bo'lmasligi uchun)
+!fuser -k 7860/tcp 2>/dev/null; sleep 2
+
 !python app.py \
   --resume_path /content/Lookzi/hf_models/lookzi-vton \
   --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
