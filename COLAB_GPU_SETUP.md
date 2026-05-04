@@ -38,9 +38,31 @@ drive.mount('/content/drive')
 ## 4. Dependencies o'rnatish
 
 ```python
-# Colab'da torch allaqachon o'rnatilgan — qayta o'rnatmang!
-# faqat qolgan kutubxonalar:
-!pip install -r requirements.txt --ignore-installed torch torchvision torchaudio -q
+# Eski build tizimi uchun setuptools avval yangilanadi
+!pip install -q "setuptools<70" wheel
+
+# Asosiy kutubxonalar (torch Colab'nikini ishlatamiz — qayta o'rnatmaymiz)
+!pip install -q \
+  accelerate==1.10.1 \
+  diffusers==0.31.0 \
+  transformers==4.46.3 \
+  peft==0.17.1 \
+  huggingface_hub==0.36.0 \
+  gradio==4.41.0 \
+  gradio-client==1.3.0 \
+  opencv-python==4.10.0.84 \
+  scikit-image==0.24.0 \
+  omegaconf==2.3.0 \
+  cloudpickle==3.0.0 \
+  fvcore==0.1.5.post20221221 \
+  av==12.3.0 \
+  fastapi==0.112.2 \
+  starlette==0.38.2 \
+  pydantic==2.8.2 \
+  typer==0.12.3
+
+# pycocotools alohida (setup.py muammosi bor)
+!pip install -q pycocotools --no-build-isolation
 ```
 
 ---
