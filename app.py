@@ -329,7 +329,7 @@ Upload a person image, choose a garment, select the target clothing area, and ge
 </p>
 """
 def app_gradio():
-    with gr.Blocks(title="Lookzi") as demo:
+    with gr.Blocks(title="Lookzi", css="footer{display:none !important}") as demo:
         gr.Markdown(HEADER)
         with gr.Row():
             with gr.Column(scale=1, min_width=350):
@@ -467,6 +467,7 @@ def app_gradio():
         server_port=args.server_port,
         share=args.share,
         show_error=True,
+        show_api=False,
     )
 
 
