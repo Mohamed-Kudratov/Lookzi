@@ -38,10 +38,17 @@ drive.mount('/content/drive')
 ## 4. Dependencies o'rnatish
 
 ```python
-# Eski build tizimi uchun setuptools avval yangilanadi
+# Eski build tizimi uchun
 !pip install -q "setuptools<70" wheel
 
-# Asosiy kutubxonalar (torch Colab'nikini ishlatamiz — qayta o'rnatmaymiz)
+# fvcore --no-deps bilan: o'zi torch tortib olmasin
+!pip install -q fvcore==0.1.5.post20221221 --no-deps
+!pip install -q iopath portalocker yacs termcolor tabulate tqdm
+
+# pycocotools alohida
+!pip install -q pycocotools --no-build-isolation
+
+# Qolgan asosiy kutubxonalar
 !pip install -q \
   accelerate==1.10.1 \
   diffusers==0.31.0 \
@@ -54,15 +61,22 @@ drive.mount('/content/drive')
   scikit-image==0.24.0 \
   omegaconf==2.3.0 \
   cloudpickle==3.0.0 \
-  fvcore==0.1.5.post20221221 \
   av==12.3.0 \
   fastapi==0.112.2 \
   starlette==0.38.2 \
   pydantic==2.8.2 \
   typer==0.12.3
 
-# pycocotools alohida (setup.py muammosi bor)
-!pip install -q pycocotools --no-build-isolation
+# Agar biror paket torch'ni eski versiyaga tushirib qo'ygan bo'lsa — qayta tiklash
+import torch
+if not torch.__version__.startswith("2.5"):
+    import subprocess
+    subprocess.run(["pip", "install", "-q", "--upgrade",
+                    "torch", "torchvision",
+                    "--index-url", "https://download.pytorch.org/whl/cu121"])
+    print("torch qayta o'rnatildi — runtime restart kerak!")
+else:
+    print(f"torch OK: {torch.__version__}")
 ```
 
 ---
@@ -111,7 +125,11 @@ print("\nBarcha modellar tayyor.")
 ## 6. Appni ishga tushirish
 
 ```python
+# Absolute path ishlatamiz — symlink/relative path muammolaridan xoli
 !python app.py \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
   --device cuda \
   --mixed_precision fp16 \
   --width 768 \
