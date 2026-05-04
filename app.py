@@ -72,6 +72,12 @@ def parse_args():
         default="resource/demo/output",
         help="The output directory where the model predictions will be written.",
     )
+    parser.add_argument(
+        "--root_path",
+        type=str,
+        default="",
+        help="Root path for reverse proxy (e.g. Colab proxy URL). Fixes static file URLs.",
+    )
 
     parser.add_argument(
         "--width",
@@ -491,6 +497,7 @@ def app_gradio():
         share=args.share,
         show_error=True,
         show_api=False,
+        root_path=args.root_path,
     )
 
 

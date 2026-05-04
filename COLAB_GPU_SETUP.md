@@ -128,6 +128,10 @@ print("\nBarcha modellar tayyor.")
 import subprocess, time
 from google.colab.output import eval_js
 
+# Avval proxy URL'ni olamiz — rasmlar to'g'ri yuklanishi uchun
+proxy_url = eval_js("google.colab.kernel.proxyPort(7860, {'cache': false})")
+print(f"Proxy URL: {proxy_url}")
+
 proc = subprocess.Popen([
     "python", "app.py",
     "--resume_path", "/content/Lookzi/hf_models/lookzi-vton",
@@ -139,18 +143,17 @@ proc = subprocess.Popen([
     "--height", "1024",
     "--server_name", "0.0.0.0",
     "--server_port", "7860",
+    "--root_path", proxy_url,   # rasmlar va static fayllar to'g'ri URL bilan yuklanadi
 ])
 
 print("App yuklanmoqda, 40 soniya kuting...")
 time.sleep(40)
-
-url = eval_js("google.colab.kernel.proxyPort(7860, {'cache': false})")
-print(f"\nApp tayyor: {url}")
+print(f"\nApp tayyor — shu linkni oching: {proxy_url}")
 ```
 
 Tavsiya: Steps=50, CFG=2.5, Show Type=result only
 
-> Agar 40 soniyadan keyin URL ochilmasa, `time.sleep(60)` ga o'zgartiring.
+> Agar 40 soniyadan keyin app ochilmasa, `time.sleep(60)` ga o'zgartiring.
 
 ---
 
