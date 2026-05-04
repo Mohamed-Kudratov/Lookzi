@@ -46,20 +46,14 @@ class LookziPipeline:
         init_adapter(self.unet, cross_attn_cls=SkipAttnProcessor)  # Skip Cross-Attention
         self.attn_modules = get_trainable_module(self.unet, "attention")
         self.auto_attn_ckpt_load(attn_ckpt, attn_ckpt_version)
-        # Memory-efficient attention: xformers (Ampere+) yoki PyTorch SDPA (T4 ham ishlaydi)
+        # xformers faqat mavjud bo'lsa yoqiladi — set_attn_processor ISHLATILMAYDI
+        # Sabab: set_attn_processor SkipAttnProcessor ni o'chirib yuboradi → shape crash
         try:
             import xformers  # noqa: F401
             self.unet.enable_xformers_memory_efficient_attention()
             print("xformers: memory-efficient attention enabled")
         except Exception:
-            # T4 kabi eski GPU'larda xformers ishlamaydi — PyTorch SDPA ishlatamiz
-            try:
-                self.unet.set_attn_processor(
-                    __import__('diffusers').models.attention_processor.AttnProcessor2_0()
-                )
-                print("PyTorch SDPA attention enabled (T4 compatible)")
-            except Exception:
-                print("Default attention — xformers va SDPA ishlamadi")
+            print("xformers not available — default attention (T4 safe)")
 
         # Pytorch 2.0 Compile
         if compile:

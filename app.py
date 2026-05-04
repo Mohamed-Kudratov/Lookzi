@@ -238,7 +238,13 @@ def submit_function(
     seed,
     show_type
 ):
+    if person_image is None or cloth_image is None:
+        raise gr.Error("Iltimos, inson rasmi va kiyim rasmini yuklang.")
+
     person_image_path = person_image["background"]
+    if not person_image_path:
+        raise gr.Error("Iltimos, inson rasmini yuklang.")
+
     layers = person_image.get("layers") or []
     mask = None
     if mask_source == "manual" and layers:
