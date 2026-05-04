@@ -122,23 +122,35 @@ print("\nBarcha modellar tayyor.")
 
 ---
 
-## 6. Appni ishga tushirish
+## 6. Appni ishga tushirish (ngrok'siz, Colab proxy orqali)
 
 ```python
-# Absolute path ishlatamiz — symlink/relative path muammolaridan xoli
-!python app.py \
-  --resume_path /content/Lookzi/hf_models/lookzi-vton \
-  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
-  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
-  --device cuda \
-  --mixed_precision fp16 \
-  --width 768 \
-  --height 1024 \
-  --share \
-  --server_name 0.0.0.0
+import subprocess, time
+from google.colab.output import eval_js
+
+proc = subprocess.Popen([
+    "python", "app.py",
+    "--resume_path", "/content/Lookzi/hf_models/lookzi-vton",
+    "--base_model_path", "/content/Lookzi/hf_models/stable-diffusion-inpainting",
+    "--vae_model_path", "/content/Lookzi/hf_models/sd-vae-ft-mse",
+    "--device", "cuda",
+    "--mixed_precision", "fp16",
+    "--width", "768",
+    "--height", "1024",
+    "--server_name", "0.0.0.0",
+    "--server_port", "7860",
+])
+
+print("App yuklanmoqda, 40 soniya kuting...")
+time.sleep(40)
+
+url = eval_js("google.colab.kernel.proxyPort(7860, {'cache': false})")
+print(f"\nApp tayyor: {url}")
 ```
 
 Tavsiya: Steps=50, CFG=2.5, Show Type=result only
+
+> Agar 40 soniyadan keyin URL ochilmasa, `time.sleep(60)` ga o'zgartiring.
 
 ---
 
@@ -148,7 +160,7 @@ Tavsiya: Steps=50, CFG=2.5, Show Type=result only
 |---|---|---|
 | Model yuklash | 15-20 daqiqa (Drive'ga saqlaydi) | 1-2 daqiqa (Drive'dan o'qiydi) |
 | pip install | 2-3 daqiqa | 2-3 daqiqa |
-| Render (50 steps) | ~130-150s (PyTorch SDPA bilan) | ~130-150s |
+| Render (50 steps) | ~130-150s | ~130-150s |
 
 Drive'dagi model papkasi: `MyDrive/Lookzi/hf_models/`
 Bu papkani o'chirmang — keyingi barcha sessionlarda ishlatiladi.
