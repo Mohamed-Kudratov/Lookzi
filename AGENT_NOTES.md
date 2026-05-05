@@ -5,6 +5,47 @@
 
 ---
 
+## [2026-05-05 v3] Lower mask fallback and final protect fix
+
+### Nima qilindi
+Lower garment mask engine yana kuchaytirildi va GitHub'ga `9e312dc` commit bilan push qilindi.
+
+### Muammo
+Screenshotlarda lower try-on mask coverage juda past chiqdi:
+- skirt test: ~9.90%
+- pants test: ~6.45%
+- shorts/skirt test: ~11.40%
+
+Mask ko'rinishda lower body topilgandek edi, lekin juda tor/kalta bo'lgani uchun model condition garmentni kuchli ushlamay, eski shim/shorts rangini yoki o'zi taxmin qilgan lower kiyimni chiqarib yubordi.
+
+### Sabab
+Oldingi lower fix branch ichida `strong_protect_area`ni lower bodydan olib tashlagan edi:
+```python
+local_strong_protect = strong_protect_area & ~lower_body_area
+```
+Lekin final cleanup oxirida yana umumiy quyidagi logic ishlayotgan edi:
+```python
+mask_area = ... & (~strong_protect_area) & (~background_area)
+```
+Natijada lower branchdagi fix final bosqichda qayta bekor bo'lib, oyoq/feet atrofida mask yana kesilib qolgan.
+
+### Fix
+- `final_protect_area` part-specific qilindi.
+- `part == "lower"` bo'lsa final protect lower body ichidagi maskani kesmaydi.
+- Lower mask coverage juda past (`<18%`) bo'lsa DensePose lower-body hull fallback ishlaydi.
+- Kichik stray bloblar uchun `keep_main_components()` qo'shildi.
+- `infer_garment_style()` lower garment uchun endi `sleeveless/sleeved` demaydi, `auto -> lower` deb debug qiladi.
+
+### Hali test qilish kerak
+Colab/GPU'da quyidagilarni qayta sinash:
+- red skirt -> black pants person
+- blue jeans -> white shorts person
+- red skirt -> light jeans woman
+
+Kutilgan natija: lower mask coverage kamida ~20-35% oralig'iga chiqishi va output garment rang/forma condition imagega yaqinlashishi kerak.
+
+---
+
 ## [2026-05-05] Avtomatik Baholash Tizimi (Eval Benchmark)
 
 ### Nima qilindi
