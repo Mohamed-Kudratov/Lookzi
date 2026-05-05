@@ -184,8 +184,7 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
     Qaytaradi: dict (barcha metrikalar)
     """
     import torch
-    from utils import init_weight_dtype, resize_and_crop, resize_and_padding
-    from app import infer_garment_style
+    from utils import infer_garment_style, resize_and_crop, resize_and_padding
 
     pid = pair["id"]
     tag = pair["tag"]

@@ -155,6 +155,79 @@ def init_weight_dtype(wight_dtype):
     }[wight_dtype]
 
 
+def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
+    """Return (style, covers_lower_legs, debug_info) for a garment image."""
+    image = np.array(cloth_image.convert("RGB").resize((256, 256))).astype(np.int16)
+    edge_pixels = np.concatenate(
+        [
+            image[:8].reshape(-1, 3),
+            image[-8:].reshape(-1, 3),
+            image[:, :8].reshape(-1, 3),
+            image[:, -8:].reshape(-1, 3),
+        ]
+    )
+    bg = np.median(edge_pixels, axis=0)
+    distance = np.linalg.norm(image - bg, axis=2)
+    foreground = distance > 28
+    foreground[:4, :] = False
+    foreground[-4:, :] = False
+    foreground[:, :4] = False
+    foreground[:, -4:] = False
+
+    ys, xs = np.where(foreground)
+    if len(xs) < 100:
+        return "auto", False, "fg_pixels<100 -> auto"
+
+    x0, x1 = xs.min(), xs.max()
+    y0, y1 = ys.min(), ys.max()
+    h = max(1, y1 - y0 + 1)
+    w = max(1, x1 - x0 + 1)
+    covers_lower_legs = (h / 256.0) > 0.65
+
+    def band_width(start, end):
+        yy0 = y0 + int(h * start)
+        yy1 = y0 + int(h * end)
+        band = foreground[yy0:yy1 + 1]
+        _, bx = np.where(band)
+        if len(bx) < 10:
+            return 0
+        return bx.max() - bx.min() + 1
+
+    shoulder_w = band_width(0.12, 0.32)
+    chest_w = band_width(0.34, 0.56)
+    hem_w = band_width(0.72, 0.95)
+    shoulder_ratio = shoulder_w / max(chest_w, 1)
+    hem_ratio = hem_w / max(chest_w, 1)
+
+    upper = foreground[y0 + int(h * 0.12):y0 + int(h * 0.38), x0:x1 + 1]
+    side_band = max(1, int(w * 0.25))
+    left_mass = upper[:, :side_band].mean() if upper.size else 0
+    right_mass = upper[:, -side_band:].mean() if upper.size else 0
+    side_mass = (left_mass + right_mass) / 2
+
+    lower = foreground[y0 + int(h * 0.38):y0 + int(h * 0.65), x0:x1 + 1]
+    lower_left = lower[:, :side_band].mean() if lower.size else 0
+    lower_right = lower[:, -side_band:].mean() if lower.size else 0
+    lower_side_mass = (lower_left + lower_right) / 2
+
+    dbg = (
+        f"side={side_mass:.3f} lower_side={lower_side_mass:.3f} "
+        f"sho_ratio={shoulder_ratio:.3f} hem_ratio={hem_ratio:.3f} "
+        f"covers_legs={covers_lower_legs}"
+    )
+
+    if side_mass > 0.55 and lower_side_mass > 0.42:
+        return "sleeved", covers_lower_legs, dbg + " -> sleeved"
+    if cloth_type == "overall" and hem_ratio > 0.75 and h > w * 1.15:
+        style = "sleeveless" if side_mass < 0.48 else "sleeved"
+        return style, covers_lower_legs, dbg + f" -> {style}(overall+hem)"
+    if shoulder_ratio < 1.15 and side_mass < 0.52:
+        return "sleeveless", covers_lower_legs, dbg + " -> sleeveless"
+    if shoulder_ratio > 1.55 or lower_side_mass > 0.35:
+        return "sleeved", covers_lower_legs, dbg + " -> sleeved(ratio/lower)"
+    return "short_sleeve", covers_lower_legs, dbg + " -> short_sleeve"
+
+
 def init_add_item_id(config):
     return torch.tensor(
         [

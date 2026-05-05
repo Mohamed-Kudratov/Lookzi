@@ -132,7 +132,7 @@ class LookziPipeline:
         eta=1.0,
         **kwargs
     ):
-        concat_dim = -2  # FIXME: y axis concat
+        concat_dim = -2
         # Prepare inputs to Tensor
         image, condition_image, mask = self.check_inputs(image, condition_image, mask, width, height)
         image = prepare_image(image).to(self.device, dtype=self.weight_dtype)
@@ -180,10 +180,10 @@ class LookziPipeline:
                 # prepare the input for the inpainting model
                 inpainting_latent_model_input = torch.cat([non_inpainting_latent_model_input, mask_latent_concat, masked_latent_concat], dim=1)
                 # predict the noise residual
-                noise_pred= self.unet(
+                noise_pred = self.unet(
                     inpainting_latent_model_input,
                     t.to(self.device),
-                    encoder_hidden_states=None, # FIXME
+                    encoder_hidden_states=None,
                     return_dict=False,
                 )[0]
                 # perform guidance
@@ -227,7 +227,7 @@ class LookziPipeline:
 
 class LookziPix2PixPipeline(LookziPipeline):
     def auto_attn_ckpt_load(self, attn_ckpt, version):
-        # TODO: Temperal fix for the model version
+        # Pix2Pix checkpoints use the version name directly as the attention folder.
         if os.path.exists(attn_ckpt):
             load_checkpoint_in_model(self.attn_modules, os.path.join(attn_ckpt, version, 'attention'))
         else:
@@ -236,7 +236,7 @@ class LookziPix2PixPipeline(LookziPipeline):
             load_checkpoint_in_model(self.attn_modules, os.path.join(repo_path, version, 'attention'))
     
     def check_inputs(self, image, condition_image, width, height):
-        if isinstance(image, torch.Tensor) and isinstance(condition_image, torch.Tensor) and isinstance(torch.Tensor):
+        if isinstance(image, torch.Tensor) and isinstance(condition_image, torch.Tensor):
             return image, condition_image
         image = resize_and_crop(image, (width, height))
         condition_image = resize_and_padding(condition_image, (width, height))
@@ -297,7 +297,7 @@ class LookziPix2PixPipeline(LookziPipeline):
                 # prepare the input for the inpainting model
                 p2p_latent_model_input = torch.cat([latent_model_input, condition_latent_concat], dim=1)
                 # predict the noise residual
-                noise_pred= self.unet(
+                noise_pred = self.unet(
                     p2p_latent_model_input,
                     t.to(self.device),
                     encoder_hidden_states=None, 
