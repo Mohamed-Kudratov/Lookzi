@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-05] Avtomatik Baholash Tizimi (Eval Benchmark)
+
+### Nima qilindi
+Kodni har safar o'zgartirgandan so'ng, mask qoplanishi (coverage), style aniqlanishi va CLIP score (garment bilan o'xshashlik) kabi metrikalarni avtomatik o'lchaydigan tizim qo'shildi. Bu model o'zini-o'zi rivojlantirishini (continuous evaluation) ta'minlaydi. 
+
+### Yangi fayllar
+- `eval_benchmark.py` — Asosiy baholash skripti. Oldingi test natijalarini Drive'dan o'qiydi va joriy run natijalari bilan solishtirib Delta hisobot chiqaradi.
+- `benchmark/pairs.json` — 10 ta maxsus tanlab olingan test juftliklari. Ularda kiyim turi, kutilayotgan style va optimal mask coverage diapazoni ko'rsatilgan.
+
+### Qanday ishlatiladi?
+Kodni o'zgartirgach, quyidagi buyruqni Colab yoki lokal muhitda ishga tushiring:
+```bash
+# Tezkor tekshirish (faqat mask va style, 2-3 min)
+python eval_benchmark.py --mode fast \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json
+
+# To'liq tekshirish (inference + CLIP kiritilgan, ~20 min)
+python eval_benchmark.py --mode full \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+---
+
 ## [2026-05-04 v2] Lower garment mask fix
 
 ### Muammo

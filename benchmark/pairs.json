@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "description": "Lookzi mask engine benchmark juftliklari. Har bir juftlik mask sifatini o'lchash uchun ishlatiladi.",
+  "coverage_targets": {
+    "upper":   {"min": 22, "max": 58, "ideal_min": 28, "ideal_max": 50},
+    "lower":   {"min": 20, "max": 52, "ideal_min": 27, "ideal_max": 45},
+    "overall": {"min": 30, "max": 65, "ideal_min": 38, "ideal_max": 58}
+  },
+  "pairs": [
+    {
+      "id": "T01",
+      "tag": "upper_men_sleeved",
+      "note": "Erkak, uzun yengli ko'ylak — asosiy sleeved testi",
+      "person": "resource/demo/example/person/men/Simon_1.png",
+      "garment": "resource/demo/example/condition/upper/21514384_52353349_1000.jpg",
+      "cloth_type": "upper",
+      "expected_style": "sleeved",
+      "expected_coverage_range": [28, 52],
+      "priority": "high"
+    },
+    {
+      "id": "T02",
+      "tag": "upper_men_short_sleeve",
+      "note": "Erkak, qisqa yengli — short_sleeve testi",
+      "person": "resource/demo/example/person/men/Yifeng_0.png",
+      "garment": "resource/demo/example/condition/upper/22790049_53294275_1000.jpg",
+      "cloth_type": "upper",
+      "expected_style": "short_sleeve",
+      "expected_coverage_range": [25, 48],
+      "priority": "high"
+    },
+    {
+      "id": "T03",
+      "tag": "upper_men_sleeveless",
+      "note": "Erkak, yengsiz kiyim — sleeveless testi (qo'l ko'rinib turishi kerak)",
+      "person": "resource/demo/example/person/men/model_5.png",
+      "garment": "resource/demo/example/condition/upper/23255574_53383833_1000.jpg",
+      "cloth_type": "upper",
+      "expected_style": "sleeveless",
+      "expected_coverage_range": [20, 42],
+      "priority": "high"
+    },
+    {
+      "id": "T04",
+      "tag": "upper_men_sleeved_cardigan",
+      "note": "Erkak, cardigan/uzun yengli — bilak ham maskalanishi kerak",
+      "person": "resource/demo/example/person/men/model_7.png",
+      "garment": "resource/demo/example/condition/upper/24083449_54173465_2048.jpg",
+      "cloth_type": "upper",
+      "expected_style": "sleeved",
+      "expected_coverage_range": [30, 58],
+      "priority": "high"
+    },
+    {
+      "id": "T05",
+      "tag": "upper_women_sleeved",
+      "note": "Ayol, uzun yengli kiyim",
+      "person": "resource/demo/example/person/women/1-model_3.png",
+      "garment": "resource/demo/example/condition/upper/21514384_52353349_1000.jpg",
+      "cloth_type": "upper",
+      "expected_style": "sleeved",
+      "expected_coverage_range": [26, 52],
+      "priority": "medium"
+    },
+    {
+      "id": "T06",
+      "tag": "upper_women_short_sleeve",
+      "note": "Ayol, qisqa yengli kiyim",
+      "person": "resource/demo/example/person/women/2-model_4.png",
+      "garment": "resource/demo/example/condition/upper/22790049_53294275_1000.jpg",
+      "cloth_type": "upper",
+      "expected_style": "short_sleeve",
+      "expected_coverage_range": [22, 46],
+      "priority": "medium"
+    },
+    {
+      "id": "T07",
+      "tag": "overall_women_sleeveless_dress",
+      "note": "Ayol, qisqa dress (overall) — oyoq pastki qismi ko'rinib turishi kerak",
+      "person": "resource/demo/example/person/women/1-model_3.png",
+      "garment": "resource/demo/example/condition/overall/22153949_52376342_1000.jpg",
+      "cloth_type": "overall",
+      "expected_style": "sleeveless",
+      "expected_coverage_range": [32, 58],
+      "priority": "high"
+    },
+    {
+      "id": "T08",
+      "tag": "overall_women_sleeved_jumpsuit",
+      "note": "Ayol, jumpsuit (overall+uzun yengli) — to'liq qoplash kerak",
+      "person": "resource/demo/example/person/women/2-model_4.png",
+      "garment": "resource/demo/example/condition/overall/23962182_54027982_1000.jpg",
+      "cloth_type": "overall",
+      "expected_style": "sleeved",
+      "expected_coverage_range": [40, 65],
+      "priority": "high"
+    },
+    {
+      "id": "T09",
+      "tag": "upper_women_reference_garment",
+      "note": "Ayol, reference kiyim (person papkasidan) — boshqa kiyim turi",
+      "person": "resource/demo/example/person/women/model_8.png",
+      "garment": "resource/demo/example/condition/person/baumu30483223c3_1719437121402_2-0._QL90_UX564_V12524t6_.jpg",
+      "cloth_type": "upper",
+      "expected_style": "short_sleeve",
+      "expected_coverage_range": [22, 50],
+      "priority": "medium"
+    },
+    {
+      "id": "T10",
+      "tag": "upper_men_reference_garment",
+      "note": "Erkak, reference kiyim — sleeved kiyim testi",
+      "person": "resource/demo/example/person/men/Simon_1.png",
+      "garment": "resource/demo/example/condition/person/jbeeq301271a569_1719429971246_2-0._QL90_UX564_V12524t6_.jpg",
+      "cloth_type": "upper",
+      "expected_style": "sleeved",
+      "expected_coverage_range": [28, 54],
+      "priority": "medium"
+    }
+  ]
+}

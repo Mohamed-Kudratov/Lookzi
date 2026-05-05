@@ -152,3 +152,28 @@ Tavsiya: Steps=50, CFG=2.5, Show Type=result only
 
 Drive'dagi model papkasi: `MyDrive/Lookzi/hf_models/`
 Bu papkani o'chirmang — keyingi barcha sessionlarda ishlatiladi.
+
+---
+
+## 7. Model Sifatini Baholash (Continuous Evaluation)
+
+Kodni o'zgartirganingizdan so'ng (ayniqsa mask mantiqini), uni qay darajada yaxshilanganligini bilish uchun avtomatik test tizimini ishga tushiring.
+
+```python
+# Faqat mask foizi va kiyim uslubini aniqlashni test qilish (tez, ~3 daqiqa)
+!python eval_benchmark.py --mode fast \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json
+```
+
+```python
+# To'liq test (Inference va CLIP metrikasi bilan, ~20 daqiqa)
+!python eval_benchmark.py --mode full \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+Ushbu test har bir sessiyada qayd qilingan natijalarni Drive ga saqlaydi va **oldingi testlarga nisbatan o'zgarishni (+/- foizlarda)** chiqarib beradi.
