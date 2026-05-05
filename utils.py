@@ -218,7 +218,7 @@ def infer_garment_style(cloth_image: Image.Image, cloth_type: str) -> tuple:
 
     if cloth_type == "lower":
         if hem_ratio > 1.12 and side_mass < 0.70:
-            return "skirt", covers_lower_legs, dbg + " -> skirt"
+            return "skirt", False, dbg + " -> skirt"
         if not covers_lower_legs:
             return "shorts", covers_lower_legs, dbg + " -> shorts"
         return "pants", covers_lower_legs, dbg + " -> pants"

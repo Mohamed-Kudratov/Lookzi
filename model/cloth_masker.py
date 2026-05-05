@@ -188,7 +188,7 @@ def skirt_silhouette_mask(lower_body_area: np.ndarray, covers_lower_legs: bool):
     if covers_lower_legs:
         y_bottom = dense_bottom
     else:
-        y_bottom = min(dense_bottom, int(y_top + (dense_bottom - y_top) * 0.58))
+        y_bottom = min(dense_bottom, int(y_top + (dense_bottom - y_top) * 0.76))
 
     center_x = int(np.median(xs))
     body_width = int(xs.max() - xs.min() + 1)
@@ -341,9 +341,10 @@ class AutoMasker:
             if garment_style == 'skirt':
                 target_lower_area = skirt_silhouette_mask(lower_body_area, covers_lower_legs)
 
-            lower_base = (target_lower_area | strong_mask_area).astype(np.uint8) * 255
+            source_lower_mask = strong_mask_area if garment_style != 'skirt' else np.zeros_like(strong_mask_area)
+            lower_base = (target_lower_area | source_lower_mask).astype(np.uint8) * 255
             lower_hull = hull_mask(lower_base).astype(bool)
-            allowed_area = lower_hull | target_lower_area | strong_mask_area
+            allowed_area = lower_hull | target_lower_area | source_lower_mask
             protect_area = local_strong_protect | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
@@ -376,7 +377,10 @@ class AutoMasker:
         final_protect_area = protect_area | background_area
         if part == 'lower':
             final_protect_area = (protect_area | background_area | feet_area) & ~lower_body_area
-        mask_area = (mask_area.astype(bool) | strong_mask_area) & (~final_protect_area)
+        final_mask_seed = mask_area.astype(bool)
+        if not (part == 'lower' and garment_style == 'skirt'):
+            final_mask_seed = final_mask_seed | strong_mask_area
+        mask_area = final_mask_seed & (~final_protect_area)
         if part == 'lower':
             mask_area = keep_main_components(mask_area, min_area_ratio=0.003)
         mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1)

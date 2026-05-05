@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-05-05 v5] Skirt mask no longer inherits source pants shape
+
+### Muammo
+`skirt` subtype aniqlangandan keyin ham red skirt testlarida output pants/shorts tomonga ketdi.
+
+### Sabab
+Lower branchda `strong_mask_area` source persondagi eski lower garmentdan olinadi. Agar source odam black pants yoki jeans kiygan bo'lsa, `strong_mask_area` pants silhouette bo'ladi. Skirt branchda ham:
+```python
+allowed_area = ... | strong_mask_area
+mask_area = ... | strong_mask_area
+```
+ishlayotgani uchun skirt trapezoid mask oxirida yana pants/two-leg maskga aylanib qolgan.
+
+### Fix
+- `garment_style == "skirt"` bo'lsa source `strong_mask_area` lower maskga majburan qo'shilmaydi.
+- Skirt mask knee/mini skirt kabi ishlashi uchun `covers_lower_legs=False` qilib qaytariladi.
+- Short/knee skirt silhouette pastga 58% emas, 76% lower bodygacha tushadigan qilindi.
+
+### Eslatma
+Bu CatVTON ichida mumkin bo'lgan eng mantiqli mask-side fix. Agar bundan keyin ham skirt geometry to'liq chiqmasa, bu CatVTON checkpoint lower cross-category (pants -> skirt) transferni yaxshi bilmasligini anglatadi. Keyingi real yechim: lower/skirt uchun IDM-VTON yoki boshqa VTON modelni solishtirish.
+
+---
+
 ## [2026-05-05 v4] Lower garment subtype: skirt vs pants mask
 
 ### Nima qilindi
