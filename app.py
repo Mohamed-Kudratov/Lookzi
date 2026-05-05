@@ -8,10 +8,10 @@ from diffusers.image_processor import VaeImageProcessor
 from huggingface_hub import snapshot_download
 from PIL import Image
 
-from model.cloth_masker import AutoMasker, vis_mask
+from model.cloth_masker import AutoMasker
 from model.pipeline import LookziPipeline
+from tryon_engines import CatVTONEngine, TryOnRequest
 from utils import (
-    infer_garment_style,
     init_weight_dtype,
     resize_and_crop,
     resize_and_padding,
@@ -23,6 +23,7 @@ gr = None
 pipeline = None
 mask_processor = None
 automasker = None
+tryon_engine = None
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Lookzi virtual try-on demo.")
@@ -144,9 +145,9 @@ def image_grid(imgs, rows, cols):
     return grid
 
 def initialize_runtime():
-    global args, device, gr, pipeline, mask_processor, automasker
+    global args, device, gr, pipeline, mask_processor, automasker, tryon_engine
 
-    if pipeline is not None and automasker is not None:
+    if tryon_engine is not None:
         return
 
     args = parse_args()
@@ -184,6 +185,12 @@ def initialize_runtime():
         schp_ckpt=os.path.join(repo_path, "SCHP"),
         device=device,
     )
+    tryon_engine = CatVTONEngine(
+        pipeline=pipeline,
+        automasker=automasker,
+        mask_processor=mask_processor,
+        device=device,
+    )
 
 def submit_function(
     person_image,
@@ -219,16 +226,8 @@ def submit_function(
     if not os.path.exists(os.path.join(tmp_folder, date_str[:8])):
         os.makedirs(os.path.join(tmp_folder, date_str[:8]))
 
-    generator = None
-    if seed != -1:
-        generator = torch.Generator(device=device).manual_seed(seed)
-
     person_image = Image.open(person_image_path).convert("RGB")
     cloth_image = Image.open(cloth_image).convert("RGB")
-    garment_style, covers_lower_legs, style_debug = infer_garment_style(cloth_image, cloth_type)
-    print(f"Detected garment_style={garment_style} covers_lower_legs={covers_lower_legs} | {style_debug}")
-    person_image = resize_and_crop(person_image, (args.width, args.height))
-    cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
     
     # Process mask
     if mask is not None:
@@ -236,45 +235,35 @@ def submit_function(
         mask_array = np.array(mask) > 0
         if mask_array.mean() > 0.70:
             gr.Warning("Manual mask is too large. Lookzi used automatic masking instead.")
-            mask = automasker(
-                person_image,
-                cloth_type,
-                garment_style=garment_style,
-                covers_lower_legs=covers_lower_legs,
-            )['mask']
-    else:
-        mask = automasker(
-            person_image,
-            cloth_type,
-            garment_style=garment_style,
-            covers_lower_legs=covers_lower_legs,
-        )['mask']
-    mask = mask_processor.blur(mask, blur_factor=9)
+            mask = None
 
-    # Inference
-    # try:
-    result_image = pipeline(
-        image=person_image,
-        condition_image=cloth_image,
-        mask=mask,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-        generator=generator
-    )[0]
-    # except Exception as e:
-    #     raise gr.Error(
-    #         "An error occurred. Please try again later: {}".format(e)
-    #     )
+    result = tryon_engine.run(
+        TryOnRequest(
+            person_image=person_image,
+            garment_image=cloth_image,
+            category=cloth_type,
+            seed=seed,
+            steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            width=args.width,
+            height=args.height,
+            metadata={"mask": mask} if mask is not None else {},
+        )
+    )
     
     # Post-process
-    masked_person = vis_mask(person_image, mask)
-    mask_array = np.array(mask) > 127
-    coverage = float(mask_array.mean() * 100)
+    result_image = result.image
+    mask = result.mask
+    masked_person = result.masked_person
+    person_image = resize_and_crop(person_image, (args.width, args.height))
+    cloth_image = resize_and_padding(cloth_image, (args.width, args.height))
+    diagnostics = result.diagnostics
     debug_text = (
-        f"Garment style: {garment_style} | covers_legs: {covers_lower_legs}\n"
-        f"Style detection: {style_debug}\n"
+        f"Engine: {result.engine_name}\n"
+        f"Garment style: {diagnostics.get('garment_style')} | covers_legs: {diagnostics.get('covers_lower_legs')}\n"
+        f"Style detection: {diagnostics.get('style_debug')}\n"
         f"Clothing type: {cloth_type}\n"
-        f"Mask coverage: {coverage:.2f}%\n"
+        f"Mask coverage: {diagnostics.get('mask_coverage')}%\n"
         f"Resolution: {args.width}x{args.height}\n"
         f"Steps: {num_inference_steps}\n"
         f"CFG: {guidance_scale}\n"

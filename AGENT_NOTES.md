@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-05-05 v7] Platform architecture and try-on engine scaffold
+
+### Nima qilindi
+Lookzi product direction rasmiy ravishda `Lookzi AI Stylist Commerce Platform` deb nomlandi.
+
+### Muhim qaror
+Recommendation AI hozircha scope'dan chiqarildi. Hozirgi asosiy vazifa:
+- do'kon kiritgan kiyim rasmini olish
+- user person image bilan preview qilish
+- qaysi category qaysi engine bilan yaxshi ishlashini benchmark qilish
+
+### Yangi fayllar
+- `docs/ARCHITECTURE.md` - platform architecture, current scope, future scope, engine strategy.
+- `tryon_engines/base.py` - `TryOnEngine`, `TryOnRequest`, `TryOnResult`.
+- `tryon_engines/catvton.py` - hozirgi CatVTON pipeline uchun adapter wrapper.
+- `tryon_engines/router.py` - category bo'yicha engine tanlaydigan router.
+
+### App integratsiya
+`app.py` endi CatVTON pipeline'ni bevosita chaqirmaydi. U `TryOnRequest` yaratadi va `CatVTONEngine.run()` orqali preview oladi. Bu keyin boshqa engine'larni router orqali ulashga tayyorlaydi.
+
+### Keyingi yo'nalish
+1. benchmark output schema'ni engine nomi/category bilan kengaytirish
+2. category-wise production-ready status yozish
+3. creative/alternative engine uchun stub qo'shish
+
+---
+
 ## [2026-05-05 v6] Skirt silhouette can extend outside leg/background parse
 
 ### Muammo
