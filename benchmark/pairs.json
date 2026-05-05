@@ -115,7 +115,28 @@
       "cloth_type": "upper",
       "expected_style": "sleeved",
       "expected_coverage_range": [28, 54],
-      "priority": "medium"
+    },
+    {
+      "id": "T11",
+      "tag": "lower_men_pants",
+      "note": "Erkak, shim (lower) — asosiy lower testi",
+      "person": "resource/demo/example/person/men/Simon_1.png",
+      "garment": "resource/demo/example/condition/lower/men_pants.png",
+      "cloth_type": "lower",
+      "expected_style": "auto",
+      "expected_coverage_range": [25, 52],
+      "priority": "high"
+    },
+    {
+      "id": "T12",
+      "tag": "lower_women_skirt",
+      "note": "Ayol, yubka (lower) — asosiy lower testi",
+      "person": "resource/demo/example/person/women/1-model_3.png",
+      "garment": "resource/demo/example/condition/lower/women_skirt.png",
+      "cloth_type": "lower",
+      "expected_style": "auto",
+      "expected_coverage_range": [22, 48],
+      "priority": "high"
     }
   ]
 }
