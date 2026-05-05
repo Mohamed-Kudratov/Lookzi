@@ -238,6 +238,20 @@ GOOD / OK / BAD / MODEL_FAIL / MASK_FAIL
 
 Review buttonlari browser localStorage'ga saqlanadi. Ish tugagach `Download review JSON` tugmasini bosing va JSON faylni saqlang.
 
+Download qilingan review JSON avtomatik Drive logga yozilmaydi. JSONni Colab'ga upload qilib, keyin merge qiling:
+
+```python
+from google.colab import files
+uploaded = files.upload()
+review_json = next(iter(uploaded.keys()))
+
+!python apply_human_review.py \
+  --review_json "$review_json" \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json
+```
+
+Shundan keyin `results.json` ichidagi oxirgi run `human_rating`, `failure_reason`, `review_status` maydonlari bilan yangilanadi.
+
 ---
 
 ## 8. Eski Benchmark

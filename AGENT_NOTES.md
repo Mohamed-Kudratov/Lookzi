@@ -5,6 +5,26 @@
 
 ---
 
+## [2026-05-05 v13] Human review import and benchmark category correction
+
+### Muammo
+Review report buttonlari browser ichida ishlaydi, lekin Colab HTML Drive'dagi `results.json` faylni bevosita o'zgartira olmaydi. User baholagan natija doimiy dataset/logga yozilishi uchun alohida import qadam kerak.
+
+Yana C02/C03 catalog pairlari `upper` deb belgilangan edi, lekin garment rasmlari odam ustidagi long/full reference garment bo'lgani uchun benchmark vazifasi `overall` bo'lishi kerak.
+
+### Fix
+- `apply_human_review.py` qo'shildi:
+  - downloaded `lookzi_human_review_*.json` faylni o'qiydi
+  - oxirgi eval run bilan pair id bo'yicha merge qiladi
+  - `human_rating`, `failure_reason`, `review_status`, `reviewed_at` maydonlarini `results.json`ga yozadi
+- `COLAB_GPU_SETUP.md`ga review JSON upload + merge komandasi qo'shildi.
+- `benchmark/catalog_pairs.json`da C02/C03 `cloth_type=overall` qilib tuzatildi va tag/coverage range moslandi.
+
+### Eslatma
+Brauzerda button bosishning o'zi repo dataset/logga yozmaydi. Har reviewdan keyin `Download review JSON` -> `apply_human_review.py` qadamini bajarish kerak.
+
+---
+
 ## [2026-05-05 v12] Interactive human review buttons
 
 ### Muammo
