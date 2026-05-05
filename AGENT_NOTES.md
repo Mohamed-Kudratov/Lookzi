@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-05-05 v9] Colab setup updated for catalog benchmark workflow
+
+### Nima qilindi
+`COLAB_GPU_SETUP.md` yangi architecture va benchmark workflowga moslab qayta yozildi.
+
+### Yangilanishlar
+- Repo clone/update alohida ko'rsatildi (`git pull origin main`).
+- App run qismi saqlandi.
+- Yangi `Catalog Benchmark + Review Gallery` bo'limi qo'shildi.
+- `benchmark/catalog_pairs.json` bilan fast va full test commandlari qo'shildi.
+- Review report HTML qayerda chiqishi tushuntirildi.
+- Eski `benchmark/pairs.json` curated benchmark alohida bo'limga ko'chirildi.
+- Mojibake belgilar o'rniga ASCII matn ishlatildi.
+
+### Asosiy command
+```bash
+python eval_benchmark.py \
+  --mode full \
+  --pairs benchmark/catalog_pairs.json \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+---
+
 ## [2026-05-05 v8] Catalog benchmark and HTML review gallery
 
 ### Nima qilindi
