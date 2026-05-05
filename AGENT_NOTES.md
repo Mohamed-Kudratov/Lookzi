@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-05 v12] Interactive human review buttons
+
+### Muammo
+Review reportdagi `Human review: GOOD / OK / BAD / MODEL_FAIL / MASK_FAIL` faqat text edi, button emas edi. Colab'da user bosib baholay olmadi.
+
+### Fix
+- `review_report.html` cardlari endi haqiqiy buttonlar chiqaradi:
+  - `GOOD`
+  - `OK`
+  - `BAD`
+  - `MODEL_FAIL`
+  - `MASK_FAIL`
+- Har card uchun optional failure note input qo'shildi.
+- Tanlangan review browser `localStorage`ga saqlanadi.
+- `Download review JSON` tugmasi qo'shildi.
+- `COLAB_GPU_SETUP.md`ga eski report rasmlari ko'rinmasligi va yangi commitdan keyin qayta run qilish kerakligi yozildi.
+
+### Eslatma
+Eski `review_report.html` fayllar avtomatik tuzalmaydi. `git pull origin main`dan keyin benchmarkni qayta run qilish kerak.
+
+---
+
 ## [2026-05-05 v11] Self-contained review report and category status
 
 ### Muammo

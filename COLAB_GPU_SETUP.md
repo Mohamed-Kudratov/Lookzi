@@ -202,6 +202,8 @@ Run tugagach terminalda shunga o'xshash path chiqadi:
 
 O'sha HTML fayl self-contained bo'ladi: rasmlar HTML ichiga joylanadi. Uni Colab ichida ko'rish uchun:
 
+Muhim: agar report eski commit bilan yaratilgan bo'lsa, rasmlar ko'rinmaydi. Avval `git pull origin main` qiling va benchmarkni qayta run qiling.
+
 ```python
 from IPython.display import HTML, display
 
@@ -234,7 +236,7 @@ Human review uchun har card ostida quyidagi statuslardan birini qo'lda belgilash
 GOOD / OK / BAD / MODEL_FAIL / MASK_FAIL
 ```
 
-Hozircha HTML faqat review ko'rish uchun. Keyingi bosqichda statuslarni JSONga qayta yozadigan review tool qo'shiladi.
+Review buttonlari browser localStorage'ga saqlanadi. Ish tugagach `Download review JSON` tugmasini bosing va JSON faylni saqlang.
 
 ---
 

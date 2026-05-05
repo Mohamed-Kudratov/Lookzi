@@ -321,6 +321,7 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
     cards = []
     for r in run_results:
         status = r.get("review_status", "NEEDS_HUMAN_REVIEW")
+        card_id = html.escape(r.get("id", "?"))
         error = r.get("error")
         output_html = ""
         if r.get("output_path"):
@@ -329,10 +330,13 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
             output_html = '<div class="placeholder">No output in fast mode</div>'
 
         cards.append(f"""
-        <article class="card {html.escape(status.lower())}">
+        <article class="card {html.escape(status.lower())}" data-pair-id="{card_id}">
           <header>
             <h2>{html.escape(r.get("id", "?"))} - {html.escape(r.get("tag", ""))}</h2>
-            <span>{html.escape(r.get("cloth_type", "?"))}</span>
+            <div class="badges">
+              <span>{html.escape(r.get("cloth_type", "?"))}</span>
+              <strong class="status-pill">{html.escape(status)}</strong>
+            </div>
           </header>
           <div class="grid">
             <section><h3>Person</h3><img src="{img_src(r.get("person_path"))}" alt="person"></section>
@@ -353,8 +357,13 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
               "human_rating": r.get("human_rating"),
               "failure_reason": r.get("failure_reason"),
           }, ensure_ascii=False, indent=2))}</pre>
-          <div class="review">
-            Human review: GOOD / OK / BAD / MODEL_FAIL / MASK_FAIL
+          <div class="review" data-current="{html.escape(status)}">
+            <button type="button" data-rating="GOOD">GOOD</button>
+            <button type="button" data-rating="OK">OK</button>
+            <button type="button" data-rating="BAD">BAD</button>
+            <button type="button" data-rating="MODEL_FAIL">MODEL_FAIL</button>
+            <button type="button" data-rating="MASK_FAIL">MASK_FAIL</button>
+            <input type="text" placeholder="failure note (optional)" aria-label="failure note">
           </div>
         </article>
         """)
@@ -371,8 +380,11 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
     h1 {{ margin: 0 0 8px; }}
     .meta {{ color: #9ca3af; margin-bottom: 24px; }}
     .card {{ background: #1f2937; border: 1px solid #374151; border-radius: 8px; margin-bottom: 24px; padding: 16px; }}
+    .card.reviewed {{ border-color: #22c55e; }}
     header {{ display: flex; justify-content: space-between; gap: 16px; align-items: center; }}
-    header span {{ background: #374151; border-radius: 999px; padding: 4px 10px; }}
+    .badges {{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
+    header span, .status-pill {{ background: #374151; border-radius: 999px; padding: 4px 10px; font-size: 13px; }}
+    .status-pill {{ background: #4b5563; color: #f9fafb; }}
     .grid {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }}
     section {{ min-width: 0; }}
     h2 {{ margin: 0 0 12px; font-size: 18px; }}
@@ -380,7 +392,11 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
     img {{ width: 100%; height: 360px; object-fit: contain; background: #020617; border-radius: 6px; }}
     pre {{ white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 6px; overflow: auto; }}
     .placeholder {{ height: 360px; display: grid; place-items: center; background: #020617; color: #64748b; border-radius: 6px; }}
-    .review {{ color: #fbbf24; font-weight: 700; }}
+    .review {{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }}
+    .review button, #download-review {{ border: 0; border-radius: 6px; padding: 8px 10px; background: #374151; color: #e5e7eb; font-weight: 700; cursor: pointer; }}
+    .review button.active {{ background: #22c55e; color: #052e16; }}
+    .review input {{ min-width: 260px; flex: 1; border: 1px solid #4b5563; border-radius: 6px; padding: 8px 10px; background: #111827; color: #e5e7eb; }}
+    #download-review {{ margin-bottom: 18px; background: #2563eb; }}
     @media (max-width: 1000px) {{ .grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }} }}
     @media (max-width: 600px) {{ .grid {{ grid-template-columns: 1fr; }} img, .placeholder {{ height: 280px; }} }}
   </style>
@@ -389,8 +405,64 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
   <main>
     <h1>Lookzi Benchmark Review</h1>
     <div class="meta">Commit {html.escape(str(run_meta.get("commit")))} | Mode {html.escape(str(run_meta.get("mode")))} | {html.escape(str(run_meta.get("timestamp")))}</div>
+    <button id="download-review" type="button">Download review JSON</button>
     {''.join(cards)}
   </main>
+  <script>
+    const STORAGE_KEY = "lookzi_review_{html.escape(str(run_meta.get("timestamp")))}";
+
+    function loadReviews() {{
+      try {{
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{{}}");
+      }} catch (error) {{
+        return {{}};
+      }}
+    }}
+
+    function saveReviews(reviews) {{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews, null, 2));
+    }}
+
+    function applyReview(card, rating, note) {{
+      const pairId = card.dataset.pairId;
+      const reviews = loadReviews();
+      reviews[pairId] = {{ human_rating: rating, failure_reason: note || null }};
+      saveReviews(reviews);
+
+      card.classList.add("reviewed");
+      card.querySelector(".status-pill").textContent = rating;
+      card.querySelectorAll(".review button").forEach((button) => {{
+        button.classList.toggle("active", button.dataset.rating === rating);
+      }});
+    }}
+
+    document.querySelectorAll(".card").forEach((card) => {{
+      const pairId = card.dataset.pairId;
+      const input = card.querySelector(".review input");
+      const saved = loadReviews()[pairId];
+      if (saved) {{
+        input.value = saved.failure_reason || "";
+        applyReview(card, saved.human_rating, input.value);
+      }}
+      card.querySelectorAll(".review button").forEach((button) => {{
+        button.addEventListener("click", () => applyReview(card, button.dataset.rating, input.value));
+      }});
+      input.addEventListener("change", () => {{
+        const active = card.querySelector(".review button.active");
+        if (active) applyReview(card, active.dataset.rating, input.value);
+      }});
+    }});
+
+    document.getElementById("download-review").addEventListener("click", () => {{
+      const blob = new Blob([JSON.stringify(loadReviews(), null, 2)], {{ type: "application/json" }});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "lookzi_human_review_{html.escape(str(run_meta.get("timestamp")))}.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }});
+  </script>
 </body>
 </html>
 """
