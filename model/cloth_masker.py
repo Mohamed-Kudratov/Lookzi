@@ -345,14 +345,15 @@ class AutoMasker:
             lower_base = (target_lower_area | source_lower_mask).astype(np.uint8) * 255
             lower_hull = hull_mask(lower_base).astype(bool)
             allowed_area = lower_hull | target_lower_area | source_lower_mask
-            protect_area = local_strong_protect | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
+            lower_background_protect = background_area & ~target_lower_area
+            protect_area = local_strong_protect | lower_background_protect | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
             mask_area = keep_main_components(mask_area, min_area_ratio=0.003)
 
             if mask_area.mean() < 0.18:
                 fallback_dense_area = mask_dense_area if covers_lower_legs else (mask_dense_area & thigh_area)
-                fallback = (lower_hull | target_lower_area | fallback_dense_area) & (~background_area) & (~feet_area)
+                fallback = (lower_hull | target_lower_area | fallback_dense_area) & (~lower_background_protect) & (~feet_area)
                 fallback = clean_binary_mask(fallback, dilate_kernel, close_iterations=3, open_iterations=1)
                 mask_area = keep_main_components(fallback, min_area_ratio=0.003)
         else:
@@ -376,7 +377,7 @@ class AutoMasker:
         mask_area[mask_area >= 25] = 1
         final_protect_area = protect_area | background_area
         if part == 'lower':
-            final_protect_area = (protect_area | background_area | feet_area) & ~lower_body_area
+            final_protect_area = (protect_area | background_area | feet_area) & ~target_lower_area
         final_mask_seed = mask_area.astype(bool)
         if not (part == 'lower' and garment_style == 'skirt'):
             final_mask_seed = final_mask_seed | strong_mask_area

@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-05 v6] Skirt silhouette can extend outside leg/background parse
+
+### Muammo
+Skirt branch source pants maskni olib tashlagandan keyin ham mask preview oyoq/pants silhouettega o'xshab qoldi.
+
+### Sabab
+`background_area` lower branch ichida `protect_area`ga juda erta qo'shilgan edi. Skirt trapezoid silhouette oyoq tanasidan tashqariga kengayganda, SCHP/DensePose u joylarni background deb ko'radi va maskadan kesib tashlaydi. Natija: skirt shape yana lower-body/leg contourga qaytadi.
+
+### Fix
+- Lower branchda `lower_background_protect = background_area & ~target_lower_area` qilindi.
+- `garment_style == "skirt"` bo'lsa `target_lower_area` skirt silhouette, shuning ichidagi background endi protect emas.
+- Final protect ham `~target_lower_area` orqali ishlaydi, `~lower_body_area` emas.
+
+### Kutilgan natija
+Red skirt mask preview endi oyoq ikki bo'lak ko'rinishida emas, kengroq bitta skirt/trapezoid body sifatida chiqishi kerak.
+
+---
+
 ## [2026-05-05 v5] Skirt mask no longer inherits source pants shape
 
 ### Muammo
