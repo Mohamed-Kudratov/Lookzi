@@ -91,11 +91,25 @@ def load_prev_results(log_path: str) -> list:
         return []
 
 
+def to_json_safe(value):
+    if isinstance(value, dict):
+        return {str(k): to_json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [to_json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [to_json_safe(v) for v in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    return value
+
+
 def save_results(log_path: str, all_results: list):
     """Yangilangan natijalarni Drive JSON fayliga yozadi."""
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
+        json.dump(to_json_safe(all_results), f, ensure_ascii=False, indent=2)
 
 
 # ─────────────────────────────────────────────
@@ -640,14 +654,14 @@ def main():
     # To'liq hisobot chiqarish
     print_report(run_results, all_prev, run_meta, coverage_targets)
 
+    report_path = args.review_report or os.path.join(run_output_dir, "review_report.html")
+    generate_review_report(report_path, run_results, run_meta)
+    print(f"[Eval] Review report: {report_path}")
+
     # Drive'ga saqlash
     all_prev.append(run_meta)
     save_results(args.drive_log, all_prev)
     print(f"[Eval] Natijalar saqlandi: {args.drive_log}")
-
-    report_path = args.review_report or os.path.join(run_output_dir, "review_report.html")
-    generate_review_report(report_path, run_results, run_meta)
-    print(f"[Eval] Review report: {report_path}")
     print(f"[Eval] Jami log: {len(all_prev)} run\n")
 
 

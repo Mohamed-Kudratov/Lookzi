@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-05-05 v10] Eval JSON serialization fix
+
+### Muammo
+Colab full catalog benchmark oxirida `save_results()` paytida xato berdi:
+```text
+TypeError: Object of type bool is not JSON serializable
+```
+
+### Sabab
+Run result ichida `numpy.bool_` yoki boshqa numpy scalar qiymatlar bor edi. Python `json.dump()` ularni oddiy `bool/int/float` sifatida serialize qila olmaydi.
+
+### Fix
+- `to_json_safe()` recursive converter qo'shildi:
+  - `np.generic -> .item()`
+  - `np.ndarray -> .tolist()`
+  - dict/list/tuple ichidagi qiymatlar ham tozalanadi
+- `save_results()` endi `json.dump(to_json_safe(all_results), ...)` ishlatadi.
+- `review_report.html` endi log save'dan oldin yaratiladi, shuning uchun Drive logda xato bo'lsa ham review report yo'qolmaydi.
+
+---
+
 ## [2026-05-05 v9] Colab setup updated for catalog benchmark workflow
 
 ### Nima qilindi
