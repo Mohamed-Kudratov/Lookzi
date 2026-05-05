@@ -200,7 +200,23 @@ Run tugagach terminalda shunga o'xshash path chiqadi:
 [Eval] Review report: /content/drive/MyDrive/Lookzi/eval_logs/outputs/20260505_123456/review_report.html
 ```
 
-O'sha HTML faylni ochib ko'ring. U har test uchun quyidagilarni ko'rsatadi:
+O'sha HTML fayl self-contained bo'ladi: rasmlar HTML ichiga joylanadi. Uni Colab ichida ko'rish uchun:
+
+```python
+from IPython.display import HTML, display
+
+report_path = "/content/drive/MyDrive/Lookzi/eval_logs/outputs/20260505_123456/review_report.html"
+with open(report_path, "r", encoding="utf-8") as f:
+    display(HTML(f.read()))
+```
+
+Yoki helper bilan:
+
+```python
+%run display_report.py /content/drive/MyDrive/Lookzi/eval_logs/outputs/20260505_123456/review_report.html
+```
+
+HTML report har test uchun quyidagilarni ko'rsatadi:
 
 - person image
 - garment image

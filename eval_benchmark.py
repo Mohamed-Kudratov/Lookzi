@@ -17,8 +17,10 @@ Ishlatish:
 """
 
 import argparse
+import base64
 import html
 import json
+import mimetypes
 import os
 import subprocess
 import sys
@@ -303,9 +305,14 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
     return result
 
 
-def img_src(path: str | None) -> str:
+def img_src(path: str | None, embed: bool = True) -> str:
     if not path:
         return ""
+    if embed and os.path.exists(path):
+        mime = mimetypes.guess_type(path)[0] or "image/png"
+        with open(path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("ascii")
+        return f"data:{mime};base64,{data}"
     return html.escape(path.replace("\\", "/"))
 
 
@@ -389,6 +396,40 @@ def generate_review_report(report_path: str, run_results: list, run_meta: dict):
 """
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(html_doc)
+
+
+def category_status_summary(run_results: list) -> dict:
+    summary = {}
+    for r in run_results:
+        category = r.get("cloth_type", "unknown")
+        item = summary.setdefault(
+            category,
+            {"total": 0, "coverage_ok": 0, "style_ok": 0, "errors": 0, "status": "UNKNOWN"},
+        )
+        item["total"] += 1
+        if r.get("coverage_grade") == "OK":
+            item["coverage_ok"] += 1
+        if r.get("style_correct"):
+            item["style_ok"] += 1
+        if r.get("error"):
+            item["errors"] += 1
+
+    for category, item in summary.items():
+        total = max(1, item["total"])
+        coverage_rate = item["coverage_ok"] / total
+        style_rate = item["style_ok"] / total
+        if item["errors"]:
+            status = "BROKEN"
+        elif coverage_rate >= 0.8 and style_rate >= 0.8:
+            status = "PRODUCTION_CANDIDATE"
+        elif coverage_rate >= 0.5:
+            status = "NEEDS_REVIEW"
+        else:
+            status = "NOT_PRODUCTION_READY"
+        item["coverage_rate"] = round(coverage_rate, 3)
+        item["style_rate"] = round(style_rate, 3)
+        item["status"] = status
+    return summary
 
 
 # ─────────────────────────────────────────────
@@ -511,6 +552,16 @@ def print_report(run_results: list, all_prev: list, run_meta: dict, coverage_tar
         print(f"   Avg CLIP      : {sum(clip_scores)/len(clip_scores):.4f}")
     if inf_times:
         print(f"   Avg inference : {sum(inf_times)/len(inf_times):.1f}s")
+
+    category_status = category_status_summary(run_results)
+    if category_status:
+        print("\n CATEGORY STATUS:")
+        for category, item in category_status.items():
+            print(
+                f"   {category}: {item['status']} "
+                f"(coverage_ok={item['coverage_ok']}/{item['total']}, "
+                f"style_ok={item['style_ok']}/{item['total']})"
+            )
 
     # Global delta (oxirgi run bilan)
     if all_prev:
@@ -648,6 +699,7 @@ def main():
                 sum(r["inference_time_s"] for r in run_results if "inference_time_s" in r) /
                 max(1, sum(1 for r in run_results if "inference_time_s" in r)), 1
             ) if any("inference_time_s" in r for r in run_results) else None,
+            "category_status": category_status_summary(run_results),
         },
     }
 

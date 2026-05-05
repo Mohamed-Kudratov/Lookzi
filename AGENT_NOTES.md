@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-05-05 v11] Self-contained review report and category status
+
+### Muammo
+Colab'da `review_report.html` ochilganda rasmlar ko'rinmadi. Sabab HTML ichida `/content/drive/...` pathlar image `src` sifatida ishlatilgan, browser/Colab esa ularni to'g'ridan-to'g'ri o'qimaydi.
+
+### Fix
+- `eval_benchmark.py` review report rasmlarni base64 data URI sifatida HTML ichiga joylaydi.
+- Report endi self-contained: download qilinsa ham rasmlar ko'rinadi.
+- `display_report.py` helper qo'shildi:
+```bash
+%run display_report.py /content/drive/MyDrive/Lookzi/eval_logs/outputs/.../review_report.html
+```
+- `COLAB_GPU_SETUP.md` yangi display instructions bilan yangilandi.
+
+### Qo'shimcha
+Benchmark summary endi category status chiqaradi:
+- `PRODUCTION_CANDIDATE`
+- `NEEDS_REVIEW`
+- `NOT_PRODUCTION_READY`
+- `BROKEN`
+
+Bu hozirgi CatVTON engine qaysi categorylarda productionga tayyor emasligini aniq ko'rsatadi.
+
+---
+
 ## [2026-05-05 v10] Eval JSON serialization fix
 
 ### Muammo
