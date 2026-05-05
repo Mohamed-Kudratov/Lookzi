@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-05-05 v8] Catalog benchmark and HTML review gallery
+
+### Nima qilindi
+Benchmark tizimi do'kondagi demo garment/person rasmlariga yaqinroq review workflowga kengaytirildi.
+
+### Yangi fayl
+- `benchmark/catalog_pairs.json` - catalog-style test pairlar:
+  - upper
+  - lower pants
+  - lower skirt
+  - overall/dress
+
+### Eval benchmark yangilanishlari
+- `eval_benchmark.py` endi har run uchun output papka yaratadi, fast mode'da ham mask rasmlari saqlanadi.
+- `--review_report` argumenti qo'shildi.
+- Default HTML report: `<output_dir>/<timestamp>/review_report.html`.
+- Har resultga quyidagilar qo'shildi:
+  - `engine_name`
+  - `review_status`
+  - `human_rating`
+  - `failure_reason`
+  - `person_path`
+  - `garment_path`
+- HTML gallery person, garment, mask, output va JSON diagnostikani bir joyda ko'rsatadi.
+
+### Muhim fix
+`benchmark/pairs.json` ichidagi invalid trailing comma tuzatildi. Endi JSON parser bilan valid.
+
+### Qanday ishlatiladi
+```bash
+python eval_benchmark.py \
+  --mode full \
+  --pairs benchmark/catalog_pairs.json \
+  --resume_path /content/Lookzi/hf_models/lookzi-vton \
+  --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
+  --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+Run tugagach `review_report.html` ochiladi va category/engine bo'yicha human review qilinadi.
+
+---
+
 ## [2026-05-05 v7] Platform architecture and try-on engine scaffold
 
 ### Nima qilindi

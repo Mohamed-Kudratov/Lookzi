@@ -114,7 +114,7 @@
       "garment": "resource/demo/example/condition/person/jbeeq301271a569_1719429971246_2-0._QL90_UX564_V12524t6_.jpg",
       "cloth_type": "upper",
       "expected_style": "sleeved",
-      "expected_coverage_range": [28, 54],
+      "expected_coverage_range": [28, 54]
     },
     {
       "id": "T11",

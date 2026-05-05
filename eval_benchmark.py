@@ -17,6 +17,7 @@ Ishlatish:
 """
 
 import argparse
+import html
 import json
 import os
 import subprocess
@@ -54,6 +55,8 @@ def parse_args():
                    help="Natija rasmlari saqlanadigan papka (Drive)")
     p.add_argument("--high_priority_only", action="store_true",
                    help="Faqat priority=high juftliklarni test qilish (tezroq)")
+    p.add_argument("--review_report", default=None,
+                   help="HTML review gallery path. Default: output_dir/<timestamp>/review_report.html")
     return p.parse_args()
 
 
@@ -202,6 +205,12 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         "expected_style": expected_style,
         "expected_coverage_range": expected_range,
         "priority": pair.get("priority", "medium"),
+        "engine_name": "catvton",
+        "review_status": pair.get("review_status", "NEEDS_HUMAN_REVIEW"),
+        "human_rating": None,
+        "failure_reason": None,
+        "person_path": person_path,
+        "garment_path": garment_path,
     }
 
     try:
@@ -278,6 +287,94 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         print(f"   ❌ Xato: {e}")
 
     return result
+
+
+def img_src(path: str | None) -> str:
+    if not path:
+        return ""
+    return html.escape(path.replace("\\", "/"))
+
+
+def generate_review_report(report_path: str, run_results: list, run_meta: dict):
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
+    cards = []
+    for r in run_results:
+        status = r.get("review_status", "NEEDS_HUMAN_REVIEW")
+        error = r.get("error")
+        output_html = ""
+        if r.get("output_path"):
+            output_html = f'<img src="{img_src(r.get("output_path"))}" alt="output">'
+        else:
+            output_html = '<div class="placeholder">No output in fast mode</div>'
+
+        cards.append(f"""
+        <article class="card {html.escape(status.lower())}">
+          <header>
+            <h2>{html.escape(r.get("id", "?"))} - {html.escape(r.get("tag", ""))}</h2>
+            <span>{html.escape(r.get("cloth_type", "?"))}</span>
+          </header>
+          <div class="grid">
+            <section><h3>Person</h3><img src="{img_src(r.get("person_path"))}" alt="person"></section>
+            <section><h3>Garment</h3><img src="{img_src(r.get("garment_path"))}" alt="garment"></section>
+            <section><h3>Mask</h3><img src="{img_src(r.get("mask_path"))}" alt="mask"></section>
+            <section><h3>Output</h3>{output_html}</section>
+          </div>
+          <pre>{html.escape(json.dumps({
+              "engine": r.get("engine_name"),
+              "style": r.get("detected_style"),
+              "expected_style": r.get("expected_style"),
+              "style_correct": r.get("style_correct"),
+              "coverage_pct": r.get("coverage_pct"),
+              "coverage_grade": r.get("coverage_grade"),
+              "clip_score": r.get("clip_score"),
+              "error": error,
+              "review_status": status,
+              "human_rating": r.get("human_rating"),
+              "failure_reason": r.get("failure_reason"),
+          }, ensure_ascii=False, indent=2))}</pre>
+          <div class="review">
+            Human review: GOOD / OK / BAD / MODEL_FAIL / MASK_FAIL
+          </div>
+        </article>
+        """)
+
+    html_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lookzi Benchmark Review - {html.escape(run_meta.get("timestamp", ""))}</title>
+  <style>
+    body {{ margin: 0; font-family: Arial, sans-serif; background: #111827; color: #e5e7eb; }}
+    main {{ max-width: 1400px; margin: 0 auto; padding: 24px; }}
+    h1 {{ margin: 0 0 8px; }}
+    .meta {{ color: #9ca3af; margin-bottom: 24px; }}
+    .card {{ background: #1f2937; border: 1px solid #374151; border-radius: 8px; margin-bottom: 24px; padding: 16px; }}
+    header {{ display: flex; justify-content: space-between; gap: 16px; align-items: center; }}
+    header span {{ background: #374151; border-radius: 999px; padding: 4px 10px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }}
+    section {{ min-width: 0; }}
+    h2 {{ margin: 0 0 12px; font-size: 18px; }}
+    h3 {{ margin: 8px 0; font-size: 13px; color: #cbd5e1; }}
+    img {{ width: 100%; height: 360px; object-fit: contain; background: #020617; border-radius: 6px; }}
+    pre {{ white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 6px; overflow: auto; }}
+    .placeholder {{ height: 360px; display: grid; place-items: center; background: #020617; color: #64748b; border-radius: 6px; }}
+    .review {{ color: #fbbf24; font-weight: 700; }}
+    @media (max-width: 1000px) {{ .grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }} }}
+    @media (max-width: 600px) {{ .grid {{ grid-template-columns: 1fr; }} img, .placeholder {{ height: 280px; }} }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Lookzi Benchmark Review</h1>
+    <div class="meta">Commit {html.escape(str(run_meta.get("commit")))} | Mode {html.escape(str(run_meta.get("mode")))} | {html.escape(str(run_meta.get("timestamp")))}</div>
+    {''.join(cards)}
+  </main>
+</body>
+</html>
+"""
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
 
 
 # ─────────────────────────────────────────────
@@ -487,7 +584,7 @@ def main():
 
     # Timestamp + output papka
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_output_dir = os.path.join(args.output_dir, ts) if args.mode == "full" else None
+    run_output_dir = os.path.join(args.output_dir, ts)
 
     # Har juftlik uchun eval
     run_results = []
@@ -547,6 +644,10 @@ def main():
     all_prev.append(run_meta)
     save_results(args.drive_log, all_prev)
     print(f"[Eval] Natijalar saqlandi: {args.drive_log}")
+
+    report_path = args.review_report or os.path.join(run_output_dir, "review_report.html")
+    generate_review_report(report_path, run_results, run_meta)
+    print(f"[Eval] Review report: {report_path}")
     print(f"[Eval] Jami log: {len(all_prev)} run\n")
 
 
