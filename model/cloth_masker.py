@@ -156,6 +156,25 @@ def clean_binary_mask(mask: np.ndarray, kernel: np.ndarray, close_iterations=2, 
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=close_iterations)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=open_iterations)
     return mask > 0
+
+
+def keep_main_components(mask: np.ndarray, min_area_ratio: float = 0.002):
+    mask = mask.astype(np.uint8)
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if num_labels <= 1:
+        return mask.astype(bool)
+
+    image_area = mask.shape[0] * mask.shape[1]
+    min_area = max(32, int(image_area * min_area_ratio))
+    component_areas = stats[1:, cv2.CC_STAT_AREA]
+    largest_area = int(component_areas.max()) if len(component_areas) else 0
+    keep = np.zeros_like(mask, dtype=bool)
+
+    for label_idx in range(1, num_labels):
+        area = int(stats[label_idx, cv2.CC_STAT_AREA])
+        if area >= min_area or area >= largest_area * 0.25:
+            keep |= labels == label_idx
+    return keep
     
 
 class AutoMasker:
@@ -258,11 +277,11 @@ class AutoMasker:
         upper_arm_area = part_mask_of('big arms', densepose_mask, DENSE_INDEX_MAP).astype(bool)
         forearm_area = part_mask_of('forearms', densepose_mask, DENSE_INDEX_MAP).astype(bool)
         lower_body_area = part_mask_of(['thighs', 'legs'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
-        full_body_area = (torso_area | lower_body_area | upper_arm_area)
         arms_protect_area = forearm_area | part_mask_of(['hands'], densepose_mask, DENSE_INDEX_MAP).astype(bool)
 
         lower_leg_area = part_mask_of('legs', densepose_mask, DENSE_INDEX_MAP).astype(bool)
         thigh_area = part_mask_of('thighs', densepose_mask, DENSE_INDEX_MAP).astype(bool)
+        feet_area = part_mask_of('feet', densepose_mask, DENSE_INDEX_MAP).astype(bool)
 
         if part in ['upper', 'inner', 'outer']:
             allowed_area = torso_area | strong_mask_area
@@ -293,6 +312,12 @@ class AutoMasker:
             protect_area = local_strong_protect | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
+            mask_area = keep_main_components(mask_area, min_area_ratio=0.003)
+
+            if mask_area.mean() < 0.18:
+                fallback = (lower_hull | lower_body_area | mask_dense_area) & (~background_area) & (~feet_area)
+                fallback = clean_binary_mask(fallback, dilate_kernel, close_iterations=3, open_iterations=1)
+                mask_area = keep_main_components(fallback, min_area_ratio=0.003)
         else:
             # Overall: torso + thighs always masked; lower legs only when garment covers them
             allowed_area = torso_area | thigh_area | strong_mask_area
@@ -312,7 +337,12 @@ class AutoMasker:
         mask_area = cv2.GaussianBlur(mask_area.astype(np.uint8) * 255, (kernal_size, kernal_size), 0)
         mask_area[mask_area < 25] = 0
         mask_area[mask_area >= 25] = 1
-        mask_area = (mask_area.astype(bool) | strong_mask_area) & (~strong_protect_area) & (~background_area)
+        final_protect_area = protect_area | background_area
+        if part == 'lower':
+            final_protect_area = (protect_area | background_area | feet_area) & ~lower_body_area
+        mask_area = (mask_area.astype(bool) | strong_mask_area) & (~final_protect_area)
+        if part == 'lower':
+            mask_area = keep_main_components(mask_area, min_area_ratio=0.003)
         mask_area = cv2.dilate(mask_area.astype(np.uint8), dilate_kernel, iterations=1)
 
         return Image.fromarray((mask_area * 255).astype(np.uint8))
