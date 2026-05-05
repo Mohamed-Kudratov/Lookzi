@@ -123,7 +123,7 @@
       "person": "resource/demo/example/person/men/Simon_1.png",
       "garment": "resource/demo/example/condition/lower/men_pants.png",
       "cloth_type": "lower",
-      "expected_style": "auto",
+      "expected_style": "pants",
       "expected_coverage_range": [25, 52],
       "priority": "high"
     },
@@ -134,7 +134,7 @@
       "person": "resource/demo/example/person/women/1-model_3.png",
       "garment": "resource/demo/example/condition/lower/women_skirt.png",
       "cloth_type": "lower",
-      "expected_style": "auto",
+      "expected_style": "skirt",
       "expected_coverage_range": [22, 48],
       "priority": "high"
     }

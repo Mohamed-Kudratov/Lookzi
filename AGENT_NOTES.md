@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-05-05 v4] Lower garment subtype: skirt vs pants mask
+
+### Nima qilindi
+Lower garment uchun faqat "lower body" mask yetmasligi aniqlandi. Red skirt testlarida mask ikki oyoq/pants shaklida bo'lgani uchun model skirtni red pants yoki gray shorts qilib chiqarayotgan edi.
+
+### Fix
+- `infer_garment_style()` lower garment uchun endi subtype qaytaradi:
+  - `skirt`
+  - `pants`
+  - `shorts`
+- `model/cloth_masker.py` ichida `garment_style == "skirt"` bo'lsa lower mask ikki oyoq shaklida emas, beldan pastga kengayuvchi skirt/trapezoid silhouette sifatida quriladi.
+- `covers_lower_legs=False` bo'lsa lower mask faqat thigh/shorts zonaga cheklanadi.
+- `benchmark/pairs.json` lower expected stylelari `pants` va `skirt` qilib yangilandi.
+
+### Sabab
+CatVTON condition garmentni ko'rsa ham, mask silhouette pants bo'lsa model skirt geometriyasini chiqara olmaydi. Skirt uchun mask ham skirtga o'xshash bo'lishi kerak.
+
+### Hali test qilish kerak
+Colab/GPU'da red skirt testlarini qayta ko'rish:
+- black pants person -> red skirt
+- light jeans woman -> red skirt
+
+Kutilgan natija: output pants emas, kamida skirt/loose lower silhouette tomonga o'tishi kerak. Agar hali ham pants chiqsa, keyingi bosqich CatVTON o'rniga lower/overall uchun IDM-VTON yoki OOTDiffusion adapterini sinash.
+
+---
+
 ## [2026-05-05 v3] Lower mask fallback and final protect fix
 
 ### Nima qilindi

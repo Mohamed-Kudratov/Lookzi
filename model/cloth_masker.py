@@ -175,6 +175,37 @@ def keep_main_components(mask: np.ndarray, min_area_ratio: float = 0.002):
         if area >= min_area or area >= largest_area * 0.25:
             keep |= labels == label_idx
     return keep
+
+
+def skirt_silhouette_mask(lower_body_area: np.ndarray, covers_lower_legs: bool):
+    ys, xs = np.where(lower_body_area)
+    if len(xs) < 20:
+        return lower_body_area
+
+    height, width = lower_body_area.shape
+    y_top = max(0, int(ys.min() - height * 0.025))
+    dense_bottom = int(ys.max())
+    if covers_lower_legs:
+        y_bottom = dense_bottom
+    else:
+        y_bottom = min(dense_bottom, int(y_top + (dense_bottom - y_top) * 0.58))
+
+    center_x = int(np.median(xs))
+    body_width = int(xs.max() - xs.min() + 1)
+    hip_width = max(18, int(body_width * 0.72))
+    hem_width = max(int(hip_width * 1.55), int(body_width * 1.15))
+    hem_width = min(hem_width, int(width * 0.78))
+
+    rows = max(1, y_bottom - y_top)
+    mask = np.zeros_like(lower_body_area, dtype=np.uint8)
+    for y in range(y_top, y_bottom + 1):
+        t = (y - y_top) / rows
+        half_width = int((hip_width + (hem_width - hip_width) * t) / 2)
+        x0 = max(0, center_x - half_width)
+        x1 = min(width - 1, center_x + half_width)
+        mask[y, x0:x1 + 1] = 1
+
+    return mask.astype(bool)
     
 
 class AutoMasker:
@@ -306,16 +337,21 @@ class AutoMasker:
             # Actual shoe pixels (DensePose 5,6) are NOT in lower_body_area, so shoes stay protected.
             local_strong_protect = strong_protect_area & ~lower_body_area
             # Hull fill: close the gap between legs so pants/skirt cover inner thigh area too
-            lower_base = (lower_body_area | strong_mask_area).astype(np.uint8) * 255
+            target_lower_area = lower_body_area if covers_lower_legs else thigh_area
+            if garment_style == 'skirt':
+                target_lower_area = skirt_silhouette_mask(lower_body_area, covers_lower_legs)
+
+            lower_base = (target_lower_area | strong_mask_area).astype(np.uint8) * 255
             lower_hull = hull_mask(lower_base).astype(bool)
-            allowed_area = lower_hull | lower_body_area | strong_mask_area
+            allowed_area = lower_hull | target_lower_area | strong_mask_area
             protect_area = local_strong_protect | background_area | part_mask_of(['Left-arm', 'Right-arm', 'Face'], schp_lip_mask, LIP_MAPPING).astype(bool)
             mask_area = (allowed_area | mask_dense_area) & (~protect_area)
             mask_area = clean_binary_mask(mask_area, dilate_kernel, close_iterations=3, open_iterations=1)
             mask_area = keep_main_components(mask_area, min_area_ratio=0.003)
 
             if mask_area.mean() < 0.18:
-                fallback = (lower_hull | lower_body_area | mask_dense_area) & (~background_area) & (~feet_area)
+                fallback_dense_area = mask_dense_area if covers_lower_legs else (mask_dense_area & thigh_area)
+                fallback = (lower_hull | target_lower_area | fallback_dense_area) & (~background_area) & (~feet_area)
                 fallback = clean_binary_mask(fallback, dilate_kernel, close_iterations=3, open_iterations=1)
                 mask_area = keep_main_components(fallback, min_area_ratio=0.003)
         else:
