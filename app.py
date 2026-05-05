@@ -1,4 +1,4 @@
-﻿import argparse
+import argparse
 import os
 from datetime import datetime
 
@@ -454,6 +454,16 @@ def app_gradio():
                             inputs=cloth_image,
                             label="Upper Garments",
                         )
+                        if os.path.exists(os.path.join(root_path, "condition", "lower")):
+                            condition_lower_exm = gr.Examples(
+                                examples=[
+                                    os.path.join(root_path, "condition", "lower", _)
+                                    for _ in os.listdir(os.path.join(root_path, "condition", "lower"))
+                                ],
+                                examples_per_page=4,
+                                inputs=cloth_image,
+                                label="Lower Garments",
+                            )
                         condition_overall_exm = gr.Examples(
                             examples=[
                                 os.path.join(root_path, "condition", "overall", _)
