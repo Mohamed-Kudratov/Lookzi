@@ -61,6 +61,29 @@ Bu fix GitHub'ga push qilindi lekin Colab'da test qilinmadi (torch versiyasi mua
 
 ---
 
+## [2026-05-05 v2] Mask disappearing on light skin / white pants
+
+### Muammo
+Oq fonli rasmlarda kalta ishton kiygan (bare legs) yoki oq shim kiygan odamlarda (Screenshot 1 va 3) maska juda kichkina bo'lib qolayotgan edi (coverage: 8-14%). Maska faqat kiyimni qoplab, oyoqlarni qoplamagan (natijada jinsi shim kalta qilib kiydirilgan).
+
+### Sabab
+SCHP (Kiyim segmentatsiyasi) modellari ba'zan oq fon bilan ochiq teri rangi yoki oq shimni adashtirib, uni `Background` deb belgilagan. 
+DensePose (Tana segmentatsiyasi) oyoqlarni to'g'ri topgan, LEKIN `cloth_masker.py` dagi quyidagi qator DensePose topgan joylarni ham o'chirib tashlagan:
+```python
+mask_area = ... & (~background_area)
+```
+Ya'ni, SCHP "bu background" desa, tizim ko'r-ko'rona o'sha joyni maskadan o'chirgan, vaholanki DensePose "bu oyoq" deb turgan bo'lsa ham!
+
+### Fix (model/cloth_masker.py)
+Agar DensePose qandaydir tana qismini (`densepose_mask > 0`) ko'rsa, biz uni aslo `Background` deb hisoblamasligimiz kerak:
+```python
+densepose_body = (np.array(densepose_mask) > 0)
+background_area = background_area & (~densepose_body)
+```
+Bu orqali Ochiq rangli oyoqlar va Oq shimlar endi `Background` tomonidan o'chirib yuborilmaydi va maska to'liq tushadi.
+
+---
+
 ## [2026-05-04] Mask fixes + Colab stabilization
 
 ### Nima qilindi

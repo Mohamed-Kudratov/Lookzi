@@ -238,6 +238,12 @@ class AutoMasker:
         strong_mask_area = (part_mask_of(MASK_CLOTH_PARTS[part], schp_lip_mask, LIP_MAPPING) | \
             part_mask_of(MASK_CLOTH_PARTS[part], schp_atr_mask, ATR_MAPPING)).astype(bool)
         background_area = (part_mask_of(['Background'], schp_lip_mask, LIP_MAPPING) & part_mask_of(['Background'], schp_atr_mask, ATR_MAPPING)).astype(bool)
+        
+        # FIX: If SCHP hallucinates background over light skin/clothes, but DensePose detects a body part, trust DensePose!
+        # This prevents bare legs and white pants from being deleted by ~background_area
+        densepose_body = (np.array(densepose_mask) > 0)
+        background_area = background_area & (~densepose_body)
+
         mask_dense_area = part_mask_of(MASK_DENSE_PARTS[part], densepose_mask, DENSE_INDEX_MAP).astype(bool)
         
         original_shape = mask_dense_area.shape[:2]  # (height, width)
