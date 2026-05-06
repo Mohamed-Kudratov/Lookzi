@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-06 v16] External candidate output benchmark path
+
+### Nima qilindi
+- `eval_benchmark.py`ga `--engine external_outputs` qo'shildi.
+- `--external_engine_name` bilan model nomini logga yozish mumkin, masalan `idm_vton`.
+- `--external_output_dir` ichidan pair id bo'yicha output topiladi:
+  - `C01.png`
+  - `C01_<tag>.png`
+  - `<tag>.png`
+- Tashqi outputlar Lookzi review galleryga bir xil formatda kiradi.
+- `docs/IDM_VTON_CANDIDATE.md` qo'shildi.
+- `COLAB_GPU_SETUP.md` external candidate import komandasi bilan yangilandi.
+
+### IDM-VTON haqida xulosa
+Official IDM-VTON Gradio demo auto-mask yo'li `upper_body`ga bog'langan. Shuning uchun lower/overall benchmark uchun avval IDM-VTON real outputlarini alohida runner/dataset-style inference bilan olish kerak, keyin Lookzi benchmarkga import qilinadi.
+
+---
+
 ## [2026-05-06 v15] Engine-aware benchmark baseline
 
 ### Nima qilindi

@@ -42,8 +42,12 @@ def parse_args():
     p = argparse.ArgumentParser(description="Lookzi benchmark eval")
     p.add_argument("--mode", choices=["fast", "full"], default="fast",
                    help="fast=mask+style only; full=mask+style+inference+CLIP")
-    p.add_argument("--engine", choices=["catvton", "identity_baseline"], default="catvton",
+    p.add_argument("--engine", choices=["catvton", "identity_baseline", "external_outputs"], default="catvton",
                    help="Try-on engine to benchmark")
+    p.add_argument("--external_output_dir", default=None,
+                   help="Directory containing precomputed external engine outputs keyed by pair id")
+    p.add_argument("--external_engine_name", default="external",
+                   help="Engine name to record when --engine external_outputs is used")
     p.add_argument("--pairs", default="benchmark/pairs.json",
                    help="Benchmark juftliklari fayli")
     p.add_argument("--resume_path", default="hf_models/lookzi-vton")
@@ -209,6 +213,38 @@ def resize_crop_pil(image: Image.Image, size: tuple[int, int]) -> Image.Image:
     )
 
 
+def find_external_output(output_dir: str, pair: dict) -> str | None:
+    if not output_dir or not os.path.isdir(output_dir):
+        return None
+
+    pair_id = pair["id"]
+    tag = pair["tag"]
+    candidates = [
+        f"{pair_id}.png",
+        f"{pair_id}.jpg",
+        f"{pair_id}.jpeg",
+        f"{pair_id}_{tag}.png",
+        f"{pair_id}_{tag}.jpg",
+        f"{pair_id}_{tag}.jpeg",
+        f"{tag}.png",
+        f"{tag}.jpg",
+        f"{tag}.jpeg",
+    ]
+    for name in candidates:
+        path = os.path.join(output_dir, name)
+        if os.path.exists(path):
+            return path
+
+    for root, _, files in os.walk(output_dir):
+        for file_name in files:
+            stem, ext = os.path.splitext(file_name)
+            if ext.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+                continue
+            if stem == pair_id or stem == tag or stem.startswith(f"{pair_id}_"):
+                return os.path.join(root, file_name)
+    return None
+
+
 # ─────────────────────────────────────────────
 # Bitta juftlikni test qilish
 # ─────────────────────────────────────────────
@@ -235,7 +271,7 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         "expected_style": expected_style,
         "expected_coverage_range": expected_range,
         "priority": pair.get("priority", "medium"),
-        "engine_name": args.engine,
+        "engine_name": args.external_engine_name if args.engine == "external_outputs" else args.engine,
         "review_status": pair.get("review_status", "NEEDS_HUMAN_REVIEW"),
         "human_rating": None,
         "failure_reason": None,
@@ -249,6 +285,43 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         # Rasmlarni yuklash
         person_img = Image.open(person_path).convert("RGB")
         garment_img = Image.open(garment_path).convert("RGB")
+
+        if args.engine == "external_outputs":
+            external_path = find_external_output(args.external_output_dir, pair)
+            blank_mask = Image.new("L", (args.width, args.height), 0)
+            result["detected_style"] = "external_precomputed"
+            result["style_correct"] = None
+            result["covers_lower_legs"] = None
+            result["style_debug"] = f"external output dir: {args.external_output_dir}"
+            result["mask_time_s"] = 0.0
+            result["coverage_pct"] = 0.0
+            if run_output_dir:
+                os.makedirs(run_output_dir, exist_ok=True)
+                mask_path = os.path.join(run_output_dir, f"{pid}_{tag}_mask.png")
+                blank_mask.save(mask_path)
+                result["mask_path"] = mask_path
+
+            if external_path is None:
+                raise FileNotFoundError(
+                    f"External output not found for {pid}. Expected files like {pid}.png or {pid}_{tag}.png"
+                )
+
+            result_image = Image.open(external_path).convert("RGB")
+            if run_output_dir:
+                out_path = os.path.join(run_output_dir, f"{pid}_{tag}.png")
+                resize_crop_pil(result_image, (args.width, args.height)).save(out_path)
+                result["output_path"] = out_path
+            else:
+                result["output_path"] = external_path
+            result["external_output_path"] = external_path
+
+            if args.mode == "full":
+                result["clip_score"] = compute_clip_score(garment_img, result_image)
+                result["inference_time_s"] = 0.0
+
+            result["total_time_s"] = round(time.time() - t_start, 2)
+            result["error"] = None
+            return result
 
         if args.engine == "identity_baseline":
             from tryon_engines.base import TryOnRequest
@@ -791,7 +864,8 @@ def main():
 
     # Timestamp + output papka
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_output_dir = os.path.join(args.output_dir, args.engine, ts)
+    engine_output_name = args.external_engine_name if args.engine == "external_outputs" else args.engine
+    run_output_dir = os.path.join(args.output_dir, engine_output_name, ts)
 
     # Har juftlik uchun eval
     run_results = []
@@ -820,7 +894,7 @@ def main():
         "timestamp": ts,
         "commit": commit,
         "mode": args.mode,
-        "engine": args.engine,
+        "engine": engine_output_name,
         "device": args.device,
         "mixed_precision": args.mixed_precision,
         "width": args.width,

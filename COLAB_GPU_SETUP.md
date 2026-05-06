@@ -213,6 +213,46 @@ Bu test kiyim kiydirmaydi: person rasmini qaytaradi. Maqsad - benchmark gate uch
   --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
 ```
 
+### External candidate output import
+
+IDM-VTON yoki boshqa model alohida setupda output chiqargandan keyin, output rasmlarini bitta papkaga shunday nomlab qo'ying:
+
+```text
+C01.png
+C02.png
+C03.png
+...
+C08.png
+```
+
+Keyin Lookzi review galleryga import qiling:
+
+```python
+!python eval_benchmark.py \
+  --mode full \
+  --engine external_outputs \
+  --external_engine_name idm_vton \
+  --external_output_dir /content/drive/MyDrive/Lookzi/idm_vton_outputs \
+  --pairs benchmark/catalog_pairs.json \
+  --device cuda \
+  --mixed_precision fp16 \
+  --width 768 \
+  --height 1024 \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+Bu modelni run qilmaydi. Faqat tashqi model chiqargan rasmlarni Lookzi benchmark reportiga kiritadi.
+
+### IDM-VTON candidate setup note
+
+Official IDM-VTON manbalari:
+
+- https://github.com/yisol/IDM-VTON
+- https://huggingface.co/yisol/IDM-VTON
+
+Muhim: official Gradio demo auto-mask yo'li `upper_body`ga qattiq bog'langan. Lower/overall uchun to'liq benchmark qilishdan oldin IDM-VTONni dataset-style inference yoki category-aware runner bilan sozlash kerak.
+
 Run tugagach terminalda shunga o'xshash path chiqadi:
 
 ```text
