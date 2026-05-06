@@ -2,6 +2,29 @@
 
 Bu setup modellarni Google Drive'ga bir marta saqlaydi. Keyingi sessionlarda modellar Drive'dan ulanadi va HuggingFace'dan qayta yuklanmaydi.
 
+## Hozir Qaysi Yo'l Kerak?
+
+### CatVTONni tekshirish
+
+Lookzi ichidagi hozirgi modelni test qilish uchun:
+
+1. `1 -> 5` bo'limlarni bajar.
+2. `7.1 CatVTON full benchmark`ni run qil.
+3. Chiqqan `review_report.html`ni ochib human review qil.
+
+### IDM-VTONni CatVTON bilan solishtirish
+
+IDM-VTON Lookzi ichida hali bevosita ulanmagan. Shuning uchun:
+
+1. `docs/COLAB_IDM_VTON_COMPARISON.md` workflowini bajar.
+2. IDM-VTON outputlarini `/content/drive/MyDrive/Lookzi/idm_vton_outputs/C01.png ... C08.png` qilib saqla.
+3. `7.3 External candidate import`ni run qil.
+4. Chiqqan reportni human review qil.
+
+### Identity baseline
+
+Bu model emas. Faqat nazorat chizig'i. Oddiy ishlashda run qilish shart emas.
+
 ---
 
 ## 1. GPU ni yoqish
@@ -165,10 +188,11 @@ Show Type = result only
 
 Bu hozirgi asosiy debugging workflow. U demo do'kon garment/person pairlarini avtomatik test qiladi, mask/outputlarni Drive'ga saqlaydi va HTML review gallery chiqaradi.
 
-### Tez mask/style test
+### 7.0 Tez mask/style test
 
 ```python
 !python eval_benchmark.py \
+  --engine catvton \
   --mode fast \
   --pairs benchmark/catalog_pairs.json \
   --resume_path /content/Lookzi/hf_models/lookzi-vton \
@@ -176,7 +200,7 @@ Bu hozirgi asosiy debugging workflow. U demo do'kon garment/person pairlarini av
   --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
 ```
 
-### To'liq inference test
+### 7.1 CatVTON full benchmark
 
 ```python
 !python eval_benchmark.py \
@@ -195,7 +219,7 @@ Bu hozirgi asosiy debugging workflow. U demo do'kon garment/person pairlarini av
   --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
 ```
 
-### Engine baseline test
+### 7.2 Identity baseline test
 
 Bu test kiyim kiydirmaydi: person rasmini qaytaradi. Maqsad - benchmark gate uchun nazorat chizig'i. Har qanday yangi engine bundan aniq yaxshiroq chiqishi kerak.
 
@@ -213,7 +237,7 @@ Bu test kiyim kiydirmaydi: person rasmini qaytaradi. Maqsad - benchmark gate uch
   --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
 ```
 
-### External candidate output import
+### 7.3 External candidate import
 
 IDM-VTON yoki boshqa model alohida setupda output chiqargandan keyin, output rasmlarini bitta papkaga shunday nomlab qo'ying:
 
@@ -244,7 +268,7 @@ Keyin Lookzi review galleryga import qiling:
 
 Bu modelni run qilmaydi. Faqat tashqi model chiqargan rasmlarni Lookzi benchmark reportiga kiritadi.
 
-### IDM-VTON candidate setup note
+### 7.4 IDM-VTON candidate note
 
 Official IDM-VTON manbalari:
 
@@ -252,6 +276,12 @@ Official IDM-VTON manbalari:
 - https://huggingface.co/yisol/IDM-VTON
 
 Muhim: official Gradio demo auto-mask yo'li `upper_body`ga qattiq bog'langan. Lower/overall uchun to'liq benchmark qilishdan oldin IDM-VTONni dataset-style inference yoki category-aware runner bilan sozlash kerak.
+
+Aniq IDM-VTON comparison qadamlarini bu faylda ko'r:
+
+```text
+docs/COLAB_IDM_VTON_COMPARISON.md
+```
 
 Run tugagach terminalda shunga o'xshash path chiqadi:
 

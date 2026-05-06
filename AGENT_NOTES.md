@@ -5,6 +5,26 @@
 
 ---
 
+## [2026-05-06 v17] Colab IDM comparison workflow clarified
+
+### Muammo
+`COLAB_GPU_SETUP.md` ichida CatVTON full benchmark, identity baseline, external import va IDM-VTON note aralashib ketdi. User qaysi cellni qachon run qilishni tushunmay qoldi.
+
+### Fix
+- `COLAB_GPU_SETUP.md` boshiga "Hozir Qaysi Yo'l Kerak?" bo'limi qo'shildi.
+- Benchmark bo'limlari aniq raqamlandi:
+  - `7.1 CatVTON full benchmark`
+  - `7.2 Identity baseline test`
+  - `7.3 External candidate import`
+  - `7.4 IDM-VTON candidate note`
+- `docs/COLAB_IDM_VTON_COMPARISON.md` qo'shildi:
+  - Lookzi inputlarini export qilish
+  - IDM-VTON outputlarini `C01.png ... C08.png` qilib saqlash
+  - external import orqali review report chiqarish
+- `prepare_candidate_inputs.py` qo'shildi.
+
+---
+
 ## [2026-05-06 v16] External candidate output benchmark path
 
 ### Nima qilindi
