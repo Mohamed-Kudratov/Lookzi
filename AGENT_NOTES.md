@@ -5,6 +5,26 @@
 
 ---
 
+## [2026-05-06 v14] Human review result archived and production decision recorded
+
+### Signal
+User submitted `lookzi_human_review_20260506_115215.json` after checking the latest full benchmark manually.
+
+Human ratings:
+- `GOOD`: 1/8
+- `OK`: 0/8
+- `BAD`: 6/8
+- `MASK_FAIL`: 1/8
+
+### Files
+- `benchmark/human_review_20260506_115215.json` stores the submitted review as a repo artifact.
+- `docs/BENCHMARK_REVIEW_20260506.md` records the decision.
+
+### Decision
+Current CatVTON setup is not production-ready for the Lookzi catalog benchmark. This is no longer only a mask threshold problem; the next step should be engine comparison/gating through `tryon_engines`, not more mask-only tuning.
+
+---
+
 ## [2026-05-05 v13] Human review import and benchmark category correction
 
 ### Muammo

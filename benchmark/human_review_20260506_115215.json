@@ -1,0 +1,47 @@
+{
+  "source_file": "lookzi_human_review_20260506_115215.json",
+  "reviewed_at": "2026-05-06",
+  "ratings": {
+    "C01": {
+      "human_rating": "MASK_FAIL",
+      "failure_reason": null
+    },
+    "C02": {
+      "human_rating": "GOOD",
+      "failure_reason": null
+    },
+    "C03": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    },
+    "C04": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    },
+    "C05": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    },
+    "C06": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    },
+    "C07": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    },
+    "C08": {
+      "human_rating": "BAD",
+      "failure_reason": null
+    }
+  },
+  "summary": {
+    "total": 8,
+    "good": 1,
+    "ok": 0,
+    "bad": 6,
+    "model_fail": 0,
+    "mask_fail": 1,
+    "production_ready": false
+  }
+}
