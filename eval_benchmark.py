@@ -30,6 +30,10 @@ from datetime import datetime
 import numpy as np
 from PIL import Image
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ─────────────────────────────────────────────
 # CLI arguments
 # ─────────────────────────────────────────────
@@ -38,6 +42,8 @@ def parse_args():
     p = argparse.ArgumentParser(description="Lookzi benchmark eval")
     p.add_argument("--mode", choices=["fast", "full"], default="fast",
                    help="fast=mask+style only; full=mask+style+inference+CLIP")
+    p.add_argument("--engine", choices=["catvton", "identity_baseline"], default="catvton",
+                   help="Try-on engine to benchmark")
     p.add_argument("--pairs", default="benchmark/pairs.json",
                    help="Benchmark juftliklari fayli")
     p.add_argument("--resume_path", default="hf_models/lookzi-vton")
@@ -192,6 +198,17 @@ def compute_clip_score(garment_img: Image.Image, result_img: Image.Image) -> flo
     return round(float(score), 4)
 
 
+def resize_crop_pil(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+    from PIL import ImageOps
+
+    return ImageOps.fit(
+        image.convert("RGB"),
+        size,
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.5),
+    )
+
+
 # ─────────────────────────────────────────────
 # Bitta juftlikni test qilish
 # ─────────────────────────────────────────────
@@ -202,9 +219,6 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
     Bitta person+garment juftligi uchun metrikalarni hisoblaydi.
     Qaytaradi: dict (barcha metrikalar)
     """
-    import torch
-    from utils import infer_garment_style, resize_and_crop, resize_and_padding
-
     pid = pair["id"]
     tag = pair["tag"]
     cloth_type = pair["cloth_type"]
@@ -221,7 +235,7 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         "expected_style": expected_style,
         "expected_coverage_range": expected_range,
         "priority": pair.get("priority", "medium"),
-        "engine_name": "catvton",
+        "engine_name": args.engine,
         "review_status": pair.get("review_status", "NEEDS_HUMAN_REVIEW"),
         "human_rating": None,
         "failure_reason": None,
@@ -235,6 +249,55 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
         # Rasmlarni yuklash
         person_img = Image.open(person_path).convert("RGB")
         garment_img = Image.open(garment_path).convert("RGB")
+
+        if args.engine == "identity_baseline":
+            from tryon_engines.base import TryOnRequest
+            from tryon_engines.baseline import IdentityBaselineEngine
+
+            blank_mask = Image.new("L", (args.width, args.height), 0)
+            result["detected_style"] = "not_applicable"
+            result["style_correct"] = None
+            result["covers_lower_legs"] = None
+            result["style_debug"] = "identity_baseline skips style and mask inference"
+            result["mask_time_s"] = 0.0
+            result["coverage_pct"] = 0.0
+            if run_output_dir:
+                os.makedirs(run_output_dir, exist_ok=True)
+                mask_path = os.path.join(run_output_dir, f"{pid}_{tag}_mask.png")
+                blank_mask.save(mask_path)
+                result["mask_path"] = mask_path
+
+            if args.mode == "full":
+                t_inf_start = time.time()
+                engine_result = IdentityBaselineEngine().run(
+                    TryOnRequest(
+                        person_image=person_img,
+                        garment_image=garment_img,
+                        category=cloth_type,
+                        seed=args.seed,
+                        steps=args.num_inference_steps,
+                        guidance_scale=2.5,
+                        width=args.width,
+                        height=args.height,
+                    )
+                )
+                result_image = engine_result.image
+                result["engine_name"] = engine_result.engine_name
+                result["inference_time_s"] = round(time.time() - t_inf_start, 2)
+                out_path = os.path.join(run_output_dir, f"{pid}_{tag}.png")
+                result_image.save(out_path)
+                result["output_path"] = out_path
+                result["clip_score"] = compute_clip_score(garment_img, result_image)
+            elif run_output_dir:
+                preview_path = os.path.join(run_output_dir, f"{pid}_{tag}_preview.png")
+                resize_crop_pil(person_img, (args.width, args.height)).save(preview_path)
+                result["output_path"] = preview_path
+
+            result["total_time_s"] = round(time.time() - t_start, 2)
+            result["error"] = None
+            return result
+
+        from utils import infer_garment_style, resize_and_crop, resize_and_padding
 
         # Garment style aniqlash
         garment_style, covers_lower_legs, style_debug = infer_garment_style(
@@ -300,7 +363,7 @@ def eval_one_pair(pair: dict, args, automasker, pipeline,
 
     except Exception as e:
         result["error"] = str(e)
-        print(f"   ❌ Xato: {e}")
+        print(f"   XATO: {e}")
 
     return result
 
@@ -660,13 +723,16 @@ def main():
     args = parse_args()
 
     # Device
-    import torch
     if args.device == "auto":
-        args.device = "cuda" if torch.cuda.is_available() else "cpu"
+        try:
+            import torch
+            args.device = "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            args.device = "cpu"
     if args.device == "cpu":
         args.mixed_precision = "no"
 
-    print(f"\n[Lookzi Eval] Device={args.device}  Mode={args.mode}  mixed_precision={args.mixed_precision}")
+    print(f"\n[Lookzi Eval] Device={args.device}  Mode={args.mode}  Engine={args.engine}  mixed_precision={args.mixed_precision}")
 
     # Pairs yuklab olish
     with open(args.pairs, "r", encoding="utf-8") as f:
@@ -682,46 +748,50 @@ def main():
     all_prev = load_prev_results(args.drive_log)
     print(f"[Eval] Drive logda {len(all_prev)} ta oldingi run topildi.")
 
-    # AutoMasker yuklash
-    from diffusers.image_processor import VaeImageProcessor
-    from model.cloth_masker import AutoMasker
-
     repo_path = args.resume_path
-    if not os.path.exists(repo_path):
-        from huggingface_hub import snapshot_download
-        repo_path = snapshot_download(repo_id=repo_path)
-
-    print("[Eval] AutoMasker yuklanmoqda...")
-    mask_processor = VaeImageProcessor(
-        vae_scale_factor=8, do_normalize=False,
-        do_binarize=True, do_convert_grayscale=True
-    )
-    automasker = AutoMasker(
-        densepose_ckpt=os.path.join(repo_path, "DensePose"),
-        schp_ckpt=os.path.join(repo_path, "SCHP"),
-        device=args.device,
-    )
-
-    # Pipeline (faqat full mode'da)
+    automasker = None
+    mask_processor = None
     pipeline = None
-    if args.mode == "full":
-        from model.pipeline import LookziPipeline
-        from utils import init_weight_dtype
-        print("[Eval] LookziPipeline yuklanmoqda...")
-        pipeline = LookziPipeline(
-            base_ckpt=args.base_model_path,
-            attn_ckpt=repo_path,
-            attn_ckpt_version="mix",
-            weight_dtype=init_weight_dtype(args.mixed_precision),
-            use_tf32=True,
-            device=args.device,
-            vae_ckpt=args.vae_model_path,
-            skip_safety_check=True,
+
+    if args.engine == "catvton":
+        # AutoMasker yuklash
+        from diffusers.image_processor import VaeImageProcessor
+        from model.cloth_masker import AutoMasker
+
+        if not os.path.exists(repo_path):
+            from huggingface_hub import snapshot_download
+            repo_path = snapshot_download(repo_id=repo_path)
+
+        print("[Eval] AutoMasker yuklanmoqda...")
+        mask_processor = VaeImageProcessor(
+            vae_scale_factor=8, do_normalize=False,
+            do_binarize=True, do_convert_grayscale=True
         )
+        automasker = AutoMasker(
+            densepose_ckpt=os.path.join(repo_path, "DensePose"),
+            schp_ckpt=os.path.join(repo_path, "SCHP"),
+            device=args.device,
+        )
+
+        # Pipeline (faqat full mode'da)
+        if args.mode == "full":
+            from model.pipeline import LookziPipeline
+            from utils import init_weight_dtype
+            print("[Eval] LookziPipeline yuklanmoqda...")
+            pipeline = LookziPipeline(
+                base_ckpt=args.base_model_path,
+                attn_ckpt=repo_path,
+                attn_ckpt_version="mix",
+                weight_dtype=init_weight_dtype(args.mixed_precision),
+                use_tf32=True,
+                device=args.device,
+                vae_ckpt=args.vae_model_path,
+                skip_safety_check=True,
+            )
 
     # Timestamp + output papka
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_output_dir = os.path.join(args.output_dir, ts)
+    run_output_dir = os.path.join(args.output_dir, args.engine, ts)
 
     # Har juftlik uchun eval
     run_results = []
@@ -750,6 +820,7 @@ def main():
         "timestamp": ts,
         "commit": commit,
         "mode": args.mode,
+        "engine": args.engine,
         "device": args.device,
         "mixed_precision": args.mixed_precision,
         "width": args.width,

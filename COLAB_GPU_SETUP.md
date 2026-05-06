@@ -181,10 +181,29 @@ Bu hozirgi asosiy debugging workflow. U demo do'kon garment/person pairlarini av
 ```python
 !python eval_benchmark.py \
   --mode full \
+  --engine catvton \
   --pairs benchmark/catalog_pairs.json \
   --resume_path /content/Lookzi/hf_models/lookzi-vton \
   --base_model_path /content/Lookzi/hf_models/stable-diffusion-inpainting \
   --vae_model_path /content/Lookzi/hf_models/sd-vae-ft-mse \
+  --device cuda \
+  --mixed_precision fp16 \
+  --width 768 \
+  --height 1024 \
+  --num_inference_steps 50 \
+  --drive_log /content/drive/MyDrive/Lookzi/eval_logs/results.json \
+  --output_dir /content/drive/MyDrive/Lookzi/eval_logs/outputs
+```
+
+### Engine baseline test
+
+Bu test kiyim kiydirmaydi: person rasmini qaytaradi. Maqsad - benchmark gate uchun nazorat chizig'i. Har qanday yangi engine bundan aniq yaxshiroq chiqishi kerak.
+
+```python
+!python eval_benchmark.py \
+  --mode full \
+  --engine identity_baseline \
+  --pairs benchmark/catalog_pairs.json \
   --device cuda \
   --mixed_precision fp16 \
   --width 768 \

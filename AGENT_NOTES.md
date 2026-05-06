@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-05-06 v15] Engine-aware benchmark baseline
+
+### Nima qilindi
+- `tryon_engines/baseline.py` qo'shildi:
+  - `IdentityBaselineEngine`
+  - person rasmini resize qilib qaytaradi
+  - kiyim kiydirmaydi
+- `eval_benchmark.py`ga `--engine catvton|identity_baseline` argumenti qo'shildi.
+- Benchmark output papkasi endi engine bo'yicha ajraladi:
+  - `outputs/catvton/<timestamp>/...`
+  - `outputs/identity_baseline/<timestamp>/...`
+- `COLAB_GPU_SETUP.md`ga baseline benchmark komandasi qo'shildi.
+- `docs/ARCHITECTURE.md` baseline nazorat engine bilan yangilandi.
+
+### Maqsad
+Bu production engine emas. Bu benchmark gate uchun nazorat chizig'i: keyingi haqiqiy candidate engine human reviewda identity baseline'dan ham, CatVTON'dan ham yaxshiroq chiqishi kerak.
+
+---
+
 ## [2026-05-06 v14] Human review result archived and production decision recorded
 
 ### Signal

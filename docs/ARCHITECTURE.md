@@ -44,12 +44,15 @@ Lookzi must support multiple engines behind one interface.
 ```text
 TryOnEngine
   - CatVTONEngine
+  - IdentityBaselineEngine
   - IDMEngine
   - CreativeEditEngine
   - FutureEngine
 ```
 
 The user should not choose an engine manually. The system should route internally by category and reliability.
+
+`IdentityBaselineEngine` is not a production try-on model. It is a benchmark control that returns the person image unchanged. Candidate engines must beat it in human review before they can be considered useful.
 
 ## Category Policy
 
