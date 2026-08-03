@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# DWPose ONNX models (~220 MB) are downloaded at runtime by easy-dwpose
+checkpoints/*.onnx
+
+# generation output
+result.png
+outputs/
