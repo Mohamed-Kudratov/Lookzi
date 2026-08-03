@@ -7,11 +7,29 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from PIL import Image
 
-from diffusers import (
-    AutoencoderKLQwenImage,
-    FlowMatchEulerDiscreteScheduler,
-    QwenImageTransformer2DModel,
-)
+try:
+    from diffusers import (
+        AutoencoderKLQwenImage,
+        FlowMatchEulerDiscreteScheduler,
+        QwenImageTransformer2DModel,
+    )
+except ImportError as exc:
+    # `diffusers/` in the repo root is the fork's repository, not its package --
+    # the package is at diffusers/src/diffusers. Python searches the working
+    # directory first, resolves `diffusers` to that directory, finds no
+    # __init__.py, and returns an empty PEP 420 namespace package. The tell is
+    # "(unknown location)" in the ImportError.
+    import diffusers as _d
+    if getattr(_d, "__file__", None) is None:
+        raise ImportError(
+            "`diffusers` resolved to the local ./diffusers directory instead of the "
+            "installed package, so it has no contents.\n\n"
+            "Fix:\n"
+            "    pip install ./diffusers        # not -e: an editable install is still shadowed\n"
+            "    mv diffusers diffusers_src     # stop the directory shadowing the package\n"
+            "then restart the Python process."
+        ) from exc
+    raise
 from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2VLProcessor
 from peft import set_peft_model_state_dict, LoraConfig
 from safetensors.torch import load_file

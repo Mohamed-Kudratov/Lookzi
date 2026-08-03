@@ -95,6 +95,32 @@ These matter only on T4; on bf16 hardware they are no-ops in effect.
   `bnb_4bit_compute_dtype: bfloat16` into its config; honouring that on a T4
   makes every 4-bit matmul crawl.
 
+## Installing the bundled `diffusers` fork
+
+`README.md` says to `pip install -e ./diffusers`, which does not work — importing
+the result fails with:
+
+```
+ImportError: cannot import name 'AutoencoderKLQwenImage' from 'diffusers' (unknown location)
+```
+
+`diffusers/` in the repo root is the fork's **repository**; the package is at
+`diffusers/src/diffusers`. Python searches the working directory first, resolves
+`diffusers` to that directory, finds no `__init__.py`, and returns an empty
+PEP 420 namespace package. `(unknown location)` is the tell — the name resolved
+to a directory, not a module.
+
+An editable install does not help: the directory still shadows it, and an
+editable install cannot survive the rename either, since it records the absolute
+source path. Install it normally and move the tree aside:
+
+```bash
+pip install ./diffusers        # not -e
+mv diffusers diffusers_src
+```
+
+`pipeline.py` now raises this explanation instead of the bare ImportError.
+
 ## Other changes
 
 - Text embeddings are cached against the inputs that produced them. Re-running
