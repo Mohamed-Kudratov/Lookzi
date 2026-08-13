@@ -16,6 +16,10 @@ einops
 gradio
 huggingface-hub==0.34.4
 hf-xet==1.1.9
+# RunPod's PyTorch images ship HF_HUB_ENABLE_HF_TRANSFER=1 preset without the
+# package, which makes every download raise. It is also the faster downloader,
+# which matters for 57.7 GB.
+hf_transfer
 omegaconf==2.3.0
 onnxruntime==1.22.0
 opencv-python==4.11.0.86

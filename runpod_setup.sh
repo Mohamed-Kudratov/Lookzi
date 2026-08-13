@@ -59,7 +59,7 @@ pip install -q --upgrade pip
 pip install -q \
     "transformers==4.56.0" "tokenizers==0.22.0" "peft==0.17.1" \
     "accelerate==1.10.1" "huggingface-hub==0.34.4" "safetensors==0.6.2" \
-    "bitsandbytes>=0.46.0" "hf-xet==1.1.9" \
+    "bitsandbytes>=0.46.0" "hf-xet==1.1.9" hf_transfer \
     "omegaconf==2.3.0" "onnxruntime==1.22.0" "opencv-python==4.11.0.86" \
     "sentencepiece==0.2.1" "protobuf==6.32.0" "timm==1.0.16" \
     "pillow==11.0.0" einops gradio
