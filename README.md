@@ -1,68 +1,112 @@
-# Layering Virtual Try-On
+# Layering Virtual Try-On — RunPod
 
-**Authors**: [Chun Feng](https://github.com/ChuenFung), [Bowei Chen](https://armastuschen.github.io/), [Mengyi Shan](https://shanmy.github.io/), and [Ira Kemelmacher-Shlizerman](https://www.irakemelmacher.com/)
+Virtual try-on with **add** (layering) and **swap** modes, packaged to run on a
+RunPod GPU pod.
 
-[![arXiv](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)](https://arxiv.org/pdf/2607.22924)
-[![Website](https://img.shields.io/badge/Project-Website-blue)](https://chunfeng-projects.github.io/layering-virtual-tryon/)
+Upstream research code: [ChuenFung/Layering-Virtual-Try-On](https://github.com/ChuenFung/Layering-Virtual-Try-On)
+· [paper](https://arxiv.org/pdf/2607.22924)
+· [project page](https://chunfeng-projects.github.io/layering-virtual-tryon/)
+
+**Authors:** [Chun Feng](https://github.com/ChuenFung), [Bowei Chen](https://armastuschen.github.io/), [Mengyi Shan](https://shanmy.github.io/), and [Ira Kemelmacher-Shlizerman](https://www.irakemelmacher.com/)
 
 ![Teaser Image](./assets/teaser.png)
 
 ---
 
-> **Running this on Google Colab?** Use [`Layering_VTON_Colab.ipynb`](./Layering_VTON_Colab.ipynb)
-> and read [`COLAB_README.md`](./COLAB_README.md) first. The base model is 57.7 GB
-> in bf16 and does not fit on any Colab GPU; the notebook uses a 4-bit build
-> (~17 GB) and patches several bugs in the demo code that break on non-A100
-> hardware. The instructions below are the original, unmodified upstream setup.
+## What this needs
 
----
+The base model is **`Qwen-Image-Edit-2509`: 20.4 B parameters, 57.7 GB** in bf16
+— transformer 40.9 GB plus text encoder 16.6 GB. That number drives every
+decision here.
 
-## Getting Started
+| GPU | VRAM | Model | Both resident | ~Time / image (40 steps) |
+|---|---|---|---|---|
+| **A100 80GB** | 80 GB | full bf16 | yes | **~2–3 min** |
+| H100 80GB | 80 GB | full bf16 | yes | ~1–2 min |
+| A100 40GB | 40 GB | full bf16 | no — sequential | ~5–8 min |
+| L40S / A40 | 48 GB | full bf16 | no — sequential | ~6–10 min |
+| RTX 4090 | 24 GB | 4-bit only | no | ~8–12 min |
 
-This directory contains the official web demo for Layering Virtual Try-On, which allows users to perform try-ons with **add** (layering) and **swap** modes.
+**A100 80GB is the sweet spot.** H100 costs roughly double for a difference you
+will not notice on single images.
 
-### 1. Environment Setup
+## Quick start
 
-We provide an `environment.yml` file to quickly set up the required Conda environment. Note that our codebase relies on a customized version of `diffusers` (v0.36.0.dev0) which is included in this repository.
-
-First, create and activate the conda environment:
-```bash
-conda env create -f environment.yml
-conda activate layering_demo
-```
-
-Next, because YOLO pose extraction (`easy-dwpose`) has specific dependency constraints, we install it separately:
-```bash
-pip install easy-dwpose==1.0.2 --no-deps
-```
-
-### 2. Download Checkpoints
-
-Because the pose extraction models exceed GitHub's 100MB file limit, they are not included in this repository. You need to manually download them and place them in the `checkpoints/` directory.
-
-1. Download `yolox_l.onnx` and `dw-ll_ucoco_384.onnx` (e.g., from [HuggingFace DWPose](https://huggingface.co/yzd-v/DWPose/tree/main)).
-2. Create a `checkpoints` folder inside this demo directory and place the `.onnx` files inside it.
+Pod: any RunPod PyTorch template (CUDA 12.1+), container disk 30 GB,
+**volume 100 GB at `/workspace`**, HTTP port **7860** exposed.
 
 ```bash
-mkdir checkpoints
-# Place yolox_l.onnx and dw-ll_ucoco_384.onnx inside the checkpoints/ directory
+cd /workspace
+git clone https://github.com/Mohamed-Kudratov/Lookzi.git Layering-Virtual-Try-On
+bash Layering-Virtual-Try-On/runpod_setup.sh
 ```
 
-### 3. Run the Demo
+The script detects VRAM, picks the model to match, installs everything, and
+caches the weights on the volume so a pod restart does not re-download 57.7 GB.
 
-Simply run the `app.py` script to launch the Gradio web interface. The app will automatically initialize the pipeline and load the model weights from the `weights` directory.
+Then either the web UI:
 
 ```bash
-python app.py
+bash /workspace/Layering-Virtual-Try-On/run.sh
 ```
 
-Then, open your web browser and navigate to the local URL provided in the terminal (usually `http://127.0.0.1:7860`).
+at `https://<POD_ID>-7860.proxy.runpod.net`, or headless over SSH:
 
-### 3. Usage Guide
+```bash
+python infer.py --examples
+```
 
-1. **Person Image**: Upload a full-body image of a person.
-2. **Garment Image**: Upload an image of the garment you wish to try on.
-3. **Mode**: Choose either `swap` (traditional try-on) or `add` (layering).
-4. **Description**: Describe the edit (e.g., "swap the beige leggings for dark wash jeans" or "add a light gray turtleneck sweater").
-5. **Pose (Optional)**: If left blank, the app will automatically extract the pose from the uploaded person image using DWpose. You can also upload a custom pose image if desired.
-6. Click **Run VTON** to execute. The interface will first update to show you the processed inputs (padded to 512x896), and then display the final generation result once inference completes.
+See [`RUNPOD_README.md`](./RUNPOD_README.md) for the full guide and
+[`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) when something breaks.
+
+## Usage
+
+1. **Person image** — full-body.
+2. **Garment image** — the garment to try on.
+3. **Mode** — `swap` (traditional try-on) or `add` (layering).
+4. **Description** — e.g. `"swap the beige leggings for dark wash jeans"` or
+   `"add a light gray turtleneck sweater"`.
+5. **Pose** *(optional)* — extracted from the person image with DWPose if left
+   blank.
+
+Everything is padded to 512×896 before inference.
+
+## Changes from upstream
+
+The demo assumes a bf16 datacentre GPU and breaks in several places on anything
+else. Fixed here:
+
+- **Pose extraction crashed on GPU machines.** `utils.py` chose the DWPose
+  device with `torch.cuda.is_available()`, so `easy-dwpose` demanded
+  `CUDAExecutionProvider` while `environment.yml` installs the CPU-only
+  `onnxruntime`. Provider availability is now queried.
+- **The swap/add radio did nothing** — `mode` was collected by the UI and never
+  passed to the pipeline.
+- **`pip install -e ./diffusers` cannot work**; the source tree shadows the
+  install. See [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
+- `DWposeDetector` was rebuilt (two ONNX sessions) on every call.
+- `torch.cuda.empty_cache()` ran before any GPU check.
+- `if not person_img` — PIL images define neither `__bool__` nor `__len__`, so
+  this was always false and worked by accident.
+- Device and dtype were hardcoded to `cuda` + `bfloat16`; both are detected.
+- `.to(device)` was called on loaded models, which a bitsandbytes 4-bit module
+  cannot do — quantized checkpoints are placed via `device_map`.
+
+Added: `infer.py` (headless CLI), `runpod_setup.sh`, text-embedding caching,
+sampling controls in the UI, and fp32 guards for the VAE and CFG
+renormalisation that keep fp16 hardware from producing NaN.
+
+## Files
+
+| | |
+|---|---|
+| `runpod_setup.sh` | one-shot pod setup |
+| `infer.py` | headless CLI inference |
+| `app.py` | Gradio web UI |
+| `pipeline.py` | sampler |
+| `utils.py` | pose extraction, padding |
+| `weights/` | the try-on LoRA (rank 32) |
+| `diffusers/` | required diffusers fork, v0.36.0.dev0 |
+
+The upstream conda instructions live in
+[`README_UPSTREAM.md`](./README_UPSTREAM.md).

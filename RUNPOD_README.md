@@ -41,11 +41,12 @@ git clone https://github.com/Mohamed-Kudratov/Lookzi.git Layering-Virtual-Try-On
 bash Layering-Virtual-Try-On/runpod_setup.sh
 ```
 
-The script detects VRAM, picks the model accordingly, installs everything,
-works around the `diffusers` shadowing problem (see `COLAB_README.md`), and
-downloads the weights into `/workspace/hf_cache` so they survive a restart.
+The script detects VRAM, picks the model accordingly, installs everything, works
+around the `diffusers` shadowing problem (see
+[`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)), and downloads the weights into
+`/workspace/hf_cache` so they survive a restart.
 
-Then:
+Then either the web UI:
 
 ```bash
 bash /workspace/Layering-Virtual-Try-On/run.sh
@@ -53,6 +54,27 @@ bash /workspace/Layering-Virtual-Try-On/run.sh
 
 Open `https://<YOUR_POD_ID>-7860.proxy.runpod.net`. RunPod's proxy handles TLS,
 so Gradio's `share=True` tunnel is neither needed nor enabled.
+
+Or headless, which is what you want over SSH — there is no browser there:
+
+```bash
+cd /workspace/Layering-Virtual-Try-On
+
+# the three bundled examples, into ./outputs -- use this as a smoke test
+python infer.py --examples
+
+# a single run
+python infer.py \
+    --person assets/person_1.png \
+    --garment assets/pants.png \
+    --mode swap \
+    --description "swap the deep blue jeans for dark wash jeans" \
+    --steps 40 --cfg 4.0 --seed 42 \
+    --out result.png
+```
+
+`infer.py` prints per-step timing and peak VRAM, so it doubles as the benchmark
+for deciding whether a given pod size is worth its hourly rate.
 
 ## Cost
 
@@ -64,19 +86,18 @@ its volume**. Two habits worth keeping:
 - The first run downloads 57.7 GB. On a stopped-and-restarted pod with the same
   volume, that download does not repeat.
 
-## Settings worth changing from the Colab defaults
+## Defaults
 
-`app.py` defaults to 20 steps because a T4 makes 40 painful. On an A100, put it
-back:
+Set for a proper GPU, not a free-tier one:
 
-- **Steps:** 40 (the paper's default)
+- **Model:** `Qwen/Qwen-Image-Edit-2509`, full bf16 — `runpod_setup.sh` drops to
+  the 4-bit build only under 40 GB of VRAM
+- **Steps:** 40, the paper's default
 - **True CFG:** 4.0
-- **Model:** `MODEL_PATH=Qwen/Qwen-Image-Edit-2509` — set automatically by
-  `runpod_setup.sh` when VRAM allows
 
-Everything else in `pipeline.py` adapts on its own: bf16 is selected instead of
-fp16, the fp16 numerical guards become no-ops, and `low_vram` switches off above
-20 GB so nothing is loaded twice.
+`pipeline.py` adapts the rest on its own: bf16 is selected over fp16 by GPU
+capability, the fp16 numerical guards become no-ops, and `low_vram` switches off
+above 20 GB so nothing is loaded twice.
 
 ## RunPod plugin for Claude Code
 

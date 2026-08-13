@@ -3,10 +3,10 @@
 #
 #   bash runpod_setup.sh
 #
-# Unlike Colab, a decently sized pod runs the *full bf16* model rather than the
-# 4-bit build, which is the whole reason to pay for one. The script picks the
-# model by VRAM and puts everything under /workspace so a pod stop/start does
-# not re-download 57.7 GB.
+# A decently sized pod runs the *full bf16* model rather than a quantized build,
+# which is the whole reason to pay for one. The script picks the model by VRAM
+# and puts everything under /workspace so a pod stop/start does not re-download
+# 57.7 GB.
 
 set -euo pipefail
 

@@ -8,10 +8,10 @@ import torch
 from utils import process_inputs
 from pipeline import LayeringVTONPipeline, detect_device, total_vram_gb
 
-# Default to the 4-bit repo: 17 GB against 57.7 GB for the bf16 original, which
-# is the difference between fitting on a free-Colab T4 and not. Override with
-# MODEL_PATH=Qwen/Qwen-Image-Edit-2509 on a 40 GB+ GPU for full quality.
-MODEL_PATH = os.environ.get("MODEL_PATH", "ovedrive/Qwen-Image-Edit-2509-4bit")
+# The full bf16 model: 57.7 GB, and what you are paying a GPU host for.
+# Under ~40 GB of VRAM set MODEL_PATH=ovedrive/Qwen-Image-Edit-2509-4bit
+# instead (~17 GB, visibly lossy). runpod_setup.sh picks this by VRAM.
+MODEL_PATH = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
 LORA_DIR = os.environ.get("LORA_DIR", "./weights")
 SHARE = os.environ.get("GRADIO_SHARE", "0") == "1"
 
@@ -42,7 +42,7 @@ def run_vton(person_img, garment_img, custom_pose_img, mode, description,
     yield padded_person, padded_garment, padded_pose, None
 
     try:
-        progress(0, desc="Loading model (first run downloads ~17 GB)...")
+        progress(0, desc="Loading model (first run downloads the weights)...")
         pl = get_pipeline()
 
         def on_step(done, total):
@@ -83,10 +83,7 @@ with gr.Blocks(title="Layering VTON Demo") as demo:
             f"**Model:** `{MODEL_PATH}`"
         )
     else:
-        gr.Markdown(
-            "**No GPU detected.** This is a 20B model and will not run on CPU. "
-            "In Colab: Runtime -> Change runtime type -> GPU."
-        )
+        gr.Markdown("**No GPU detected.** This is a 20B model and will not run on CPU.")
 
     with gr.Row():
         with gr.Column():
@@ -98,7 +95,7 @@ with gr.Blocks(title="Layering VTON Demo") as demo:
             desc_in = gr.Textbox(label="Description", value="swap the beige leggings for dark wash jeans")
 
             with gr.Accordion("Sampling settings", open=False):
-                steps_in = gr.Slider(8, 50, value=20, step=1, label="Inference steps")
+                steps_in = gr.Slider(8, 50, value=40, step=1, label="Inference steps")
                 cfg_in = gr.Slider(1.0, 7.0, value=4.0, step=0.5,
                                    label="True CFG scale (1.0 = single pass, ~2x faster, lower fidelity)")
                 seed_in = gr.Number(value=42, precision=0, label="Seed")

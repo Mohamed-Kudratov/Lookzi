@@ -43,8 +43,9 @@ import inspect
 # Hardware detection
 # ---------------------------------------------------------------------------
 # The upstream code hardcodes device="cuda" and torch.bfloat16. That is correct
-# for an A100 but breaks on a free-Colab T4, which is Turing and has no native
-# bfloat16. These helpers pick a working configuration instead of assuming one.
+# for an A100 but breaks on any pre-Ampere card -- Turing (T4, RTX 20xx) has no
+# native bfloat16. These helpers pick a working configuration rather than
+# assuming one.
 
 def detect_device():
     if torch.cuda.is_available():
@@ -339,14 +340,14 @@ def apply_mode(mode: str, description: str) -> str:
 class LayeringVTONPipeline:
     """Layering VTON sampler.
 
-    Differences from the reference implementation, all driven by running on a
-    16 GB Colab T4 rather than a datacentre GPU:
+    Differences from the reference implementation, all driven by not assuming an
+    80 GB Ampere card:
 
     * device / dtype are detected instead of hardcoded to cuda + bfloat16
     * bitsandbytes-quantized checkpoints are supported (a 4-bit repo is ~17 GB
       against 57.7 GB for the bf16 original)
-    * `low_vram` loads the text encoder and the transformer one at a time,
-      because together they do not fit in 15 GB
+    * `low_vram` loads the text encoder and the transformer one at a time, for
+      cards where 40.9 + 16.6 GB does not fit at once
     * the VAE runs in fp32 when the rest of the model is fp16, and the CFG
       renormalisation is done in fp32, to avoid overflow on Turing
     """
@@ -369,7 +370,7 @@ class LayeringVTONPipeline:
         if self.device == "cpu":
             raise RuntimeError(
                 "No CUDA GPU detected. This is a 20B-parameter diffusion model; it cannot run on CPU.\n"
-                "In Colab: Runtime -> Change runtime type -> Hardware accelerator -> GPU (T4)."
+                "Check `nvidia-smi` and that torch was built with CUDA."
             )
 
         self.weight_dtype = dtype or detect_dtype(self.device)
