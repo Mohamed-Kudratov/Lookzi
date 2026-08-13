@@ -87,10 +87,11 @@ pip install -q \
     "bitsandbytes>=0.46.0" "hf-xet==1.1.9" hf_transfer \
     "omegaconf==2.3.0" "onnxruntime==1.22.0" "opencv-python==4.11.0.86" \
     "sentencepiece==0.2.1" "protobuf==6.32.0" "timm==1.0.16" \
-    "pillow==11.0.0" einops gradio
+    "pillow==11.0.0" "matplotlib==3.10.6" einops gradio
 
-# easy-dwpose pins dependencies that conflict with the above; at runtime it
-# only needs onnxruntime + opencv, both already present.
+# easy-dwpose pins dependencies that conflict with the above, so it goes in with
+# --no-deps. matplotlib above is not optional: draw_handpose imports it, and
+# without it pose extraction dies with ModuleNotFoundError.
 pip install -q easy-dwpose==1.0.2 --no-deps
 
 echo "--- 4/5  bundled diffusers fork ---"

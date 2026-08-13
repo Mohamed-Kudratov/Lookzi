@@ -33,6 +33,11 @@ tokenizers==0.22.0
 transformers==4.56.0
 tqdm==4.67.1
 
-# easy-dwpose must be installed separately with --no-deps; its own pins
-# conflict with the above and at runtime it only needs onnxruntime + opencv:
+# easy-dwpose draws hand keypoints through matplotlib, so this is a hard runtime
+# dependency despite being installed with --no-deps below. Without it, pose
+# extraction dies with ModuleNotFoundError inside draw_handpose.
+matplotlib==3.10.6
+
+# easy-dwpose must be installed separately with --no-deps; its own pins conflict
+# with the above:
 #     pip install easy-dwpose==1.0.2 --no-deps
