@@ -88,6 +88,49 @@ and you reach it at `https://<POD_ID>-7860.proxy.runpod.net` — not at the pod'
 IP. `share=True` is off by default because RunPod's proxy already does the job;
 set `GRADIO_SHARE=1` only if you need the `gradio.live` tunnel.
 
+## `OSError: [Errno 122] Disk quota exceeded` on RunPod
+
+Your network volume has a quota, and **`df` will not show it**. On a RunPod
+volume `df -h /workspace` reports the whole MFS cluster — hundreds of terabytes
+free — while your own limit may be 50 GB. The only reliable check is to write
+until it refuses:
+
+```bash
+dd if=/dev/zero of=/workspace/.probe bs=1M count=2000; rm -f /workspace/.probe
+du -sh /workspace
+```
+
+The full bf16 model needs **57.7 GB plus ~2 GB of repo**, so a 50 GB volume
+cannot hold it no matter what else you delete. Stop the pod, raise the volume
+in RunPod's Storage page, and start it again. `snapshot_download` resumes, so
+whatever already landed is not re-fetched.
+
+## Downloads stall or crawl on RunPod
+
+RunPod's PyTorch images preset two download accelerators. Both hurt here, all
+three cases measured on an A100 pod:
+
+| Setting | Result |
+|---|---|
+| `HF_XET_HIGH_PERFORMANCE=1` (preset) | stalls after ~10 GB |
+| `HF_HUB_ENABLE_HF_TRANSFER=1` (preset) | `RuntimeError` mid-download |
+| both disabled — plain HTTP | **~190 MB/s** |
+
+Xet writes deduplicated chunks, and that small random IO is pathological on a
+network volume; it also stores every blob twice while reconstructing. So:
+
+```bash
+export HF_HUB_DISABLE_XET=1
+export HF_HUB_ENABLE_HF_TRANSFER=0
+```
+
+`runpod_setup.sh` sets both. Note the volume itself is not the bottleneck —
+`dd` measured 648 MB/s of sequential write on the same volume.
+
+Repo choice matters independently: the official `Qwen/Qwen-Image-Edit-2509`
+pulled at ~190 MB/s, while the community `ovedrive/Qwen-Image-Edit-2509-4bit`
+managed ~6 MB/s from the same pod. The 4-bit build saves disk, not time.
+
 ## The model re-downloads after a pod restart
 
 `HF_HOME` must point at the **volume**, not the container disk. `runpod_setup.sh`

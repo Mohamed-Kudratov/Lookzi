@@ -15,8 +15,20 @@ REPO_DIR="$WORKSPACE/Layering-Virtual-Try-On"
 REPO_URL="${REPO_URL:-https://github.com/Mohamed-Kudratov/Lookzi.git}"
 
 # Persist the HF cache on the network volume, not the container's ephemeral disk.
+# RunPod images already point HF_HOME at /workspace/.cache/huggingface, so defer
+# to that when it is set.
 export HF_HOME="${HF_HOME:-$WORKSPACE/hf_cache}"
 mkdir -p "$HF_HOME"
+
+# Both of RunPod's preset download accelerators make things worse here, measured
+# on an A100 pod against the official Qwen repo:
+#   xet          stalls after ~10 GB -- it writes deduplicated chunks, and the
+#                small random IO that implies is pathological on RunPod's MFS
+#                network volume (it also stores every blob twice while doing it)
+#   hf_transfer  raises RuntimeError mid-download and hides the real error
+# Plain HTTP sustained ~190 MB/s. Turn both off.
+export HF_HUB_DISABLE_XET=1
+export HF_HUB_ENABLE_HF_TRANSFER=0
 
 echo "=============================================="
 echo " Layering VTON -- RunPod setup"
@@ -26,6 +38,19 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -n1)
 VRAM_GB=$((VRAM_MB / 1024))
 echo "Detected ${VRAM_GB} GB of VRAM"
+
+# `df` on a RunPod network volume reports the whole MFS cluster (hundreds of TB),
+# not your quota, so it cannot be used to check for space. Probe the quota by
+# writing until it refuses.
+echo "Checking the volume quota (df is useless here -- it shows the whole cluster)"
+dd if=/dev/zero of="$WORKSPACE/.quota_probe" bs=1M count=1 status=none 2>/dev/null || {
+    echo "ERROR: cannot write to $WORKSPACE at all -- the volume is already full."
+    exit 1
+}
+rm -f "$WORKSPACE/.quota_probe"
+USED_GB=$(du -sm "$WORKSPACE" 2>/dev/null | cut -f1)
+USED_GB=$((USED_GB / 1024))
+echo "  $WORKSPACE currently uses ${USED_GB} GB"
 
 # 57.7 GB of bf16 weights: transformer 40.9 + text encoder 16.6. Both stay
 # resident above ~70 GB. Between 40 and 70 the pipeline loads them one at a

@@ -31,6 +31,12 @@ will not notice on single images.
   and a volume is what survives a pod stop
 - **Expose HTTP port:** `7860`
 
+> **The volume size is the one setting people get wrong.** A 50 GB volume cannot
+> hold the bf16 model, and you will not find out until the download dies at 46 GB
+> with `Errno 122 Disk quota exceeded`. `df -h /workspace` is no help — on RunPod
+> it reports the whole MFS cluster as free, not your quota. Set 100 GB up front;
+> the volume costs cents per hour next to the GPU.
+
 ## Setup
 
 In the pod's web terminal:
