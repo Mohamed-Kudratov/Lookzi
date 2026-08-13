@@ -1,5 +1,10 @@
 import os
 import gc
+
+# Must be set before torch initialises CUDA. Loading a 40.9 GB transformer shard
+# by shard fragments the allocator badly enough to OOM with GB still free.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import torch
 import numpy as np
 import copy
@@ -124,6 +129,7 @@ def _load_model(cls, path, subfolder, dtype, device, library="diffusers", **kwar
 
     last_exc = None
     for i, extra in enumerate(attempts):
+        model = None
         try:
             model = cls.from_pretrained(path, subfolder=subfolder, torch_dtype=dtype, **extra, **kwargs)
             if "device_map" not in extra:
@@ -133,8 +139,25 @@ def _load_model(cls, path, subfolder, dtype, device, library="diffusers", **kwar
                     )
                 model = model.to(device)
             return model
-        except Exception as exc:  # noqa: BLE001 - fall through to the next strategy
+        except torch.cuda.OutOfMemoryError:
+            # Never retry an OOM. The next strategy needs at least as much VRAM,
+            # and the half-built model from this attempt is still holding it --
+            # retrying just leaks until nothing is left. Drop it and report.
+            del model
+            _free()
+            free_gb = (torch.cuda.mem_get_info()[0] / 1024**3) if torch.cuda.is_available() else 0
+            raise torch.cuda.OutOfMemoryError(
+                f"Out of VRAM loading '{subfolder}' ({free_gb:.1f} GB free).\n"
+                f"The bf16 model needs ~57.7 GB resident (transformer 40.9 + text encoder 16.6).\n"
+                f"Options: low_vram=True to load components one at a time, a 4-bit checkpoint, "
+                f"or a larger GPU.\n"
+                f"If free VRAM looks far lower than the card should have, a dead process is still "
+                f"holding it -- restart the pod."
+            )
+        except Exception as exc:  # noqa: BLE001 - a non-OOM failure; try the next strategy
             last_exc = exc
+            del model
+            _free()
             if i < len(attempts) - 1:
                 print(f"  load strategy {i + 1} failed ({type(exc).__name__}: {exc}); retrying")
     raise last_exc
@@ -380,13 +403,25 @@ class LayeringVTONPipeline:
         )
 
         vram = total_vram_gb(self.device)
+        free_gb = torch.cuda.mem_get_info()[0] / 1024**3
+        # A pod's GPU is not always as empty as its spec sheet. Memory held by a
+        # dead process, or by another tenant outside this container, is invisible
+        # to `nvidia-smi` here and cannot be reclaimed from inside -- but it will
+        # OOM the transformer load 20 minutes later. Say so now.
+        if free_gb < vram * 0.9:
+            print(
+                f"WARNING: only {free_gb:.1f} GB of {vram:.1f} GB is free. "
+                f"{vram - free_gb:.1f} GB is held by something else -- if no process of yours "
+                f"is running, restart the pod before going further."
+            )
+
         if low_vram is None:
             # transformer (~11.6 GB) + text encoder (~5.1 GB) at 4-bit needs
             # ~17 GB resident; anything under ~20 GB has to load sequentially.
             low_vram = vram < 20.0
         self.low_vram = low_vram
 
-        print(f"Device: {torch.cuda.get_device_name(0)} ({vram:.1f} GB VRAM)")
+        print(f"Device: {torch.cuda.get_device_name(0)} ({vram:.1f} GB VRAM, {free_gb:.1f} GB free)")
         print(f"Compute dtype: {self.weight_dtype}, VAE dtype: {self.vae_dtype}")
         print(f"Low-VRAM sequential loading: {self.low_vram}")
 
