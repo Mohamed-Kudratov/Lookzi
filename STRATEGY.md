@@ -77,6 +77,33 @@ Surveyed on HuggingFace, 2026-08-14:
 - Apache 2.0, no commercial restriction
 - capped at 576×864, and explicitly cannot layer
 
+## Survey of the 2025–2026 field
+
+Checked 2026-08-14, against the shortlist from YouTube reviews plus what the
+[Awesome-Try-On-Models](https://github.com/Zheng-Chong/Awesome-Try-On-Models)
+index turned up. **Licence is the sharpest filter** — several of the strongest
+models cannot be used commercially at all.
+
+| Model | What it is | Licence | Verdict for us |
+|---|---|---|---|
+| **FLUX.2 Klein 9B** | top-ranked open image-editing model; `fal/flux-klein-9b-virtual-tryon-lora` adds try-on | **non-commercial** | **blocked.** The 4B sibling is Apache 2.0; the 9B is not, and the try-on LoRA targets the 9B |
+| **Z-Image-Turbo** | 6B, **8 NFEs**, sub-second on H800, 16 GB VRAM | Apache 2.0 | **not a try-on model** — text-to-image. Interesting as a *base* to train on, and for generating studio backdrops |
+| **OmniTry** | mask-free try-on of **anything** — jewellery, watches, glasses | Apache 2.0 | **useful for Service 2.** Accessories are a real gap in garment-only models |
+| **PG-VTON** (CVPR 2026) | training-free, mask-free, **single pass** | released | worth testing. "CGPR-VTON" appears to be this; no model by that exact name exists |
+| Mobile-VTON (CVPR 2026) | on-device | released | wrong target — we have GPUs |
+| **FitVTON** (2026-06) | **fit-aware sizing control** | released | closest thing to the sizing requirement in the plan |
+| **Voost** | bidirectional try-on **and try-off**, DiT | released | try-off is interesting for catalogue prep |
+| Garments2Look (CVPR 2026) | outfit-level, clothing **+ accessories** | dataset | matches the photo-studio brief |
+| MagicTryOn / DreamVVT / CatV2TON / OmniTryOn | **video** try-on, DiT-based | released | this is the video path, when we get there |
+
+"AI Virtual Try-On | My Project Showcased at IBM Pre-AI Summit" is a conference
+talk, not a model — nothing to evaluate.
+
+**Nothing in this list beats what we already run on quality.** FASHN 1.5 was
+tested and fell short; the rest are either licence-blocked, not try-on models,
+or in the same weight class as what we have. So the answer is not a different
+model — it is fewer forward passes through this one.
+
 ## Unit economics
 
 **Service 1 on this model.** 57.7 GB of weights means a ~3 minute cold start, so
