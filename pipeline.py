@@ -1,5 +1,6 @@
 import os
 import gc
+import math
 
 # Must be set before torch initialises CUDA. Loading a 40.9 GB transformer shard
 # by shard fragments the allocator badly enough to OOM with GB still free.
@@ -71,6 +72,65 @@ def detect_dtype(device="cuda"):
     if torch.cuda.is_bf16_supported():
         return torch.bfloat16
     return torch.float16
+
+
+def _lora_config_from_state_dict(state_dict, alpha_scale=1.0):
+    """Derive a LoraConfig from the weights themselves.
+
+    The VTON LoRA's shape is known (rank 32 on to_q/to_k/to_v/to_out.0), but a
+    distillation LoRA's is not -- Lightning targets a different module set at a
+    different rank, and hardcoding either would silently mis-load it. Read both
+    off the tensors instead.
+    """
+    rank, targets = None, set()
+    for key, tensor in state_dict.items():
+        if "lora_A" not in key:
+            continue
+        if rank is None:
+            rank = tensor.shape[0]
+        # "transformer_blocks.0.attn.to_q.lora_A.weight" -> "to_q"
+        # "...to_out.0.lora_A.weight"                    -> "to_out.0"
+        parts = key.split(".lora_A")[0].split(".")
+        targets.add(f"{parts[-2]}.{parts[-1]}" if parts[-1].isdigit() else parts[-1])
+
+    if rank is None:
+        raise ValueError("no lora_A tensors found -- not a PEFT-convertible LoRA")
+
+    return LoraConfig(
+        r=rank,
+        lora_alpha=int(rank * alpha_scale),
+        lora_dropout=0.0,
+        init_lora_weights="gaussian",
+        target_modules=sorted(targets),
+    )
+
+
+# Lightning is guidance-distilled: it is trained to produce the CFG result in a
+# single pass, so the negative branch is not just unnecessary but wrong. It also
+# wants its own noise schedule -- exponential dynamic shifting with
+# base_shift = max_shift = log(3), rather than the base model's fixed shift=3.0.
+LIGHTNING_SCHEDULER_CONFIG = {
+    "base_image_seq_len": 256,
+    "base_shift": math.log(3),
+    "invert_sigmas": False,
+    "max_image_seq_len": 8192,
+    "max_shift": math.log(3),
+    "num_train_timesteps": 1000,
+    "shift": 1.0,
+    "shift_terminal": None,
+    "stochastic_sampling": False,
+    "time_shift_type": "exponential",
+    "use_beta_sigmas": False,
+    "use_dynamic_shifting": True,
+    "use_exponential_sigmas": False,
+    "use_karras_sigmas": False,
+}
+
+LIGHTNING_REPO = "lightx2v/Qwen-Image-Lightning"
+LIGHTNING_WEIGHTS = {
+    4: "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
+    8: "Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors",
+}
 
 
 def _is_quantized(model):
@@ -384,10 +444,17 @@ class LayeringVTONPipeline:
         low_vram=None,
         vae_dtype=None,
         lora_rank=32,
+        lightning=None,
+        lightning_scale=1.0,
     ):
         self.model_path = pretrained_model_name_or_path
         self.lora_weights_dir = lora_weights_dir
         self.lora_rank = lora_rank
+        # Step-distillation: 4 or 8, or None for the undistilled 40-step path.
+        self.lightning = lightning
+        self.lightning_scale = lightning_scale
+        if lightning is not None and lightning not in LIGHTNING_WEIGHTS:
+            raise ValueError(f"lightning must be one of {sorted(LIGHTNING_WEIGHTS)} or None")
 
         self.device = device or detect_device()
         if self.device == "cpu":
@@ -426,11 +493,17 @@ class LayeringVTONPipeline:
         print(f"Low-VRAM sequential loading: {self.low_vram}")
 
         print("Loading noise scheduler...")
-        self.noise_scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-            pretrained_model_name_or_path,
-            subfolder="scheduler",
-            shift=3.0
-        )
+        if self.lightning:
+            print(f"  Lightning {self.lightning}-step schedule (exponential dynamic shifting)")
+            self.noise_scheduler = FlowMatchEulerDiscreteScheduler.from_config(
+                LIGHTNING_SCHEDULER_CONFIG
+            )
+        else:
+            self.noise_scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
+                pretrained_model_name_or_path,
+                subfolder="scheduler",
+                shift=3.0
+            )
 
         print("Loading VAE...")
         self.vae = AutoencoderKLQwenImage.from_pretrained(
@@ -527,9 +600,50 @@ class LayeringVTONPipeline:
         else:
             print("Successfully loaded LoRA weights.")
 
+        if self.lightning:
+            self._load_lightning_adapter()
+
         self.transformer.requires_grad_(False)
         self.transformer.eval()
         _free()
+
+    def _load_lightning_adapter(self):
+        """Stack the step-distillation LoRA on top of the try-on LoRA.
+
+        Both are LoRAs over the same transformer, so they live side by side as
+        separate PEFT adapters and are activated together. The try-on adapter
+        supplies the task; Lightning supplies the ability to do it in 4-8 steps
+        instead of 40, at CFG 1.0 -- 10-20x fewer forward passes.
+        """
+        from huggingface_hub import hf_hub_download
+
+        name = LIGHTNING_WEIGHTS[self.lightning]
+        print(f"Loading Lightning {self.lightning}-step LoRA ({name})...")
+        path = hf_hub_download(LIGHTNING_REPO, name)
+
+        state_dict = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
+        state_dict = {
+            k.replace("transformer.", ""): v
+            for k, v in state_dict.items()
+            if k.startswith("transformer.")
+        }
+        state_dict = convert_unet_state_dict_to_peft(state_dict)
+        state_dict = {k: v.to(self.weight_dtype) for k, v in state_dict.items()}
+
+        config = _lora_config_from_state_dict(state_dict)
+        print(f"  rank {config.r} over {len(config.target_modules)} module types")
+        self.transformer.add_adapter(config, adapter_name="lightning")
+
+        incompatible = set_peft_model_state_dict(
+            self.transformer, state_dict, adapter_name="lightning"
+        )
+        if incompatible and incompatible.unexpected_keys:
+            print(f"  Warning: unexpected keys: {len(incompatible.unexpected_keys)}")
+
+        self.transformer.set_adapters(
+            ["default", "lightning"], [1.0, self.lightning_scale]
+        )
+        print(f"  Both adapters active (try-on 1.0, lightning {self.lightning_scale})")
 
     def _unload_transformer(self):
         if self.transformer is None:
@@ -549,13 +663,23 @@ class LayeringVTONPipeline:
         pose_img: Image.Image,
         description: str,
         mode: str = None,
-        num_inference_steps: int = 40,
-        true_cfg_scale: float = 4.0,
+        num_inference_steps: int = None,
+        true_cfg_scale: float = None,
         guidance_scale: float = None,
         seed: int = 42,
         progress_callback=None,
     ):
         description = apply_mode(mode, description)
+
+        # Lightning is distilled for a fixed step count and for CFG 1.0; running
+        # it at 40 steps or with a negative branch throws away the distillation
+        # and produces worse output than either path alone.
+        if num_inference_steps is None:
+            num_inference_steps = self.lightning if self.lightning else 40
+        if true_cfg_scale is None:
+            true_cfg_scale = 1.0 if self.lightning else 4.0
+        if self.lightning and true_cfg_scale > 1:
+            print(f"Note: Lightning expects true_cfg_scale=1.0, got {true_cfg_scale}.")
 
         generator = torch.Generator(device=self.device).manual_seed(seed)
         negative_prompt = " "

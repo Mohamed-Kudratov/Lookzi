@@ -42,9 +42,16 @@ def build_parser():
     p.add_argument("--description", default="", help='e.g. "swap the beige leggings for dark wash jeans"')
     p.add_argument("--examples", action="store_true", help="run the three bundled examples instead")
 
-    p.add_argument("--steps", type=int, default=40, help="inference steps (paper default: 40)")
-    p.add_argument("--cfg", type=float, default=4.0, help="true CFG scale; 1.0 skips the negative pass (~2x faster)")
+    p.add_argument("--steps", type=int, default=None,
+                   help="inference steps (default: 40, or the Lightning step count)")
+    p.add_argument("--cfg", type=float, default=None,
+                   help="true CFG scale; 1.0 skips the negative pass (~2x faster)")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--lightning", type=int, choices=[4, 8], default=None,
+                   help="stack the step-distillation LoRA: 4 or 8 steps instead of 40, "
+                        "at CFG 1.0 -- 10-20x fewer forward passes")
+    p.add_argument("--lightning-scale", type=float, default=1.0,
+                   help="weight of the Lightning adapter; lower trades speed back for fidelity")
 
     p.add_argument("--model", default=os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509"),
                    help="HF repo id; use ovedrive/Qwen-Image-Edit-2509-4bit under 40 GB of VRAM")
@@ -79,8 +86,13 @@ def main():
               f"         Use --model ovedrive/Qwen-Image-Edit-2509-4bit\n", file=sys.stderr)
 
     t0 = time.time()
-    pipe = LayeringVTONPipeline(args.model, args.lora, low_vram=args.low_vram)
+    pipe = LayeringVTONPipeline(
+        args.model, args.lora, low_vram=args.low_vram,
+        lightning=args.lightning, lightning_scale=args.lightning_scale,
+    )
     print(f"\nPipeline ready in {time.time() - t0:.0f}s")
+    steps = args.steps if args.steps is not None else (args.lightning or 40)
+    cfg = args.cfg if args.cfg is not None else (1.0 if args.lightning else 4.0)
 
     if args.examples:
         jobs = EXAMPLES
@@ -93,7 +105,7 @@ def main():
     failures = 0
     for i, (person_path, garment_path, mode, description) in enumerate(jobs, 1):
         label = f"[{i}/{len(jobs)}] {os.path.basename(person_path)} + {os.path.basename(garment_path)}"
-        print(f"\n{label}\n  mode={mode!r} steps={args.steps} cfg={args.cfg} seed={args.seed}")
+        print(f"\n{label}\n  mode={mode!r} steps={steps} cfg={cfg} seed={args.seed}")
         print(f"  {description!r}")
 
         try:
@@ -112,8 +124,8 @@ def main():
                 pose_img=ppose,
                 description=description,
                 mode=mode,
-                num_inference_steps=args.steps,
-                true_cfg_scale=args.cfg,
+                num_inference_steps=steps,
+                true_cfg_scale=cfg,
                 seed=args.seed,
             )
             elapsed = time.time() - t
@@ -125,7 +137,9 @@ def main():
             result.save(out_path)
 
             peak = torch.cuda.max_memory_allocated() / 1024**3
-            print(f"  generated in {elapsed:.0f}s ({elapsed / args.steps:.1f}s/step), peak VRAM {peak:.1f} GB")
+            passes = steps * (2 if cfg > 1 else 1)
+            print(f"  generated in {elapsed:.0f}s ({elapsed / steps:.1f}s/step, "
+                  f"{passes} transformer passes), peak VRAM {peak:.1f} GB")
             print(f"  -> {out_path}")
 
         except torch.cuda.OutOfMemoryError:
