@@ -5,18 +5,28 @@
 #
 # Stopping a RunPod pod wipes the container disk, and pip installs live there --
 # so a restarted pod has its 57.7 GB of weights but no packages, and nothing
-# launches the app on its own. This script fixes both, and keeps the virtualenv
-# on /workspace so the reinstall only ever happens once.
+# launches the app on its own. This script does both in one command.
+#
+# Packages go to the container disk, not the volume. A virtualenv on /workspace
+# sounds like the obvious fix and does not work: pip writes thousands of small
+# files and RunPod's network volume fails on that pattern --
+# `OSError: [Errno 5] Input/output error` partway through the install. What does
+# live on the volume is pip's wheel cache, which is a handful of large files,
+# exactly what a network filesystem is good at. So the reinstall stays, but it
+# runs offline in about a minute.
 #
 #   --no-ui   set everything up but do not launch Gradio
-#   --force   reinstall packages even if the venv looks current
+#   --force   reinstall packages even if they look current
 
 set -euo pipefail
 
 WORKSPACE="${WORKSPACE:-/workspace}"
 REPO="$WORKSPACE/Layering-Virtual-Try-On"
-VENV="$WORKSPACE/venv"
 REPO_URL="${REPO_URL:-https://github.com/Mohamed-Kudratov/Lookzi.git}"
+
+# Large files, sequential access -- the volume handles this well.
+export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$WORKSPACE/.pip-cache}"
+mkdir -p "$PIP_CACHE_DIR"
 
 LAUNCH_UI=1
 FORCE=0
@@ -64,26 +74,14 @@ else
 fi
 cd "$REPO"
 
-# ---- virtualenv on the volume ---------------------------------------------
-# --system-site-packages keeps torch from the pod image (several GB, already
-# built against the right CUDA) instead of duplicating it onto the volume.
-if [ ! -x "$VENV/bin/python" ]; then
-    echo "--- creating venv on the volume (one time) ---"
-    python3 -m venv --system-site-packages "$VENV"
-fi
-# shellcheck disable=SC1091
-source "$VENV/bin/activate"
-
-REQ_HASH=$(md5sum requirements.txt | cut -d' ' -f1)
-STAMP="$VENV/.requirements.md5"
-if [ "$FORCE" = "1" ] || [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$REQ_HASH" ]; then
-    echo "--- installing packages (one time, ~3 min) ---"
-    pip install -q --upgrade pip
+# ---- packages --------------------------------------------------------------
+# torch comes from the pod image; only the rest is installed here.
+if [ "$FORCE" = "1" ] || ! python3 -c "import transformers, peft, gradio" 2>/dev/null; then
+    echo "--- installing packages (~1-2 min; wheels cached on the volume) ---"
     pip install -q -r requirements.txt
     pip install -q easy-dwpose==1.0.2 --no-deps
-    echo "$REQ_HASH" > "$STAMP"
 else
-    echo "--- packages already installed ---"
+    echo "--- packages already present ---"
 fi
 
 # ---- the bundled diffusers fork -------------------------------------------
@@ -134,7 +132,7 @@ echo "    weights ok"
 # ---- launch ---------------------------------------------------------------
 if [ "$LAUNCH_UI" = "0" ]; then
     echo
-    echo "Setup complete. Activate with: source $VENV/bin/activate"
+    echo "Setup complete. Launch the UI later with: bash $REPO/start.sh"
     exit 0
 fi
 
