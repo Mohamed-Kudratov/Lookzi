@@ -131,6 +131,32 @@ Repo choice matters independently: the official `Qwen/Qwen-Image-Edit-2509`
 pulled at ~190 MB/s, while the community `ovedrive/Qwen-Image-Edit-2509-4bit`
 managed ~6 MB/s from the same pod. The 4-bit build saves disk, not time.
 
+## After a pod restart, `ModuleNotFoundError: No module named 'diffusers'`
+
+Stopping a pod wipes the **container disk**, and pip installs live there. Only
+`/workspace` survives. So a restarted pod has its 57.7 GB of weights but none of
+its packages — re-run `runpod_setup.sh`, which takes a few minutes because
+`snapshot_download` finds the weights already cached and skips them.
+
+## `CUDA out of memory` when the GPU should be empty
+
+Check what is actually free, not what the spec sheet says:
+
+```bash
+nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+```
+
+Seen on a supposedly dedicated A100 80GB: **42.4 GB used, no processes listed**.
+Inside a pod `nvidia-smi` cannot see PIDs from other namespaces, `--gpu-reset`
+returns `Not Supported`, and nothing in the container can reclaim it. The
+transformer alone is 40.9 GB, so `low_vram=True` does not rescue this either.
+
+Restart the pod. `pipeline.py` compares free VRAM against total at startup and
+warns, rather than failing twenty minutes into a load.
+
+Note this can also be self-inflicted: a failed load that gets retried leaks the
+partial model. That was a real bug here and is fixed — OOM is now terminal.
+
 ## The model re-downloads after a pod restart
 
 `HF_HOME` must point at the **volume**, not the container disk. `runpod_setup.sh`

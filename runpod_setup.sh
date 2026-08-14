@@ -106,6 +106,15 @@ if [ -d "$REPO_DIR/diffusers" ]; then
     pip install -q "$REPO_DIR/diffusers"
     mv "$REPO_DIR/diffusers" "$REPO_DIR/diffusers_src"
     echo "    moved ./diffusers -> ./diffusers_src"
+elif [ -d "$REPO_DIR/diffusers_src" ]; then
+    # A previous run already moved it. Stopping a pod wipes the container disk,
+    # so the install is gone while the source survives on the volume -- without
+    # this branch a restarted pod silently ends up with no diffusers at all.
+    echo "    source already moved; reinstalling from ./diffusers_src"
+    pip install -q "$REPO_DIR/diffusers_src"
+else
+    echo "ERROR: neither ./diffusers nor ./diffusers_src exists."
+    exit 1
 fi
 
 python - <<'PY'
