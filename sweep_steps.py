@@ -31,13 +31,14 @@ from PIL import Image
 from pipeline import LayeringVTONPipeline
 from utils import process_inputs
 
-# (steps, true_cfg_scale). The reference must be first.
+# (steps, true_cfg_scale, lightning). The reference must be first.
+# lightning=None is the undistilled path; 4 or 8 stacks the distillation LoRA.
 DEFAULT_GRID = [
-    (40, 4.0),   # reference: the paper's default
-    (32, 4.0),
-    (24, 4.0),
-    (16, 4.0),
-    (24, 1.0),   # CFG 1.0 skips the negative pass -- half the work per step
+    (40, 4.0, None),   # reference: the paper's default, 80 transformer passes
+    (24, 4.0, None),   # fewer steps alone
+    (24, 1.0, None),   # CFG 1.0 skips the negative pass -- half the work per step
+    (8,  1.0, 8),      # Lightning 8-step: 8 passes
+    (4,  1.0, 4),      # Lightning 4-step: 4 passes
 ]
 
 
@@ -80,17 +81,34 @@ def main():
     if args.grid:
         grid = []
         for item in args.grid.split(","):
-            s, c = item.split(":")
-            grid.append((int(s), float(c)))
+            parts = item.split(":")
+            s, c = int(parts[0]), float(parts[1])
+            light = int(parts[2]) if len(parts) > 2 and parts[2] not in ("", "none") else None
+            grid.append((s, c, light))
 
     os.makedirs(args.out, exist_ok=True)
 
-    pipe = LayeringVTONPipeline(args.model, args.lora)
-    pp, pg, ppose = process_inputs(Image.open(args.person), Image.open(args.garment), None)
+    # Lightning needs a different scheduler and an extra adapter, so each
+    # distillation setting is its own pipeline. Cache them: a load is ~3 minutes
+    # and the grid revisits the same settings.
+    pipes = {}
+
+    def get_pipe(lightning):
+        if lightning not in pipes:
+            print(f"\n--- loading pipeline (lightning={lightning}) ---")
+            pipes[lightning] = LayeringVTONPipeline(args.model, args.lora, lightning=lightning)
+        return pipes[lightning]
+
+    pp, pg, ppose = None, None, None
 
     rows, reference = [], None
-    for steps, cfg in grid:
-        tag = f"s{steps}_cfg{cfg}"
+    for steps, cfg, lightning in grid:
+        pipe = get_pipe(lightning)
+        if pp is None:
+            pp, pg, ppose = process_inputs(
+                Image.open(args.person), Image.open(args.garment), None
+            )
+        tag = f"s{steps}_cfg{cfg}" + (f"_L{lightning}" if lightning else "")
         t = time.time()
         img = pipe(
             person_img=pp, garment_img=pg, pose_img=ppose,
@@ -110,14 +128,15 @@ def main():
         # Passes through the transformer: CFG > 1 runs the negative branch too.
         passes = steps * (2 if cfg > 1 else 1)
         rows.append({
-            "steps": steps, "cfg": cfg, "seconds": round(elapsed, 1),
+            "steps": steps, "cfg": cfg, "lightning": lightning,
+            "seconds": round(elapsed, 1),
             "transformer_passes": passes, "ssim_vs_reference": round(s, 4),
             "mean_abs_diff": round(d, 2), "path": path,
         })
-        print(f"  {tag:16} {elapsed:6.1f}s  {passes:3d} passes  ssim={s:.4f}  diff={d:.2f}")
+        print(f"  {tag:20} {elapsed:6.1f}s  {passes:3d} passes  ssim={s:.4f}  diff={d:.2f}")
 
     base = rows[0]["seconds"]
-    print(f"\n{'setting':16}{'time':>8}{'speedup':>9}{'SSIM':>9}{'verdict':>26}")
+    print(f"\n{'setting':22}{'time':>8}{'speedup':>9}{'passes':>8}{'SSIM':>9}{'verdict':>26}")
     for r in rows:
         speed = base / r["seconds"]
         if r is rows[0]:
@@ -130,7 +149,8 @@ def main():
             verdict = "slightly different"
         else:
             verdict = "visibly different"
-        print(f"  s{r['steps']}/cfg{r['cfg']:<8}{r['seconds']:>7.1f}s{speed:>8.2f}x"
+        name = f"s{r['steps']}/cfg{r['cfg']}" + (f"/L{r['lightning']}" if r["lightning"] else "")
+        print(f"  {name:<20}{r['seconds']:>7.1f}s{speed:>8.2f}x{r['transformer_passes']:>8}"
               f"{r['ssim_vs_reference']:>9.4f}{verdict:>26}")
 
     out = os.path.join(args.out, "sweep.json")
