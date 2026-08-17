@@ -157,9 +157,11 @@ LIGHTNING_SCHEDULER_CONFIG = {
 }
 
 LIGHTNING_REPO = "lightx2v/Qwen-Image-Lightning"
+# The repo keeps each base model's LoRAs in its own directory; these are not at
+# the root, and asking for them there returns a 404.
 LIGHTNING_WEIGHTS = {
-    4: "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
-    8: "Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors",
+    4: "Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
+    8: "Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors",
 }
 
 
