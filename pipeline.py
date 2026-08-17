@@ -74,6 +74,28 @@ def detect_dtype(device="cuda"):
     return torch.float16
 
 
+# Published LoRAs disagree about how they name the transformer. diffusers uses
+# "transformer.", ComfyUI exports use "diffusion_model.", and some are saved with
+# no prefix at all. Guessing wrong yields an empty dict and a confusing failure
+# far from the cause, so try each.
+_LORA_PREFIXES = ("transformer.", "diffusion_model.", "model.diffusion_model.", "lora_unet_")
+
+
+def _strip_lora_prefix(state_dict):
+    """Return the transformer's LoRA tensors with any wrapper prefix removed."""
+    for prefix in _LORA_PREFIXES:
+        matched = {k[len(prefix):]: v for k, v in state_dict.items() if k.startswith(prefix)}
+        if matched:
+            return matched, prefix
+    # Already bare, if it looks like a LoRA at all.
+    if any("lora_A" in k or "lora_down" in k or "lora_a" in k.lower() for k in state_dict):
+        return dict(state_dict), ""
+    raise ValueError(
+        f"no recognisable LoRA tensors. Tried prefixes {_LORA_PREFIXES}; "
+        f"first keys were {list(state_dict)[:3]}"
+    )
+
+
 def _lora_config_from_state_dict(state_dict, alpha_scale=1.0):
     """Derive a LoraConfig from the weights themselves.
 
@@ -82,8 +104,14 @@ def _lora_config_from_state_dict(state_dict, alpha_scale=1.0):
     different rank, and hardcoding either would silently mis-load it. Read both
     off the tensors instead.
     """
-    rank, targets = None, set()
+    rank, alpha, targets = None, None, set()
     for key, tensor in state_dict.items():
+        # Some checkpoints carry explicit alphas. PEFT applies the LoRA scaled by
+        # alpha/r, so defaulting alpha to r when the file says otherwise changes
+        # the adapter's strength without any error being raised.
+        if key.endswith(".alpha") and alpha is None:
+            alpha = float(tensor.item()) if tensor.numel() == 1 else None
+            continue
         if "lora_A" not in key:
             continue
         if rank is None:
@@ -95,10 +123,12 @@ def _lora_config_from_state_dict(state_dict, alpha_scale=1.0):
 
     if rank is None:
         raise ValueError("no lora_A tensors found -- not a PEFT-convertible LoRA")
+    if alpha is None:
+        alpha = rank
 
     return LoraConfig(
         r=rank,
-        lora_alpha=int(rank * alpha_scale),
+        lora_alpha=alpha * alpha_scale,
         lora_dropout=0.0,
         init_lora_weights="gaussian",
         target_modules=sorted(targets),
@@ -621,17 +651,16 @@ class LayeringVTONPipeline:
         print(f"Loading Lightning {self.lightning}-step LoRA ({name})...")
         path = hf_hub_download(LIGHTNING_REPO, name)
 
-        state_dict = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
-        state_dict = {
-            k.replace("transformer.", ""): v
-            for k, v in state_dict.items()
-            if k.startswith("transformer.")
-        }
+        raw = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
+        state_dict, prefix = _strip_lora_prefix(raw)
+        if prefix:
+            print(f"  stripped prefix {prefix!r}")
         state_dict = convert_unet_state_dict_to_peft(state_dict)
         state_dict = {k: v.to(self.weight_dtype) for k, v in state_dict.items()}
 
         config = _lora_config_from_state_dict(state_dict)
-        print(f"  rank {config.r} over {len(config.target_modules)} module types")
+        print(f"  rank {config.r}, alpha {config.lora_alpha}, "
+              f"{len(config.target_modules)} module types")
         self.transformer.add_adapter(config, adapter_name="lightning")
 
         incompatible = set_peft_model_state_dict(
