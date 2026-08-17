@@ -79,20 +79,43 @@ def border_change_pct(before, after, frac=0.10, thresh=8):
     return round(float((d > thresh).mean() * 100), 2)
 
 
-def contact_sheet(rows, labels, out_path, pad=8):
-    """One strip per input: settings across, seeds down."""
+def contact_sheet(rows, labels, out_path, inputs=None, title="", pad=8):
+    """One strip per input: settings across, seeds down.
+
+    The inputs go in the first two columns. Without them the sheet only answers
+    "which output looks nicer", when the actual question is whether *that*
+    garment ended up on *that* person -- which cannot be judged from the outputs
+    alone.
+    """
     if not rows or not rows[0]:
         return
     w, h = rows[0][0].size
-    cols = max(len(r) for r in rows)
-    sheet = Image.new("RGB", (cols * (w + pad) + pad, len(rows) * (h + pad) + pad + 28),
+    lead = list(inputs or [])
+    lead_labels = ["INPUT person", "INPUT garment"][:len(lead)]
+    cols = max(len(r) for r in rows) + len(lead)
+    top = 46 if title else 28
+
+    sheet = Image.new("RGB", (cols * (w + pad) + pad, len(rows) * (h + pad) + pad + top),
                       (250, 250, 250))
     draw = ImageDraw.Draw(sheet)
-    for c, label in enumerate(labels[:cols]):
-        draw.text((pad + c * (w + pad) + 4, 6), label, fill=(20, 20, 20))
+    if title:
+        draw.text((pad + 4, 6), title, fill=(0, 0, 0))
+    for c, label in enumerate(lead_labels + labels):
+        draw.text((pad + c * (w + pad) + 4, top - 18), label, fill=(20, 20, 20))
+
     for r, row in enumerate(rows):
+        y = top + pad + r * (h + pad)
+        # Inputs repeat down every seed row so each row reads on its own.
+        for c, img in enumerate(lead):
+            sheet.paste(img.resize((w, h)), (pad + c * (w + pad), y))
         for c, img in enumerate(row):
-            sheet.paste(img, (pad + c * (w + pad), 28 + pad + r * (h + pad)))
+            sheet.paste(img, (pad + (c + len(lead)) * (w + pad), y))
+
+    # A divider between the inputs and the outputs, so the eye does not read
+    # the person image as one of the results.
+    if lead:
+        x = pad + len(lead) * (w + pad) - pad // 2
+        draw.line([(x, top), (x, sheet.height)], fill=(180, 180, 180), width=3)
     sheet.save(out_path)
 
 
@@ -104,6 +127,9 @@ def main():
     ap.add_argument("--lora", default="./weights")
     ap.add_argument("--only", default=None,
                     help="comma-separated setting labels, e.g. 'L8,s24'")
+    ap.add_argument("--rebuild-sheets", action="store_true",
+                    help="reassemble contact sheets from PNGs already in --out, "
+                         "without generating anything (no GPU needed)")
     args = ap.parse_args()
 
     settings = SETTINGS
@@ -113,6 +139,34 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     seeds = [42 + i * 1000 for i in range(args.seeds)]
+
+    labels_all = [s[0] for s in settings]
+
+    if args.rebuild_sheets:
+        for name, person, garment, mode, desc in INPUTS:
+            pp = Image.open(person).convert("RGB")
+            pg = Image.open(garment).convert("RGB")
+            size = None
+            rows = []
+            for seed in seeds:
+                row = []
+                for lab in labels_all:
+                    p = os.path.join(args.out, f"{name}__{lab}__seed{seed}.png")
+                    if os.path.exists(p):
+                        im = Image.open(p)
+                        size = size or im.size
+                        row.append(im)
+                if row:
+                    rows.append(row)
+            if not rows:
+                print(f"no images for {name}")
+                continue
+            contact_sheet(rows, labels_all,
+                          os.path.join(args.out, f"sheet__{name}.png"),
+                          inputs=[pp.resize(size), pg.resize(size)],
+                          title=f"{name}   mode={mode}   \"{desc}\"   (rows = seeds)")
+            print(f"rebuilt sheet__{name}.png")
+        return 0
 
     prepared = {}
     for name, person, garment, mode, desc in INPUTS:
@@ -166,14 +220,16 @@ def main():
         gc.collect()
         torch.cuda.empty_cache()
 
-    labels = [s[0] for s in settings]
-    for name in prepared:
+    labels = labels_all
+    for name, (pp, pg, _, mode, desc) in prepared.items():
         rows = []
         for seed in seeds:
             row = [images[(name, lab, seed)] for lab in labels if (name, lab, seed) in images]
             if row:
                 rows.append(row)
-        contact_sheet(rows, labels, os.path.join(args.out, f"sheet__{name}.png"))
+        contact_sheet(rows, labels, os.path.join(args.out, f"sheet__{name}.png"),
+                      inputs=[pp, pg],
+                      title=f"{name}   mode={mode}   \"{desc}\"   (rows = seeds)")
         print(f"sheet__{name}.png")
 
     with open(os.path.join(args.out, "stress.json"), "w", encoding="utf-8") as f:
