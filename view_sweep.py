@@ -46,7 +46,9 @@ def load(dir_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="/workspace/sweep")
-    ap.add_argument("--port", type=int, default=7861)
+    # 0 means "let Gradio find a free one". A fixed port collides with whatever
+    # app.py or an earlier viewer left behind, and the failure is a hard exit.
+    ap.add_argument("--port", type=int, default=0)
     args = ap.parse_args()
 
     items = load(args.dir)
@@ -66,7 +68,7 @@ def main():
             with gr.Accordion(label, open=False):
                 gr.Image(value=img, height=900, show_label=False)
 
-    demo.launch(server_name="0.0.0.0", server_port=args.port, share=True)
+    demo.launch(server_name="0.0.0.0", server_port=args.port or None, share=True)
 
 
 if __name__ == "__main__":
