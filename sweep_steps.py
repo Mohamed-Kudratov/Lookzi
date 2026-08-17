@@ -19,6 +19,7 @@ Rules of thumb for the SSIM column, against the 40-step reference:
     < 0.95   visibly different; the extra steps are doing something
 """
 import argparse
+import gc
 import json
 import os
 import sys
@@ -89,51 +90,59 @@ def main():
     os.makedirs(args.out, exist_ok=True)
 
     # Lightning needs a different scheduler and an extra adapter, so each
-    # distillation setting is its own pipeline. Cache them: a load is ~3 minutes
-    # and the grid revisits the same settings.
-    pipes = {}
+    # distillation setting is its own pipeline -- and at 57.7 GB each, two do not
+    # fit on an 80 GB card. Group the grid by setting, load once per group, and
+    # free before the next. First-appearance order is preserved so the reference
+    # still runs first.
+    groups = []
+    for entry in grid:
+        for lightning, entries in groups:
+            if lightning == entry[2]:
+                entries.append(entry)
+                break
+        else:
+            groups.append((entry[2], [entry]))
 
-    def get_pipe(lightning):
-        if lightning not in pipes:
-            print(f"\n--- loading pipeline (lightning={lightning}) ---")
-            pipes[lightning] = LayeringVTONPipeline(args.model, args.lora, lightning=lightning)
-        return pipes[lightning]
-
-    pp, pg, ppose = None, None, None
+    pp, pg, ppose = process_inputs(
+        Image.open(args.person), Image.open(args.garment), None
+    )
 
     rows, reference = [], None
-    for steps, cfg, lightning in grid:
-        pipe = get_pipe(lightning)
-        if pp is None:
-            pp, pg, ppose = process_inputs(
-                Image.open(args.person), Image.open(args.garment), None
+    for lightning, entries in groups:
+        print(f"\n--- loading pipeline (lightning={lightning}) ---")
+        pipe = LayeringVTONPipeline(args.model, args.lora, lightning=lightning)
+
+        for steps, cfg, _ in entries:
+            tag = f"s{steps}_cfg{cfg}" + (f"_L{lightning}" if lightning else "")
+            t = time.time()
+            img = pipe(
+                person_img=pp, garment_img=pg, pose_img=ppose,
+                description=args.description, mode=args.mode,
+                num_inference_steps=steps, true_cfg_scale=cfg, seed=args.seed,
             )
-        tag = f"s{steps}_cfg{cfg}" + (f"_L{lightning}" if lightning else "")
-        t = time.time()
-        img = pipe(
-            person_img=pp, garment_img=pg, pose_img=ppose,
-            description=args.description, mode=args.mode,
-            num_inference_steps=steps, true_cfg_scale=cfg, seed=args.seed,
-        )
-        elapsed = time.time() - t
-        path = os.path.join(args.out, f"{tag}.png")
-        img.save(path)
+            elapsed = time.time() - t
+            path = os.path.join(args.out, f"{tag}.png")
+            img.save(path)
 
-        if reference is None:
-            reference = img
-            s, d = 1.0, 0.0
-        else:
-            s, d = ssim(reference, img), mean_abs_diff(reference, img)
+            if reference is None:
+                reference = img
+                s, d = 1.0, 0.0
+            else:
+                s, d = ssim(reference, img), mean_abs_diff(reference, img)
 
-        # Passes through the transformer: CFG > 1 runs the negative branch too.
-        passes = steps * (2 if cfg > 1 else 1)
-        rows.append({
-            "steps": steps, "cfg": cfg, "lightning": lightning,
-            "seconds": round(elapsed, 1),
-            "transformer_passes": passes, "ssim_vs_reference": round(s, 4),
-            "mean_abs_diff": round(d, 2), "path": path,
-        })
-        print(f"  {tag:20} {elapsed:6.1f}s  {passes:3d} passes  ssim={s:.4f}  diff={d:.2f}")
+            # Passes through the transformer: CFG > 1 runs the negative branch too.
+            passes = steps * (2 if cfg > 1 else 1)
+            rows.append({
+                "steps": steps, "cfg": cfg, "lightning": lightning,
+                "seconds": round(elapsed, 1),
+                "transformer_passes": passes, "ssim_vs_reference": round(s, 4),
+                "mean_abs_diff": round(d, 2), "path": path,
+            })
+            print(f"  {tag:20} {elapsed:6.1f}s  {passes:3d} passes  ssim={s:.4f}  diff={d:.2f}")
+
+        del pipe
+        gc.collect()
+        torch.cuda.empty_cache()
 
     base = rows[0]["seconds"]
     print(f"\n{'setting':22}{'time':>8}{'speedup':>9}{'passes':>8}{'SSIM':>9}{'verdict':>26}")
