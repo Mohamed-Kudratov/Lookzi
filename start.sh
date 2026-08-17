@@ -93,6 +93,10 @@ if ! python -c "import diffusers, os; assert getattr(diffusers,'__file__',None)"
     if [ -d "$REPO/diffusers" ]; then
         pip uninstall -q -y diffusers 2>/dev/null || true
         pip install -q "$REPO/diffusers"
+        # A `git reset --hard` restores ./diffusers while ./diffusers_src is
+        # still on the volume from an earlier pod, and `mv` would then move one
+        # inside the other. The git copy is authoritative; drop the stale one.
+        rm -rf "$REPO/diffusers_src"
         mv "$REPO/diffusers" "$REPO/diffusers_src"
     elif [ -d "$REPO/diffusers_src" ]; then
         pip install -q "$REPO/diffusers_src"
