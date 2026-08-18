@@ -11,3 +11,5 @@ checkpoints/*.onnx
 # generation output
 result.png
 outputs/
+elements/out/
+elements/manifest.csv
