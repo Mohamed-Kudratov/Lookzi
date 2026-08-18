@@ -49,6 +49,11 @@ if ! "$VENV/bin/python" -c "from diffusers import ZImagePipeline" 2>/dev/null; t
     "$VENV/bin/pip" install -q transformers accelerate safetensors sentencepiece protobuf pillow
 fi
 
+# curate.py and view_sweep.py belong to this workflow too, and the system
+# interpreter only has gradio after start.sh has run -- which it need not have,
+# since nothing here touches the try-on pipeline.
+"$VENV/bin/pip" install -q gradio
+
 "$VENV/bin/python" - <<'PY'
 import torch, diffusers
 from diffusers import ZImagePipeline
