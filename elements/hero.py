@@ -146,16 +146,31 @@ def cmd_variations(args):
     out = os.path.join(args.out, "models")
     os.makedirs(out, exist_ok=True)
 
+    import torch
     from PIL import Image
-    from pipeline import LayeringVTONPipeline
-    from utils import pad_to_aspect_ratio
+    from diffusers import QwenImageEditPlusPipeline
 
     clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)
-    hero = pad_to_aspect_ratio(Image.open(hero_path), (512, 896))
+    hero = Image.open(hero_path).convert("RGB")
 
-    pipe = LayeringVTONPipeline(
+    # The stock edit pipeline, not LayeringVTONPipeline. Ours hardcodes the
+    # try-on instruction -- "...and change the pose of the person in the first
+    # image to the pose in the third image" -- which fights an instruction that
+    # is trying to set the pose in words. The base model is a general
+    # multi-reference editor and that is what this stage needs.
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
         os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509"),
-        args.lora, lightning=args.lightning)
+        torch_dtype=torch.bfloat16,
+    ).to("cuda")
+
+    steps, cfg = 40, 4.0
+    if args.lightning:
+        # Same distillation LoRA the try-on path uses: 8 passes instead of 80.
+        from pipeline import LIGHTNING_REPO, LIGHTNING_WEIGHTS
+        pipe.load_lora_weights(LIGHTNING_REPO,
+                               weight_name=LIGHTNING_WEIGHTS[args.lightning])
+        steps, cfg = args.lightning, 1.0
+    print(f"  sampling: {steps} steps, cfg {cfg}\n")
 
     log = open(os.path.join(out, f"variations__{face['id']}.csv"), "w",
                newline="", encoding="utf-8")
@@ -172,14 +187,20 @@ def cmd_variations(args):
         # The identity comes from the reference image; the instruction carries
         # only what should change. Describing the face here would fight the
         # reference rather than reinforce it.
-        instruction = (f"keep the same person and the same face exactly, "
-                       f"show them {s['distance']}, {s['angle']}, "
-                       f"{s['lighting']}, {s['background']}, "
-                       f"{s['expression']} expression, wearing {outfit}")
+        instruction = (f"Keep the same person with exactly the same face, "
+                       f"same skin tone and same hair. Show them {s['distance']}, "
+                       f"{s['angle']}, {s['lighting']}, {s['background']}, "
+                       f"{s['expression']} expression, wearing {outfit}. "
+                       f"Photorealistic, natural skin texture.")
         t = time.time()
         try:
-            img = pipe(person_img=hero, garment_img=hero, pose_img=hero,
-                       description=instruction, mode=None, seed=args.seed + s["index"])
+            img = pipe(
+                image=[hero],
+                prompt=instruction,
+                num_inference_steps=steps,
+                true_cfg_scale=cfg,
+                generator=torch.Generator("cuda").manual_seed(args.seed + s["index"]),
+            ).images[0]
             img.save(path)
             elapsed, err, ok = time.time() - t, "", ok + 1
             print(f"  {s['index']:03d}  {elapsed:5.1f}s  {s['distance']}, {s['angle'][:28]}")
