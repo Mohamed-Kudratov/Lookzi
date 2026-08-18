@@ -23,21 +23,67 @@ import sys
 # --------------------------------------------------------------------------
 # The roster, from ROSTER.md
 # --------------------------------------------------------------------------
+# Every entry carries distinguishing features, not just demographics. Without
+# them "Central Asian woman, mid 20s, average build" describes half the roster,
+# the generator returns near-identical faces, and the library reads as one
+# person in different clothes -- which is the opposite of a roster.
+#
+# Vary skin tone, hair and one memorable facial detail. Those three carry almost
+# all of the perceived difference between two people at catalogue size.
 ROSTER = [
-    # id                 gender   appearance          age          build      modest
-    ("f_cauz_20s_slim",  "woman", "Central Asian",    "early 20s", "slim",    False),
-    ("f_cauz_20s_avg",   "woman", "Central Asian",    "mid 20s",   "average", False),
-    ("f_cauz_30s_avg",   "woman", "Central Asian",    "early 30s", "average", False),
-    ("f_cauz_40s_full",  "woman", "Central Asian",    "late 30s",  "fuller",  False),
-    ("f_cauz_50s_avg",   "woman", "Central Asian",    "early 50s", "average", False),
-    ("f_cauz_20s_hijab", "woman", "Central Asian",    "mid 20s",   "average", True),
-    ("f_cauz_40s_hijab", "woman", "Central Asian",    "late 30s",  "average", True),
-    ("f_slav_20s_slim",  "woman", "Slavic European",  "early 20s", "slim",    False),
-    ("f_slav_30s_avg",   "woman", "Slavic European",  "early 30s", "average", False),
-    ("m_cauz_20s_slim",  "man",   "Central Asian",    "early 20s", "slim",    False),
-    ("m_cauz_30s_avg",   "man",   "Central Asian",    "early 30s", "average", False),
-    ("m_cauz_40s_avg",   "man",   "Central Asian",    "late 40s",  "average", False),
-    ("m_slav_30s_avg",   "man",   "Slavic European",  "early 30s", "average", False),
+    dict(id="f_cauz_20s_slim", gender="woman", appearance="Central Asian",
+         age="early 20s", build="slim", modest=False,
+         skin="light warm ivory skin", hair="long straight black hair",
+         detail="high cheekbones and a narrow face"),
+    dict(id="f_cauz_20s_avg", gender="woman", appearance="Central Asian",
+         age="mid 20s", build="average", modest=False,
+         skin="medium olive skin", hair="shoulder-length dark brown hair",
+         detail="a round face and full lips"),
+    dict(id="f_cauz_30s_avg", gender="woman", appearance="Central Asian",
+         age="early 30s", build="average", modest=False,
+         skin="tan golden skin", hair="dark chestnut hair in a low bun",
+         detail="a strong jaw and arched brows"),
+    dict(id="f_cauz_40s_full", gender="woman", appearance="Central Asian",
+         age="late 30s", build="fuller", modest=False,
+         skin="warm beige skin", hair="short bobbed black hair",
+         detail="a soft oval face and wide-set eyes"),
+    dict(id="f_cauz_50s_avg", gender="woman", appearance="Central Asian",
+         age="early 50s", build="average", modest=False,
+         skin="deeper tan skin with visible fine lines",
+         hair="greying dark hair pulled back",
+         detail="a lined face and deep-set eyes"),
+    dict(id="f_cauz_20s_hijab", gender="woman", appearance="Central Asian",
+         age="mid 20s", build="average", modest=True,
+         skin="fair olive skin", hair="hair fully covered by the headscarf",
+         detail="large dark almond eyes and thin brows"),
+    dict(id="f_cauz_40s_hijab", gender="woman", appearance="Central Asian",
+         age="late 30s", build="average", modest=True,
+         skin="warm brown skin", hair="hair fully covered by the headscarf",
+         detail="a broad face and a wide smile line"),
+    dict(id="f_slav_20s_slim", gender="woman", appearance="Slavic European",
+         age="early 20s", build="slim", modest=False,
+         skin="very fair pale skin with freckles", hair="long light blonde hair",
+         detail="pale grey-blue eyes and a small straight nose"),
+    dict(id="f_slav_30s_avg", gender="woman", appearance="Slavic European",
+         age="early 30s", build="average", modest=False,
+         skin="fair rosy skin", hair="mid-length auburn hair",
+         detail="green eyes and a square jaw"),
+    dict(id="m_cauz_20s_slim", gender="man", appearance="Central Asian",
+         age="early 20s", build="slim", modest=False,
+         skin="light olive skin", hair="short black hair, clean shaven",
+         detail="a narrow face and sharp cheekbones"),
+    dict(id="m_cauz_30s_avg", gender="man", appearance="Central Asian",
+         age="early 30s", build="average", modest=False,
+         skin="tan skin", hair="short dark hair with a trimmed beard",
+         detail="a square face and heavy brows"),
+    dict(id="m_cauz_40s_avg", gender="man", appearance="Central Asian",
+         age="late 40s", build="average", modest=False,
+         skin="weathered brown skin", hair="greying short hair and a moustache",
+         detail="a lined forehead and a broad nose"),
+    dict(id="m_slav_30s_avg", gender="man", appearance="Slavic European",
+         age="early 30s", build="average", modest=False,
+         skin="fair skin", hair="light brown hair, short beard",
+         detail="blue eyes and a long face"),
 ]
 
 # --------------------------------------------------------------------------
@@ -247,9 +293,9 @@ def roster_prompts(per_face=30):
     at the angle it saw.
     """
     rows = []
-    for face_id, gender, appearance, age, build, modest in ROSTER:
-        clothes = _clothing_for(modest)
-        pronoun = "her" if gender == "woman" else "his"
+    for face in ROSTER:
+        clothes = _clothing_for(face["modest"])
+        pronoun = "her" if face["gender"] == "woman" else "his"
         for i in range(per_face):
             angle = ANGLES[i % len(ANGLES)]
             distance = DISTANCE_MIX[i % len(DISTANCE_MIX)]
@@ -259,10 +305,12 @@ def roster_prompts(per_face=30):
             expression = EXPRESSION_MIX[i % len(EXPRESSION_MIX)]
             rows.append({
                 "category": "models",
-                "id": "%s__%03d" % (face_id, i),
-                "group": face_id,
-                "prompt": (f"photorealistic photograph of a {appearance} {gender} in "
-                           f"{pronoun} {age}, {build} build, wearing {outfit}, "
+                "id": "%s__%03d" % (face["id"], i),
+                "group": face["id"],
+                "prompt": (f"photorealistic photograph of a {face['appearance']} "
+                           f"{face['gender']} in {pronoun} {face['age']}, "
+                           f"{face['build']} build, {face['skin']}, {face['hair']}, "
+                           f"{face['detail']}, wearing {outfit}, "
                            f"{distance}, {angle}, {light}, {bg}, "
                            f"{expression} expression, {REALISM}"),
                 "angle": angle.split(",")[0],
@@ -277,19 +325,21 @@ def roster_prompts(per_face=30):
 def portrait_prompts(per_face=6):
     """Headshots of the same roster faces, listed separately by the competitor."""
     rows = []
-    for face_id, gender, appearance, age, build, modest in ROSTER:
-        clothes = _clothing_for(modest)
-        pronoun = "her" if gender == "woman" else "his"
+    for face in ROSTER:
+        clothes = _clothing_for(face["modest"])
+        pronoun = "her" if face["gender"] == "woman" else "his"
         for i in range(per_face):
             angle = ANGLES[i % len(ANGLES)]
             light = LIGHTING[i % len(LIGHTING)]
             bg = BACKGROUNDS_TRAIN[i % len(BACKGROUNDS_TRAIN)]
             rows.append({
                 "category": "portraits",
-                "id": "%s__portrait_%02d" % (face_id, i),
-                "group": face_id,
-                "prompt": (f"photorealistic head and shoulders portrait of a {appearance} "
-                           f"{gender} in {pronoun} {age}, wearing "
+                "id": "%s__portrait_%02d" % (face["id"], i),
+                "group": face["id"],
+                "prompt": (f"photorealistic head and shoulders portrait of a "
+                           f"{face['appearance']} {face['gender']} in {pronoun} "
+                           f"{face['age']}, {face['skin']}, {face['hair']}, "
+                           f"{face['detail']}, wearing "
                            f"{clothes[i % len(clothes)]}, {angle}, {light}, {bg}, "
                            f"neutral expression, {REALISM}"),
                 "angle": angle.split(",")[0],
@@ -414,7 +464,7 @@ def main():
     # Coverage check on the identity datasets -- the one that fails silently.
     models = [r for r in rows if r["category"] == "models"]
     if models:
-        one = [r for r in models if r["group"] == ROSTER[0][0]]
+        one = [r for r in models if r["group"] == ROSTER[0]["id"]]
         print("\ncoverage per face (%d images):" % len(one))
         for axis in ("angle", "distance", "lighting", "background", "expression"):
             counts = {}
