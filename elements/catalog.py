@@ -108,7 +108,13 @@ LIGHTING = [
     "soft diffused daylight",
     "hard directional sunlight",
     "strong side light",
-    "rim light from behind",
+    # Not "rim light from behind". That phrasing produced a bright outline
+    # traced around the head and shoulders on every image it touched -- the
+    # look of a badly cut-out sticker rather than a backlit photograph. "Rim
+    # light" correlates with hard edge highlights in product photography, so
+    # the model drew the edge instead of the light. Describing the source and
+    # ruling out the halo explicitly fixes it.
+    "gentle backlight from a low sun, soft haze, no glowing outline",
 ]
 
 BACKGROUNDS_TRAIN = [

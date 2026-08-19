@@ -128,6 +128,11 @@ def cmd_variations(args):
     face = face_by_id(args.face)
     hero_path = os.path.join(args.out, "heroes", face["id"], f"{args.hero}.png")
     specs = variation_specs(args.per_face)
+    if args.indices:
+        wanted = {int(x) for x in args.indices.replace(" ", "").split(",") if x != ""}
+        specs = [s for s in specs if s["index"] in wanted]
+        if not specs:
+            raise SystemExit(f"no spec indices matched {sorted(wanted)}")
 
     print(f"face  : {face['id']}")
     print(f"hero  : {hero_path}")
@@ -238,6 +243,9 @@ def main():
     v.add_argument("--lora", default="./weights")
     v.add_argument("--lightning", type=int, choices=[4, 8], default=8)
     v.add_argument("--seed", type=int, default=0)
+    v.add_argument("--indices", default=None,
+                   help="regenerate only these grid positions, e.g. 3,11,23,27 -- "
+                        "used with --redo when one axis value turns out bad")
     v.add_argument("--redo", action="store_true")
     v.add_argument("--dry-run", action="store_true")
     v.set_defaults(fn=cmd_variations)
