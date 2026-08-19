@@ -163,10 +163,20 @@ def cmd_variations(args):
     # image to the pose in the third image" -- which fights an instruction that
     # is trying to set the pose in words. The base model is a general
     # multi-reference editor and that is what this stage needs.
-    pipe = QwenImageEditPlusPipeline.from_pretrained(
-        os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509"),
-        torch_dtype=torch.bfloat16,
-    ).to("cuda")
+    # device_map, not .to("cuda"). Without it from_pretrained materialises all
+    # 57.7 GB in host RAM and then copies it across, and on RunPod's network
+    # volume that read pattern stalls: GPU memory climbs to ~41 GB and stops,
+    # with the process wedged in D state. device_map places each shard straight
+    # onto the GPU as it is read, which is the path LayeringVTONPipeline already
+    # uses and the one measured at ~3 minutes.
+    model_id = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
+    try:
+        pipe = QwenImageEditPlusPipeline.from_pretrained(
+            model_id, torch_dtype=torch.bfloat16, device_map="balanced")
+    except (TypeError, ValueError, NotImplementedError) as exc:
+        print(f"  device_map unavailable ({type(exc).__name__}); falling back", flush=True)
+        pipe = QwenImageEditPlusPipeline.from_pretrained(
+            model_id, torch_dtype=torch.bfloat16).to("cuda")
 
     steps, cfg = 40, 4.0
     if args.lightning:
