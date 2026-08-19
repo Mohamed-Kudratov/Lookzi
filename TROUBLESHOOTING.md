@@ -157,6 +157,27 @@ warns, rather than failing twenty minutes into a load.
 Note this can also be self-inflicted: a failed load that gets retried leaks the
 partial model. That was a real bug here and is fixed — OOM is now terminal.
 
+## Model loading hangs, GPU memory stops growing part-way
+
+Check the process state:
+
+```bash
+ps -o pid,stat,etime,wchan:24 -p $(pgrep -f your_script | head -1)
+```
+
+`D (disk sleep)` means it is wedged in uninterruptible IO against the network
+volume -- not slow, stuck. The tell is GPU memory that climbs to some fraction
+of the model size and then sits there for minutes at 0% utilisation. A process
+in `D` cannot be killed; `pkill` returns success and the process stays.
+
+**The usual cause is killing an earlier load mid-read.** Interrupting a process
+while it is streaming tens of GB off MFS can leave the mount in a state where
+the next read never returns. Once that happens the only reliable fix is
+restarting the pod, which remounts the volume; `/workspace` data is unaffected.
+
+So: let a model load finish, or restart the pod. Killing it and immediately
+retrying is what causes this, and each retry makes it worse.
+
 ## The model re-downloads after a pod restart
 
 `HF_HOME` must point at the **volume**, not the container disk. `runpod_setup.sh`
