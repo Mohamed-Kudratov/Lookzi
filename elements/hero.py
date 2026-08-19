@@ -68,15 +68,18 @@ def hero_prompt(face):
             f"neutral expression, {REALISM_PERSON}")
 
 
-def cmd_candidates(args):
-    face = face_by_id(args.face)
-    out = os.path.join(args.out, "heroes", face["id"])
-    os.makedirs(out, exist_ok=True)
+def _faces_from(arg):
+    """--face accepts one id, a comma-separated list, or 'all'."""
+    if arg.strip() == "all":
+        return list(ROSTER)
+    return [face_by_id(f.strip()) for f in arg.split(",") if f.strip()]
 
-    prompt = hero_prompt(face)
-    print(f"face   : {face['id']}")
-    print(f"prompt : {prompt[:160]}...")
-    print(f"out    : {out}\n")
+
+def cmd_candidates(args):
+    faces = _faces_from(args.face)
+    for face in faces:
+        os.makedirs(os.path.join(args.out, "heroes", face["id"]), exist_ok=True)
+        print(f"{face['id']:20} {hero_prompt(face)[:110]}...")
     if args.dry_run:
         return 0
 
@@ -93,19 +96,24 @@ def cmd_candidates(args):
     pipe = ZImagePipeline.from_pretrained("Tongyi-MAI/Z-Image-Turbo",
                                           torch_dtype=torch.bfloat16,
                                           low_cpu_mem_usage=False).to("cuda")
-    for i in range(args.n):
-        path = os.path.join(out, "%03d.png" % i)
-        if os.path.exists(path) and not args.redo:
-            continue
-        t = time.time()
-        img = pipe(prompt=prompt, height=1152, width=768, num_inference_steps=9,
-                   guidance_scale=0.0,
-                   generator=torch.Generator("cuda").manual_seed(args.seed + i)).images[0]
-        img.save(path)
-        print(f"  {i:03d}  {time.time() - t:.1f}s")
+    # One model load covers every face asked for. Loading costs minutes and a
+    # candidate costs three seconds, so per-face invocations spend nearly all
+    # their time reloading the same weights.
+    for face in faces:
+        out = os.path.join(args.out, "heroes", face["id"])
+        prompt = hero_prompt(face)
+        for i in range(args.n):
+            path = os.path.join(out, "%03d.png" % i)
+            if os.path.exists(path) and not args.redo:
+                continue
+            t = time.time()
+            img = pipe(prompt=prompt, height=1152, width=768, num_inference_steps=9,
+                       guidance_scale=0.0,
+                       generator=torch.Generator("cuda").manual_seed(args.seed + i)).images[0]
+            img.save(path)
+            print(f"  {face['id']:20} {i:03d}  {time.time() - t:.1f}s", flush=True)
 
-    print(f"\nLook at them, pick one, then:\n"
-          f"  python elements/hero.py variations --face {face['id']} --hero 000")
+    print("\nLook at them, pick one per face, then run `variations`.")
     return 0
 
 
@@ -125,8 +133,7 @@ def variation_specs(per_face=30):
 
 
 def cmd_variations(args):
-    face = face_by_id(args.face)
-    hero_path = os.path.join(args.out, "heroes", face["id"], f"{args.hero}.png")
+    faces = _faces_from(args.face)
     specs = variation_specs(args.per_face)
     if args.indices:
         wanted = {int(x) for x in args.indices.replace(" ", "").split(",") if x != ""}
@@ -134,19 +141,24 @@ def cmd_variations(args):
         if not specs:
             raise SystemExit(f"no spec indices matched {sorted(wanted)}")
 
-    print(f"face  : {face['id']}")
-    print(f"hero  : {hero_path}")
-    print(f"making: {len(specs)} variations\n")
+    jobs = []
+    for face in faces:
+        hero_path = os.path.join(args.out, "heroes", face["id"], f"{args.hero}.png")
+        jobs.append((face, hero_path))
+        print(f"{face['id']:20} hero={hero_path}")
+    print(f"making: {len(specs)} variations x {len(faces)} faces\n")
 
-    # Checked after the summary so --dry-run can be used to review the grid
-    # before any hero exists.
+    # Checked after the summary so --dry-run can review the grid before any
+    # hero exists.
     if args.dry_run:
         for s in specs[:4]:
             print(f"  {s['index']:03d}  {s['distance']}, {s['angle']}, {s['lighting']}")
         print("  ...")
         return 0
-    if not os.path.exists(hero_path):
-        raise SystemExit(f"no hero at {hero_path} -- run `candidates` first")
+    missing = [p for _, p in jobs if not os.path.exists(p)]
+    if missing:
+        raise SystemExit("no hero at:\n  " + "\n  ".join(missing) +
+                         "\nrun `candidates` first")
 
     out = os.path.join(args.out, "models")
     os.makedirs(out, exist_ok=True)
@@ -154,9 +166,6 @@ def cmd_variations(args):
     import torch
     from PIL import Image
     from diffusers import QwenImageEditPlusPipeline
-
-    clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)
-    hero = Image.open(hero_path).convert("RGB")
 
     # The stock edit pipeline, not LayeringVTONPipeline. Ours hardcodes the
     # try-on instruction -- "...and change the pose of the person in the first
@@ -187,20 +196,26 @@ def cmd_variations(args):
         steps, cfg = args.lightning, 1.0
     print(f"  sampling: {steps} steps, cfg {cfg}\n")
 
-    # A partial run must not wipe the log of the full one. Read what is there,
-    # replace only the rows this run touches, write it all back at the end.
-    log_path = os.path.join(out, f"variations__{face['id']}.csv")
     fields = ["id", "angle", "distance", "lighting", "background",
               "expression", "seconds", "error"]
-    existing = {}
-    if os.path.exists(log_path):
+    ok = failed = 0
+
+    for face, hero_path in jobs:
+      clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)
+      hero = Image.open(hero_path).convert("RGB")
+      print(f"\n--- {face['id']} ---", flush=True)
+
+      # A partial run must not wipe the log of the full one. Read what is
+      # there, replace only the rows this run touches, write it all back.
+      log_path = os.path.join(out, f"variations__{face['id']}.csv")
+      existing = {}
+      if os.path.exists(log_path):
         with open(log_path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 if row.get("id"):
                     existing[row["id"]] = row
 
-    ok = failed = 0
-    for s in specs:
+      for s in specs:
         path = os.path.join(out, "%s__%03d.png" % (face["id"], s["index"]))
         if os.path.exists(path) and not args.redo:
             continue
