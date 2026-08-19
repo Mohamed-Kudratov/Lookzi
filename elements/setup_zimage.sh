@@ -49,12 +49,17 @@ if ! "$VENV/bin/python" -c "from diffusers import ZImagePipeline" 2>/dev/null; t
     "$VENV/bin/pip" install -q transformers accelerate safetensors sentencepiece protobuf pillow
 fi
 
-# --system-site-packages lets the try-on stack leak in, and its pinned
-# huggingface-hub==0.34.4 is too old for diffusers-from-source:
-#   cannot import name 'get_cached_repo_tree' from 'huggingface_hub'
-# Installing a current hub into the venv shadows the system one here without
-# touching the pinned version the try-on pipeline needs.
-"$VENV/bin/pip" install -q --upgrade huggingface_hub
+# huggingface_hub is squeezed from both sides here.
+#
+#   too old  (0.34.4, inherited from the try-on stack via --system-site-packages)
+#            cannot import name 'get_cached_repo_tree' from 'huggingface_hub'
+#   too new  (1.x)
+#            huggingface-hub>=0.34.0,<1.0 is required ... but found 1.28.0
+#            -- transformers caps it below 1.0
+#
+# So the venv needs a late 0.x: new enough for diffusers-from-source, old enough
+# for transformers. Installed into the venv only; the system keeps its pin.
+"$VENV/bin/pip" install -q --upgrade "huggingface_hub>=0.35,<1.0"
 
 # curate.py and view_sweep.py belong to this workflow too, and the system
 # interpreter only has gradio after start.sh has run -- which it need not have,
