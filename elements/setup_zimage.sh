@@ -36,30 +36,31 @@ echo "   cache: $HF_HOME"
 echo "=============================================="
 
 if [ ! -x "$VENV/bin/python" ]; then
-    # --system-site-packages keeps torch from the pod image rather than pulling
-    # several GB of CUDA wheels a second time.
-    python3 -m venv --system-site-packages "$VENV"
+    # Fully isolated -- deliberately NOT --system-site-packages.
+    #
+    # Sharing the system packages looks like a saving, since torch is several
+    # GB, but it drags the try-on stack's pins in with it and the two stacks
+    # disagree. transformers caps huggingface_hub below 1.0; diffusers-from-
+    # source needs one new enough for get_cached_repo_tree; the inherited
+    # 0.34.4 is below both. Every attempt to satisfy one broke the other.
+    #
+    # Isolation costs ~3 GB of container disk once and ends the argument.
+    python3 -m venv "$VENV"
 fi
 
 "$VENV/bin/pip" install -q --upgrade pip
 
 if ! "$VENV/bin/python" -c "from diffusers import ZImagePipeline" 2>/dev/null; then
+    echo "--- installing torch (isolated venv, ~3 GB, one time) ---"
+    "$VENV/bin/pip" install -q torch --index-url https://download.pytorch.org/whl/cu128
+
     echo "--- installing diffusers from source (needed for ZImagePipeline) ---"
     "$VENV/bin/pip" install -q "git+https://github.com/huggingface/diffusers"
-    "$VENV/bin/pip" install -q transformers accelerate safetensors sentencepiece protobuf pillow
+    "$VENV/bin/pip" install -q transformers accelerate safetensors sentencepiece protobuf pillow gradio
 fi
 
-# huggingface_hub is squeezed from both sides here.
-#
-#   too old  (0.34.4, inherited from the try-on stack via --system-site-packages)
-#            cannot import name 'get_cached_repo_tree' from 'huggingface_hub'
-#   too new  (1.x)
-#            huggingface-hub>=0.34.0,<1.0 is required ... but found 1.28.0
-#            -- transformers caps it below 1.0
-#
-# So the venv needs a late 0.x: new enough for diffusers-from-source, old enough
-# for transformers. Installed into the venv only; the system keeps its pin.
-"$VENV/bin/pip" install -q --upgrade "huggingface_hub>=0.35,<1.0"
+# With an isolated venv there is nothing to pin by hand: pip resolves
+# huggingface_hub from what diffusers and transformers each declare.
 
 # curate.py and view_sweep.py belong to this workflow too, and the system
 # interpreter only has gradio after start.sh has run -- which it need not have,
