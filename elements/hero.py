@@ -177,11 +177,17 @@ def cmd_variations(args):
         steps, cfg = args.lightning, 1.0
     print(f"  sampling: {steps} steps, cfg {cfg}\n")
 
-    log = open(os.path.join(out, f"variations__{face['id']}.csv"), "w",
-               newline="", encoding="utf-8")
-    w = csv.writer(log)
-    w.writerow(["id", "angle", "distance", "lighting", "background",
-                "expression", "seconds", "error"])
+    # A partial run must not wipe the log of the full one. Read what is there,
+    # replace only the rows this run touches, write it all back at the end.
+    log_path = os.path.join(out, f"variations__{face['id']}.csv")
+    fields = ["id", "angle", "distance", "lighting", "background",
+              "expression", "seconds", "error"]
+    existing = {}
+    if os.path.exists(log_path):
+        with open(log_path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                if row.get("id"):
+                    existing[row["id"]] = row
 
     ok = failed = 0
     for s in specs:
@@ -212,11 +218,16 @@ def cmd_variations(args):
         except Exception as exc:
             elapsed, err, failed = time.time() - t, f"{type(exc).__name__}: {exc}", failed + 1
             print(f"  {s['index']:03d}  FAILED  {err}", file=sys.stderr)
-        w.writerow([os.path.basename(path), s["angle"], s["distance"], s["lighting"],
-                    s["background"], s["expression"], round(elapsed, 1), err])
-        log.flush()
+        existing[os.path.basename(path)] = dict(
+            id=os.path.basename(path), angle=s["angle"], distance=s["distance"],
+            lighting=s["lighting"], background=s["background"],
+            expression=s["expression"], seconds=round(elapsed, 1), error=err)
+        with open(log_path, "w", newline="", encoding="utf-8") as f:
+            wr = csv.DictWriter(f, fieldnames=fields)
+            wr.writeheader()
+            for k in sorted(existing):
+                wr.writerow({c: existing[k].get(c, "") for c in fields})
 
-    log.close()
     print(f"\n{ok} made, {failed} failed -> {out}")
     print(f"Now curate:  python elements/curate.py --group {face['id']}")
     return 1 if failed else 0
