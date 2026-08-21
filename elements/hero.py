@@ -53,17 +53,26 @@ def face_by_id(face_id):
 def hero_prompt(face):
     """A neutral, well-lit, unambiguous reference shot.
 
-    Deliberately plain: front on, soft light, plain backdrop, half body. This
-    image is the source of truth for the identity, so nothing in it should be
-    hard to read -- dramatic light or an extreme angle hides the very features
-    stage 2 has to carry over.
+    Deliberately plain: front on, soft light, plain backdrop. This image is the
+    source of truth for the identity, so nothing in it should be hard to read --
+    dramatic light or an extreme angle hides the very features stage 2 has to
+    carry over.
+
+    **Full body, not waist-up.** The first version framed from the waist up, and
+    the fuller-build model then came back looking horizontally stretched rather
+    than genuinely fuller. Aspect ratio was not the cause -- input and output
+    were both exactly 0.667. The reference simply contained no lower body, so
+    when a full-body variation was asked for the model had to invent the
+    proportions, and approximated "fuller" by widening. No instruction can
+    supply information the reference does not carry.
     """
     pronoun = "her" if face["gender"] == "woman" else "his"
     clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)[0]
     return (f"photorealistic photograph of a {face['appearance']} {face['gender']} "
             f"in {pronoun} {face['age']}, {face['build']} build, {face['skin']}, "
             f"{face['hair']}, {face['detail']}, wearing {clothes}, "
-            f"half body from the waist up, front view facing camera, "
+            f"full body from head to feet, standing straight, whole figure in "
+            f"frame with the feet visible, front view facing camera, "
             f"soft diffused daylight, plain light grey studio backdrop, "
             f"neutral expression, {REALISM_PERSON}")
 
