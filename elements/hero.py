@@ -36,7 +36,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from catalog import (ANGLES, BACKGROUNDS_TRAIN, CLOTHING_MODEST, CLOTHING_NEUTRAL,
+from catalog import (ANGLES, article, feature_clause, BACKGROUNDS_TRAIN, CLOTHING_MODEST, CLOTHING_NEUTRAL,
                      DISTANCE_MIX, EXPRESSION_MIX, LIGHTING, REALISM_PERSON,
                      ROSTER)  # noqa: E402
 
@@ -68,8 +68,9 @@ def hero_prompt(face):
     """
     pronoun = "her" if face["gender"] == "woman" else "his"
     clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)[0]
-    return (f"photorealistic photograph of a {face['appearance']} {face['gender']} "
-            f"in {pronoun} {face['age']}, {face['build']} build, {face['skin']}, "
+    return (f"photorealistic photograph of {article(face)} {face['gender']} "
+            f"in {pronoun} {face['age']}, {face['build']} build, "
+            f"{feature_clause(face)}{face['skin']}, "
             f"{face['hair']}, {face['detail']}, wearing {clothes}, "
             f"full body from head to feet, standing straight, whole figure in "
             f"frame with the feet visible, front view facing camera, "
@@ -102,7 +103,12 @@ def cmd_candidates(args):
               file=sys.stderr)
         return 3
 
-    pipe = ZImagePipeline.from_pretrained("Tongyi-MAI/Z-Image-Turbo",
+    # Prefer the bf16 copy if elements/save_bf16.py has been run: same weights,
+    # half the bytes off the volume, and no cast on load.
+    from save_bf16 import resolved_model_path
+    model = resolved_model_path()
+    print(f"  model: {model}", flush=True)
+    pipe = ZImagePipeline.from_pretrained(model,
                                           torch_dtype=torch.bfloat16).to("cuda")
     # One model load covers every face asked for. Loading costs minutes and a
     # candidate costs three seconds, so per-face invocations spend nearly all

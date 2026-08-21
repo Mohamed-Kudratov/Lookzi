@@ -21,6 +21,53 @@ import os
 import sys
 
 # --------------------------------------------------------------------------
+# Ethnicity wording, chosen by measurement -- see elements/ethnicity_probe.py.
+#
+# "Central Asian" does not work. Run it through the generator and it returns
+# East and Southeast Asian faces, because that is what "Asian" overwhelmingly
+# means in the training corpus and Central Asia is rare enough to be rounded to
+# the nearest neighbour. A bare nationality does not work either, in the other
+# direction: "Uzbek" and "Tajik" alone pull toward Persian and Middle Eastern.
+#
+# What worked in the probe was a nationality PLUS the bone structure. The name
+# selects the region and the features hold it there. Z-Image-Turbo is
+# CFG-distilled and runs at guidance_scale=0.0, so there is no negative prompt
+# to push back with -- the positive description is the only lever there is.
+#
+# The clauses below carry ethnic structure only. Everything that separates one
+# roster member from another stays in their own skin/hair/detail fields, or the
+# roster collapses back into one face.
+ETHNICITY = {
+    "uzbek": dict(label="Uzbek Central Asian",
+                  features="Turkic features, high wide cheekbones and a low nose bridge"),
+    "kazakh": dict(label="Kazakh Central Asian",
+                   features="Turkic features, prominent wide cheekbones and a "
+                            "pronounced epicanthic fold"),
+    "tajik": dict(label="Tajik Central Asian",
+                  features="Persian features, a straight narrow nose and strong dark brows"),
+    "slavic": dict(label="Slavic European", features=""),
+}
+
+# Which roster member is which. The mix is deliberate: Uzbekistan is not
+# ethnically uniform, and a roster that is reads as a stock library rather than
+# a local one. Mostly Uzbek, some Kazakh and Tajik, and the Slavic entries the
+# roster already had.
+ETHNICITY_BY_FACE = {
+    "f_cauz_20s_slim": "tajik",
+    "f_cauz_20s_avg": "uzbek",
+    "f_cauz_30s_avg": "uzbek",
+    "f_cauz_40s_full": "uzbek",
+    "f_cauz_50s_avg": "kazakh",
+    "f_cauz_20s_hijab": "uzbek",
+    "f_cauz_40s_hijab": "tajik",
+    "f_slav_20s_slim": "slavic",
+    "f_slav_30s_avg": "slavic",
+    "m_cauz_20s_slim": "uzbek",
+    "m_cauz_30s_avg": "kazakh",
+    "m_cauz_40s_avg": "uzbek",
+    "m_slav_30s_avg": "slavic",
+}
+
 # The roster, from ROSTER.md
 # --------------------------------------------------------------------------
 # Every entry carries distinguishing features, not just demographics. Without
@@ -31,60 +78,78 @@ import sys
 # Vary skin tone, hair and one memorable facial detail. Those three carry almost
 # all of the perceived difference between two people at catalogue size.
 ROSTER = [
-    dict(id="f_cauz_20s_slim", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_20s_slim", gender="woman", appearance=None,
          age="early 20s", build="slim", modest=False,
          skin="light warm ivory skin", hair="long straight black hair",
          detail="high cheekbones and a narrow face"),
-    dict(id="f_cauz_20s_avg", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_20s_avg", gender="woman", appearance=None,
          age="mid 20s", build="average", modest=False,
          skin="medium olive skin", hair="shoulder-length dark brown hair",
          detail="a round face and full lips"),
-    dict(id="f_cauz_30s_avg", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_30s_avg", gender="woman", appearance=None,
          age="early 30s", build="average", modest=False,
          skin="tan golden skin", hair="dark chestnut hair in a low bun",
          detail="a strong jaw and arched brows"),
-    dict(id="f_cauz_40s_full", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_40s_full", gender="woman", appearance=None,
          age="late 30s", build="fuller", modest=False,
          skin="warm beige skin", hair="short bobbed black hair",
          detail="a soft oval face and wide-set eyes"),
-    dict(id="f_cauz_50s_avg", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_50s_avg", gender="woman", appearance=None,
          age="early 50s", build="average", modest=False,
          skin="deeper tan skin with visible fine lines",
          hair="greying dark hair pulled back",
          detail="a lined face and deep-set eyes"),
-    dict(id="f_cauz_20s_hijab", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_20s_hijab", gender="woman", appearance=None,
          age="mid 20s", build="average", modest=True,
          skin="fair olive skin", hair="hair fully covered by the headscarf",
          detail="large dark almond eyes and thin brows"),
-    dict(id="f_cauz_40s_hijab", gender="woman", appearance="Central Asian",
+    dict(id="f_cauz_40s_hijab", gender="woman", appearance=None,
          age="late 30s", build="average", modest=True,
          skin="warm brown skin", hair="hair fully covered by the headscarf",
          detail="a broad face and a wide smile line"),
-    dict(id="f_slav_20s_slim", gender="woman", appearance="Slavic European",
+    dict(id="f_slav_20s_slim", gender="woman", appearance=None,
          age="early 20s", build="slim", modest=False,
          skin="very fair pale skin with freckles", hair="long light blonde hair",
          detail="pale grey-blue eyes and a small straight nose"),
-    dict(id="f_slav_30s_avg", gender="woman", appearance="Slavic European",
+    dict(id="f_slav_30s_avg", gender="woman", appearance=None,
          age="early 30s", build="average", modest=False,
          skin="fair rosy skin", hair="mid-length auburn hair",
          detail="green eyes and a square jaw"),
-    dict(id="m_cauz_20s_slim", gender="man", appearance="Central Asian",
+    dict(id="m_cauz_20s_slim", gender="man", appearance=None,
          age="early 20s", build="slim", modest=False,
          skin="light olive skin", hair="short black hair, clean shaven",
          detail="a narrow face and sharp cheekbones"),
-    dict(id="m_cauz_30s_avg", gender="man", appearance="Central Asian",
+    dict(id="m_cauz_30s_avg", gender="man", appearance=None,
          age="early 30s", build="average", modest=False,
          skin="tan skin", hair="short dark hair with a trimmed beard",
          detail="a square face and heavy brows"),
-    dict(id="m_cauz_40s_avg", gender="man", appearance="Central Asian",
+    dict(id="m_cauz_40s_avg", gender="man", appearance=None,
          age="late 40s", build="average", modest=False,
          skin="weathered brown skin", hair="greying short hair and a moustache",
          detail="a lined forehead and a broad nose"),
-    dict(id="m_slav_30s_avg", gender="man", appearance="Slavic European",
+    dict(id="m_slav_30s_avg", gender="man", appearance=None,
          age="early 30s", build="average", modest=False,
          skin="fair skin", hair="light brown hair, short beard",
          detail="blue eyes and a long face"),
 ]
+
+
+# Filled in from ETHNICITY rather than written inline, so the wording lives in
+# exactly one place. It was already changed once when the probe showed the old
+# phrasing missed the region entirely; thirteen inline copies would have made
+# that a thirteen-line edit with one of them silently left behind.
+for _f in ROSTER:
+    _f["ethnicity"] = ETHNICITY_BY_FACE[_f["id"]]
+    _f["appearance"] = ETHNICITY[_f["ethnicity"]]["label"]
+    # Kept as its own clause rather than folded into `appearance`. Inlined, it
+    # landed between the article and the noun -- "a Uzbek Central Asian, Turkic
+    # features, high wide cheekbones ... woman" -- and it also collided with the
+    # per-face `detail`, so two different face shapes were asserted in one
+    # sentence. As a separate clause after the build it reads as a sentence and
+    # the two never contradict, because the ethnic clause describes bone
+    # structure and `detail` describes the individual.
+    _f["features"] = ETHNICITY[_f["ethnicity"]]["features"]
+assert all(f["appearance"] for f in ROSTER)
 
 # --------------------------------------------------------------------------
 # Coverage axes for identity datasets
@@ -286,6 +351,27 @@ SHOES = [
 ]
 
 
+
+def article(face):
+    """"a" or "an" plus the ethnic label.
+
+    "a Uzbek" reads as a typo in a caption and the model has seen very few of
+    them; the corpus writes "an Uzbek".
+    """
+    label = face["appearance"]
+    return ("an " if label[0].upper() in "AEIOU" else "a ") + label
+
+
+def feature_clause(face):
+    """The ethnic bone structure, or nothing.
+
+    Empty for the Slavic entries: the probe showed "Slavic European" already
+    lands, and an unnecessary anatomical clause only competes with the per-face
+    detail for the same slot in the sentence.
+    """
+    return f"{face['features']}, " if face["features"] else ""
+
+
 def _clothing_for(modest):
     return CLOTHING_MODEST if modest else CLOTHING_NEUTRAL
 
@@ -313,9 +399,10 @@ def roster_prompts(per_face=30):
                 "category": "models",
                 "id": "%s__%03d" % (face["id"], i),
                 "group": face["id"],
-                "prompt": (f"photorealistic photograph of a {face['appearance']} "
+                "prompt": (f"photorealistic photograph of {article(face)} "
                            f"{face['gender']} in {pronoun} {face['age']}, "
-                           f"{face['build']} build, {face['skin']}, {face['hair']}, "
+                           f"{face['build']} build, {feature_clause(face)}"
+                           f"{face['skin']}, {face['hair']}, "
                            f"{face['detail']}, wearing {outfit}, "
                            f"{distance}, {angle}, {light}, {bg}, "
                            f"{expression} expression, {REALISM}"),
@@ -342,9 +429,10 @@ def portrait_prompts(per_face=6):
                 "category": "portraits",
                 "id": "%s__portrait_%02d" % (face["id"], i),
                 "group": face["id"],
-                "prompt": (f"photorealistic head and shoulders portrait of a "
-                           f"{face['appearance']} {face['gender']} in {pronoun} "
-                           f"{face['age']}, {face['skin']}, {face['hair']}, "
+                "prompt": (f"photorealistic head and shoulders portrait of "
+                           f"{article(face)} {face['gender']} in {pronoun} "
+                           f"{face['age']}, {feature_clause(face)}"
+                           f"{face['skin']}, {face['hair']}, "
                            f"{face['detail']}, wearing "
                            f"{clothes[i % len(clothes)]}, {angle}, {light}, {bg}, "
                            f"neutral expression, {REALISM}"),
