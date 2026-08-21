@@ -66,6 +66,9 @@ ETHNICITY_BY_FACE = {
     "m_cauz_30s_avg": "kazakh",
     "m_cauz_40s_avg": "uzbek",
     "m_slav_30s_avg": "slavic",
+    "f_slav_20s_slim_b": "slavic",
+    "f_slav_30s_avg_b": "slavic",
+    "m_slav_30s_avg_b": "slavic",
 }
 
 # The roster, from ROSTER.md
@@ -131,6 +134,18 @@ ROSTER = [
          age="early 30s", build="average", modest=False,
          skin="fair skin", hair="light brown hair, short beard",
          detail="blue eyes and a long face"),
+    dict(id="f_slav_20s_slim_b", gender="woman", appearance=None,
+         age="early 20s", build="slim", modest=False,
+         skin="fair skin with a warm undertone", hair="long ash blonde hair",
+         detail="grey-blue eyes and a rounded chin"),
+    dict(id="f_slav_30s_avg_b", gender="woman", appearance=None,
+         age="early 30s", build="average", modest=False,
+         skin="fair skin", hair="mid-length dark auburn hair",
+         detail="hazel eyes and a straight nose"),
+    dict(id="m_slav_30s_avg_b", gender="man", appearance=None,
+         age="early 30s", build="average", modest=False,
+         skin="fair skin", hair="dark blond hair, light stubble",
+         detail="grey eyes and a broad forehead"),
 ]
 
 
