@@ -188,12 +188,33 @@ def cmd_variations(args):
 
     steps, cfg = 40, 4.0
     if args.lightning:
-        # Same distillation LoRA the try-on path uses: 8 passes instead of 80.
-        from pipeline import LIGHTNING_REPO, LIGHTNING_WEIGHTS
-        pipe.load_lora_weights(LIGHTNING_REPO,
-                               weight_name=LIGHTNING_WEIGHTS[args.lightning])
+        # Not pipe.load_lora_weights(): on a 20B pipeline already placed by
+        # device_map it hangs indefinitely -- the model loads to 55 GB and then
+        # sits there, with the LoRA already cached locally so nothing is being
+        # downloaded. Reproduced twice.
+        #
+        # The PEFT path in pipeline.py drives the transformer directly and has
+        # run many times, so use that. Same weights, same result, no hook
+        # rewriting across a device_map'd model.
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+        from peft import set_peft_model_state_dict
+        from diffusers.utils import convert_unet_state_dict_to_peft
+        from pipeline import (LIGHTNING_REPO, LIGHTNING_WEIGHTS,
+                              _lora_config_from_state_dict, _strip_lora_prefix)
+
+        path = hf_hub_download(LIGHTNING_REPO, LIGHTNING_WEIGHTS[args.lightning])
+        sd = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
+        sd, prefix = _strip_lora_prefix(sd)
+        sd = convert_unet_state_dict_to_peft(sd)
+        sd = {k: v.to(torch.bfloat16) for k, v in sd.items()}
+        lcfg = _lora_config_from_state_dict(sd)
+        print(f"  lightning: rank {lcfg.r}, {len(lcfg.target_modules)} module types"
+              f" (prefix {prefix!r})", flush=True)
+        pipe.transformer.add_adapter(lcfg, adapter_name="lightning")
+        set_peft_model_state_dict(pipe.transformer, sd, adapter_name="lightning")
         steps, cfg = args.lightning, 1.0
-    print(f"  sampling: {steps} steps, cfg {cfg}\n")
+    print(f"  sampling: {steps} steps, cfg {cfg}\n", flush=True)
 
     fields = ["id", "angle", "distance", "lighting", "background",
               "expression", "seconds", "error"]
