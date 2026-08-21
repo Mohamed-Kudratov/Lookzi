@@ -251,31 +251,44 @@ def cmd_variations(args):
     # image to the pose in the third image" -- which fights an instruction that
     # is trying to set the pose in words. The base model is a general
     # multi-reference editor and that is what this stage needs.
-    # device_map, not .to("cuda"). Without it from_pretrained materialises all
-    # 57.7 GB in host RAM and then copies it across, and on RunPod's network
-    # volume that read pattern stalls: GPU memory climbs to ~41 GB and stops,
-    # with the process wedged in D state. device_map places each shard straight
-    # onto the GPU as it is read, which is the path LayeringVTONPipeline already
-    # uses and the one measured at ~3 minutes.
+    # The transformer is loaded on its own, then handed to the pipeline.
     #
-    # device_map={"": device}, NOT "balanced". Both stream shards straight to
-    # the GPU, so both avoid the stall above -- but "balanced" is a sharding
-    # plan, and accelerate installs dispatch hooks on every module to implement
-    # it. PEFT then injects adapters into hooked modules and the process stops
-    # dead in futex_do_wait: 55 GB resident on the GPU, 0% utilisation, no
-    # network activity, no progress for twenty minutes.
+    # Three placements were tried on the pod and only this one survives:
     #
-    # pipeline.py has always used the explicit single-device form and has never
-    # hung. On one GPU "balanced" buys nothing anyway -- there is nothing to
-    # balance across.
+    #   .to("cuda")            from_pretrained materialises all 57.7 GB in host
+    #                          RAM and then copies it across. Over the network
+    #                          volume that read pattern stalls: the process sits
+    #                          in D state with 5.5 GB placed and never recovers.
+    #   device_map="balanced"  loads fine, but accelerate installs dispatch
+    #                          hooks on every module, and PEFT injecting an
+    #                          adapter into hooked modules deadlocks -- 55 GB
+    #                          resident, 0% utilisation, futex_do_wait, twenty
+    #                          minutes with no progress.
+    #   device_map={"": 0}     rejected at pipeline level with ValueError; a
+    #                          pipeline is not a model and takes only the
+    #                          named strategies.
+    #
+    # But the dict form is accepted by the *model* loader, which is what
+    # pipeline.py has always used and what has never hung. So place the 40 GB
+    # transformer that way and let the pipeline assemble around it: the
+    # remaining components are small enough that the plain path is fine.
     model_id = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
-    try:
-        pipe = QwenImageEditPlusPipeline.from_pretrained(
-            model_id, torch_dtype=torch.bfloat16, device_map={"": "cuda"})
-    except (TypeError, ValueError, NotImplementedError) as exc:
-        print(f"  device_map unavailable ({type(exc).__name__}); falling back", flush=True)
-        pipe = QwenImageEditPlusPipeline.from_pretrained(
-            model_id, torch_dtype=torch.bfloat16).to("cuda")
+    from diffusers import QwenImageTransformer2DModel
+
+    print("  loading transformer (device_map)", flush=True)
+    transformer = QwenImageTransformer2DModel.from_pretrained(
+        model_id, subfolder="transformer", torch_dtype=torch.bfloat16,
+        device_map={"": 0})
+    print("  loading the rest of the pipeline", flush=True)
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
+        model_id, transformer=transformer, torch_dtype=torch.bfloat16)
+    # Everything except the transformer, which is already placed and would be
+    # copied a second time.
+    for name in ("vae", "text_encoder"):
+        mod = getattr(pipe, name, None)
+        if mod is not None:
+            mod.to("cuda")
+    print("  pipeline ready", flush=True)
 
     steps, cfg = 40, 4.0
     if args.lightning:
