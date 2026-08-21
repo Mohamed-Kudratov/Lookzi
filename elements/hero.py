@@ -269,25 +269,33 @@ def cmd_variations(args):
     #                          named strategies.
     #
     # But the dict form is accepted by the *model* loader, which is what
-    # pipeline.py has always used and what has never hung. So place the 40 GB
-    # transformer that way and let the pipeline assemble around it: the
-    # remaining components are small enough that the plain path is fine.
+    # pipeline.py has always used and what has never hung. So every large
+    # component is loaded that way first and the pipeline is assembled around
+    # them.
+    #
+    # Both of them, not just the transformer. Placing only the transformer got
+    # 40 GB onto the GPU and then stalled again in D state on the text encoder
+    # -- 8.3B parameters is not "small enough for the plain path", and the
+    # stall is about the read pattern, not the size.
     model_id = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
     from diffusers import QwenImageTransformer2DModel
+    from transformers import Qwen2_5_VLForConditionalGeneration
 
     print("  loading transformer (device_map)", flush=True)
     transformer = QwenImageTransformer2DModel.from_pretrained(
         model_id, subfolder="transformer", torch_dtype=torch.bfloat16,
         device_map={"": 0})
-    print("  loading the rest of the pipeline", flush=True)
+    print("  loading text encoder (device_map)", flush=True)
+    text_encoder = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        model_id, subfolder="text_encoder", torch_dtype=torch.bfloat16,
+        device_map={"": 0})
+    print("  assembling pipeline", flush=True)
     pipe = QwenImageEditPlusPipeline.from_pretrained(
-        model_id, transformer=transformer, torch_dtype=torch.bfloat16)
-    # Everything except the transformer, which is already placed and would be
+        model_id, transformer=transformer, text_encoder=text_encoder,
+        torch_dtype=torch.bfloat16)
+    # The VAE is 0.2 GB and loads either way; the two already placed would be
     # copied a second time.
-    for name in ("vae", "text_encoder"):
-        mod = getattr(pipe, name, None)
-        if mod is not None:
-            mod.to("cuda")
+    pipe.vae.to("cuda")
     print("  pipeline ready", flush=True)
 
     steps, cfg = 40, 4.0
