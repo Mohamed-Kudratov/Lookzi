@@ -59,8 +59,11 @@ if ! "$VENV/bin/python" -c "from diffusers import ZImagePipeline" 2>/dev/null; t
     "$VENV/bin/pip" install -q transformers accelerate safetensors sentencepiece protobuf pillow gradio
 fi
 
-# With an isolated venv there is nothing to pin by hand: pip resolves
-# huggingface_hub from what diffusers and transformers each declare.
+# diffusers-from-source tracks huggingface_hub 1.x (it wants is_offline_mode),
+# while an older transformers caps hub below 1.0. Upgrading them together lets
+# pip find the pair that agrees -- upgrading either alone picks a hub that
+# breaks the other, which is what the earlier attempts kept doing.
+"$VENV/bin/pip" install -q --upgrade transformers huggingface_hub
 
 # curate.py and view_sweep.py belong to this workflow too, and the system
 # interpreter only has gradio after start.sh has run -- which it need not have,
