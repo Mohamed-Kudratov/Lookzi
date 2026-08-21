@@ -25,7 +25,17 @@ WORKSPACE="${WORKSPACE:-/workspace}"
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$WORKSPACE/.pip-cache}"
 mkdir -p "$PIP_CACHE_DIR"
 
-export HF_HOME="${HF_HOME:-$WORKSPACE/.cache/huggingface}"
+# Z-Image's cache goes on the CONTAINER disk, not the volume.
+#
+# The 57.7 GB try-on model has to live on /workspace -- it is far too big to
+# re-fetch per pod. Z-Image is ~12 GB and fits on the container disk, and that
+# matters: reading it off MFS took 3 minutes on a fresh volume and 25+ minutes
+# once /workspace was near its quota, with the process wedged in D state the
+# whole time. Local disk makes the load fast and, more importantly, predictable.
+#
+# The cost is re-downloading 12 GB after a pod restart, at ~190 MB/s.
+export HF_HOME="${ZIMAGE_HF_HOME:-/opt/zimage-cache}"
+mkdir -p "$HF_HOME"
 export HF_HUB_DISABLE_XET=1
 export HF_HUB_ENABLE_HF_TRANSFER=0
 
@@ -79,8 +89,17 @@ print("  ZImagePipeline import OK")
 PY
 
 echo
-echo "Ready. Generate with:"
-echo "  $VENV/bin/python elements/generate.py --limit 5"
+echo "--- pre-fetching Z-Image-Turbo to the container disk ---"
+"$VENV/bin/python" -c "
+from huggingface_hub import snapshot_download
+p = snapshot_download('Tongyi-MAI/Z-Image-Turbo',
+                      allow_patterns=['*.json','*.safetensors','*.txt','*.model'])
+print('  cached at', p)
+"
+
+echo
+echo "Ready. Note HF_HOME -- this cache is on local disk, not the volume:"
+echo "  HF_HOME=$HF_HOME $VENV/bin/python elements/generate.py --limit 5"
 echo
 echo "The try-on pipeline is unaffected -- it still uses the system interpreter"
 echo "and the pinned fork."
