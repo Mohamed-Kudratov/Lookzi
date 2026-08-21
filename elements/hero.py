@@ -94,8 +94,7 @@ def cmd_candidates(args):
         return 3
 
     pipe = ZImagePipeline.from_pretrained("Tongyi-MAI/Z-Image-Turbo",
-                                          torch_dtype=torch.bfloat16,
-                                          low_cpu_mem_usage=False).to("cuda")
+                                          torch_dtype=torch.bfloat16).to("cuda")
     # One model load covers every face asked for. Loading costs minutes and a
     # candidate costs three seconds, so per-face invocations spend nearly all
     # their time reloading the same weights.

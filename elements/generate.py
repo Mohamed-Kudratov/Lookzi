@@ -96,8 +96,7 @@ def main():
 
     print(f"\nloading {MODEL} ...")
     t0 = time.time()
-    pipe = ZImagePipeline.from_pretrained(MODEL, torch_dtype=torch.bfloat16,
-                                          low_cpu_mem_usage=False).to("cuda")
+    pipe = ZImagePipeline.from_pretrained(MODEL, torch_dtype=torch.bfloat16).to("cuda")
     print(f"ready in {time.time() - t0:.0f}s")
 
     log_path = os.path.join(args.out, "generate_log.csv")

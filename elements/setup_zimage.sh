@@ -27,13 +27,18 @@ mkdir -p "$PIP_CACHE_DIR"
 
 # Z-Image's cache goes on the CONTAINER disk, not the volume.
 #
-# The 57.7 GB try-on model has to live on /workspace -- it is far too big to
-# re-fetch per pod. Z-Image is ~12 GB and fits on the container disk, and that
-# matters: reading it off MFS took 3 minutes on a fresh volume and 25+ minutes
-# once /workspace was near its quota, with the process wedged in D state the
-# whole time. Local disk makes the load fast and, more importantly, predictable.
+# Not a bandwidth problem -- measured on the volume while a load was crawling:
+# 1.1 GB/s write, 788 MB/s cold sequential read. The volume is fast.
 #
-# The cost is re-downloading 12 GB after a pod restart, at ~190 MB/s.
+# safetensors mmaps its files, and loading walks that mapping in a way that is
+# nothing like a sequential read. Over a network filesystem each page fault is a
+# round trip, so a load that should take seconds crawled at ~2 MB/s of GPU
+# residency and sat in D state for over half an hour. Sequential throughput
+# tells you nothing about it.
+#
+# The 57.7 GB try-on model has no choice but to live on /workspace. Z-Image is
+# ~12 GB and fits locally, so it goes where page faults are cheap. Cost: a 12 GB
+# re-fetch per pod at ~190 MB/s.
 export HF_HOME="${ZIMAGE_HF_HOME:-/opt/zimage-cache}"
 mkdir -p "$HF_HOME"
 export HF_HUB_DISABLE_XET=1
