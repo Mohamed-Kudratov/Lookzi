@@ -6,42 +6,37 @@ installs before any work can start. This image pays that once.
 
 A pod built from it is ready in roughly a minute with **nothing to install**.
 
-## Build it — the easy way
+## Build it
 
-Docker Hub can build straight from the GitHub repo, so nothing is uploaded from
-your machine and a 8+ GB image never crosses your connection.
+GitHub Actions builds the image and pushes it to Docker Hub. Nothing large
+crosses your connection and no local Docker is needed.
 
-1. Docker Hub → **Create repository** → name it `lookzi`
-2. **Builds** tab → **Link to GitHub** → pick `Mohamed-Kudratov/Lookzi`
-3. Build rule:
+Add two repository secrets once — GitHub → **Settings** → **Secrets and
+variables** → **Actions** → **New repository secret**:
 
-   | | |
-   |---|---|
-   | Source type | Branch |
-   | Source | `main` |
-   | Docker Tag | `latest` |
-   | Dockerfile location | `docker/Dockerfile` |
-   | Build context | `/docker` |
+| Name | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | your Docker Hub username |
+| `DOCKERHUB_TOKEN` | a Docker Hub **access token**, not your password |
 
-4. **Save and Build.** First build takes 20–40 minutes.
+Create the token at Docker Hub → **Account settings** → **Personal access
+tokens** → **Generate new token**, with *Read & Write* permission.
 
-Every push to `main` then rebuilds it automatically.
+Then GitHub → **Actions** → **build pod image** → **Run workflow**. The first
+build takes 20–40 minutes; later ones are faster because the layers are cached.
+It reruns automatically whenever the image or the code baked into it changes.
 
-## Build it locally instead
+The result is `YOURNAME/lookzi:latest`.
 
-Only if you would rather not link the repo. Needs Docker and patience for the
-push.
+### Or build locally
+
+Only if you would rather not use Actions.
 
 ```bash
 cd docker
 docker build -t YOURNAME/lookzi:latest .
 docker push YOURNAME/lookzi:latest
 ```
-
-Add `--build-arg BAKE_ZIMAGE=1` to include the 12 GB Z-Image weights. That makes
-the image far larger to pull; downloading them to local disk at run time takes
-about a minute instead, so leave it off unless pulls are cheaper than downloads
-for you.
 
 ## Use it on RunPod
 
