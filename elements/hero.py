@@ -146,6 +146,36 @@ def variation_specs(per_face=30):
     return specs
 
 
+def hero_index_map(arg, faces):
+    """--hero accepts one index for every face, or `face=index` pairs.
+
+    Curation does not produce one answer. Each face is judged on its own six
+    candidates, so the winning index differs per face -- and a single --hero
+    value forces either one run per face, each paying the model load again, or
+    a rename dance on the pod. Pairs let all of them go in one pass.
+
+    Unlisted faces are an error rather than a silent default: falling back to
+    000 would quietly generate thirty variations of a candidate nobody chose,
+    and that is only visible after twelve minutes of GPU time.
+    """
+    arg = arg.strip()
+    if "=" not in arg:
+        return {f["id"]: arg for f in faces}
+    picks = {}
+    for part in arg.replace(" ", "").split(","):
+        if not part:
+            continue
+        fid, _, idx = part.partition("=")
+        picks[fid] = idx
+    unknown = sorted(set(picks) - {f["id"] for f in faces})
+    if unknown:
+        raise SystemExit(f"--hero names faces not in --face: {unknown}")
+    missing = sorted({f["id"] for f in faces} - set(picks))
+    if missing:
+        raise SystemExit("--hero has no pick for: " + ", ".join(missing))
+    return picks
+
+
 def cmd_variations(args):
     faces = _faces_from(args.face)
     specs = variation_specs(args.per_face)
@@ -155,9 +185,11 @@ def cmd_variations(args):
         if not specs:
             raise SystemExit(f"no spec indices matched {sorted(wanted)}")
 
+    picks = hero_index_map(args.hero, faces)
     jobs = []
     for face in faces:
-        hero_path = os.path.join(args.out, "heroes", face["id"], f"{args.hero}.png")
+        hero_path = os.path.join(args.out, "heroes", face["id"],
+                                 f"{picks[face['id']]}.png")
         jobs.append((face, hero_path))
         print(f"{face['id']:20} hero={hero_path}")
     print(f"making: {len(specs)} variations x {len(faces)} faces\n")
@@ -318,7 +350,9 @@ def main():
 
     v = sub.add_parser("variations", help="stage 2: hero -> the coverage grid")
     v.add_argument("--face", required=True)
-    v.add_argument("--hero", default="000", help="which candidate, e.g. 003")
+    v.add_argument("--hero", default="000",
+               help="one index for all faces (003), or per-face "
+                    "pairs (f_cauz_20s_avg=002,m_slav_30s_avg=000)")
     v.add_argument("--per-face", type=int, default=30)
     v.add_argument("--out", default=os.path.join(HERE, "out"))
     v.add_argument("--lora", default="./weights")
