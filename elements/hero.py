@@ -240,14 +240,24 @@ def cmd_variations(args):
         if os.path.exists(path) and not args.redo:
             continue
         outfit = clothes[s["index"] % len(clothes)]
-        # The identity comes from the reference image; the instruction carries
-        # only what should change. Describing the face here would fight the
-        # reference rather than reinforce it.
-        instruction = (f"Keep the same person with exactly the same face, "
-                       f"same skin tone and same hair. Show them {s['distance']}, "
-                       f"{s['angle']}, {s['lighting']}, {s['background']}, "
-                       f"{s['expression']} expression, wearing {outfit}. "
-                       f"Photorealistic, natural skin texture.")
+        # Naming the attributes to preserve, not just "the same person".
+        #
+        # The first pass said only "same face, skin tone and hair" and left the
+        # rest to the reference. Review found mild but consistent drift in
+        # exactly what went unnamed: a fuller build came back slightly slimmed,
+        # and hair shifted. The face, which *was* named, held.
+        #
+        # This does not contradict leaving the description out -- these values
+        # are the ones the hero was generated from, so restating them reinforces
+        # the reference instead of competing with it. Only invented detail would
+        # fight it.
+        preserve = (f"the same face, {face['skin']}, {face['hair']}, "
+                    f"{face['detail']}, the same {face['build']} body build")
+        instruction = (f"Keep the same person: {preserve}. "
+                       f"Do not slim, reshape or beautify the body or face. "
+                       f"Show them {s['distance']}, {s['angle']}, {s['lighting']}, "
+                       f"{s['background']}, {s['expression']} expression, "
+                       f"wearing {outfit}. Photorealistic, natural skin texture.")
         t = time.time()
         try:
             img = pipe(
