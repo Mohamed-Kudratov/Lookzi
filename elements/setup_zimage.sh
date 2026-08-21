@@ -25,21 +25,7 @@ WORKSPACE="${WORKSPACE:-/workspace}"
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$WORKSPACE/.pip-cache}"
 mkdir -p "$PIP_CACHE_DIR"
 
-# Z-Image's cache goes on the CONTAINER disk, not the volume.
-#
-# Not a bandwidth problem -- measured on the volume while a load was crawling:
-# 1.1 GB/s write, 788 MB/s cold sequential read. The volume is fast.
-#
-# safetensors mmaps its files, and loading walks that mapping in a way that is
-# nothing like a sequential read. Over a network filesystem each page fault is a
-# round trip, so a load that should take seconds crawled at ~2 MB/s of GPU
-# residency and sat in D state for over half an hour. Sequential throughput
-# tells you nothing about it.
-#
-# The 57.7 GB try-on model has no choice but to live on /workspace. Z-Image is
-# ~12 GB and fits locally, so it goes where page faults are cheap. Cost: a 12 GB
-# re-fetch per pod at ~190 MB/s.
-export HF_HOME="${ZIMAGE_HF_HOME:-/opt/zimage-cache}"
+export HF_HOME="${HF_HOME:-$WORKSPACE/.cache/huggingface}"
 mkdir -p "$HF_HOME"
 export HF_HUB_DISABLE_XET=1
 export HF_HUB_ENABLE_HF_TRANSFER=0
@@ -94,7 +80,7 @@ print("  ZImagePipeline import OK")
 PY
 
 echo
-echo "--- pre-fetching Z-Image-Turbo to the container disk ---"
+echo "--- pre-fetching Z-Image-Turbo ---"
 "$VENV/bin/python" -c "
 from huggingface_hub import snapshot_download
 p = snapshot_download('Tongyi-MAI/Z-Image-Turbo',
@@ -103,8 +89,8 @@ print('  cached at', p)
 "
 
 echo
-echo "Ready. Note HF_HOME -- this cache is on local disk, not the volume:"
-echo "  HF_HOME=$HF_HOME $VENV/bin/python elements/generate.py --limit 5"
+echo "Ready. Generate with:"
+echo "  $VENV/bin/python elements/generate.py --limit 5"
 echo
 echo "The try-on pipeline is unaffected -- it still uses the system interpreter"
 echo "and the pinned fork."

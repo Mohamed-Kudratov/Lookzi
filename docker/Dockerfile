@@ -26,10 +26,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     # sustained ~190 MB/s. See TROUBLESHOOTING.md.
     HF_HUB_DISABLE_XET=1 \
     HF_HUB_ENABLE_HF_TRANSFER=0 \
-    # safetensors mmaps its weights and loading walks that mapping randomly.
-    # Over a network filesystem every page fault is a round trip, which turned a
-    # seconds-long load into half an hour. Small models cache on local disk.
-    ZIMAGE_HF_HOME=/opt/zimage-cache \
+    # One cache for both stacks, on the volume. Putting Z-Image on the container
+    # disk was tried and filled it: venv plus 12 GB of weights does not fit in
+    # 30 GB alongside the system packages. Loading it from the volume takes
+    # ~200s, which is fine -- the half-hour stall that prompted the idea was
+    # low_cpu_mem_usage=False on the try-on model, since removed.
+    HF_HOME=/workspace/.cache/huggingface \
     # Loading a 40 GB transformer shard by shard fragments the allocator enough
     # to OOM with GB still free.
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -93,17 +95,6 @@ RUN python -m venv /opt/zimage-venv \
     && /opt/zimage-venv/bin/python -c "\
 from diffusers import ZImagePipeline; import diffusers, transformers, huggingface_hub as h; \
 print('z-image diffusers', diffusers.__version__, '| transformers', transformers.__version__, '| hub', h.__version__)"
-
-# Optionally bake the 12 GB Z-Image weights in. Off by default: it adds ~12 GB
-# to every pull, and downloading them to local disk at run time takes about a
-# minute at 190 MB/s.
-ARG BAKE_ZIMAGE=0
-RUN if [ "$BAKE_ZIMAGE" = "1" ]; then \
-      HF_HOME=/opt/zimage-cache /opt/zimage-venv/bin/python -c "\
-from huggingface_hub import snapshot_download; \
-snapshot_download('Tongyi-MAI/Z-Image-Turbo', \
-                  allow_patterns=['*.json','*.safetensors','*.txt','*.model'])"; \
-    fi
 
 COPY entrypoint.sh /opt/entrypoint.sh
 RUN chmod +x /opt/entrypoint.sh
