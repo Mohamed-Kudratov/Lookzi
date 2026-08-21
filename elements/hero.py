@@ -224,10 +224,21 @@ def cmd_variations(args):
     # with the process wedged in D state. device_map places each shard straight
     # onto the GPU as it is read, which is the path LayeringVTONPipeline already
     # uses and the one measured at ~3 minutes.
+    #
+    # device_map={"": device}, NOT "balanced". Both stream shards straight to
+    # the GPU, so both avoid the stall above -- but "balanced" is a sharding
+    # plan, and accelerate installs dispatch hooks on every module to implement
+    # it. PEFT then injects adapters into hooked modules and the process stops
+    # dead in futex_do_wait: 55 GB resident on the GPU, 0% utilisation, no
+    # network activity, no progress for twenty minutes.
+    #
+    # pipeline.py has always used the explicit single-device form and has never
+    # hung. On one GPU "balanced" buys nothing anyway -- there is nothing to
+    # balance across.
     model_id = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
     try:
         pipe = QwenImageEditPlusPipeline.from_pretrained(
-            model_id, torch_dtype=torch.bfloat16, device_map="balanced")
+            model_id, torch_dtype=torch.bfloat16, device_map={"": "cuda"})
     except (TypeError, ValueError, NotImplementedError) as exc:
         print(f"  device_map unavailable ({type(exc).__name__}); falling back", flush=True)
         pipe = QwenImageEditPlusPipeline.from_pretrained(
@@ -250,7 +261,9 @@ def cmd_variations(args):
         from pipeline import (LIGHTNING_REPO, LIGHTNING_WEIGHTS,
                               _lora_config_from_state_dict, _strip_lora_prefix)
 
+        print("  lightning: fetching", flush=True)
         path = hf_hub_download(LIGHTNING_REPO, LIGHTNING_WEIGHTS[args.lightning])
+        print("  lightning: reading", flush=True)
         sd = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
         sd, prefix = _strip_lora_prefix(sd)
         sd = convert_unet_state_dict_to_peft(sd)
@@ -258,8 +271,11 @@ def cmd_variations(args):
         lcfg = _lora_config_from_state_dict(sd)
         print(f"  lightning: rank {lcfg.r}, {len(lcfg.target_modules)} module types"
               f" (prefix {prefix!r})", flush=True)
+        print("  lightning: injecting adapter", flush=True)
         pipe.transformer.add_adapter(lcfg, adapter_name="lightning")
+        print("  lightning: loading weights", flush=True)
         set_peft_model_state_dict(pipe.transformer, sd, adapter_name="lightning")
+        print("  lightning: ready", flush=True)
         steps, cfg = args.lightning, 1.0
     print(f"  sampling: {steps} steps, cfg {cfg}\n", flush=True)
 
