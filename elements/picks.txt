@@ -1,0 +1,23 @@
+# Curated hero candidate per roster face: which of the six generated
+# candidates is the identity every variation of that model is built from.
+#
+# Chosen by eye from the contact sheets -- there is no metric for "this is the
+# person we want to sell in", and the choice is permanent in a way the
+# variations are not: every image of this model inherits this face.
+#
+# Faces absent here are not yet curated and will not generate. That is the
+# point: a missing pick must stop the run, not silently fall back to 000.
+
+f_cauz_20s_avg      002
+f_cauz_20s_hijab    002
+f_cauz_20s_slim     000
+m_cauz_20s_slim     000
+
+# The Slavic slots each returned two faces worth keeping. Both were promoted to
+# their own roster entry rather than one being discarded -- see catalog.py.
+f_slav_20s_slim     000
+f_slav_20s_slim_b   000
+f_slav_30s_avg      000
+f_slav_30s_avg_b    000
+m_slav_30s_avg      000
+m_slav_30s_avg_b    000

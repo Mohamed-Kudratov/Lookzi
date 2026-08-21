@@ -146,8 +146,31 @@ def variation_specs(per_face=30):
     return specs
 
 
+def read_picks(path):
+    """`face_id index` per line, blank lines and # comments ignored.
+
+    Curation is an input to the build, not a shell argument. Ten pairs already
+    make a command line long enough that it has to be typed on one line to
+    survive being pasted into a pod shell, and every rerun retypes it. In a file
+    it is reviewed, corrected, and versioned like anything else.
+    """
+    picks = {}
+    with open(path, encoding="utf-8") as fh:
+        for n, line in enumerate(fh, 1):
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            parts = line.replace("=", " ").split()
+            if len(parts) != 2:
+                raise SystemExit(f"{path}:{n}: expected `face_id index`, got {line!r}")
+            picks[parts[0]] = parts[1]
+    if not picks:
+        raise SystemExit(f"{path}: no picks")
+    return picks
+
+
 def hero_index_map(arg, faces):
-    """--hero accepts one index for every face, or `face=index` pairs.
+    """--hero accepts one index for every face, `face=index` pairs, or @file.
 
     Curation does not produce one answer. Each face is judged on its own six
     candidates, so the winning index differs per face -- and a single --hero
@@ -159,14 +182,17 @@ def hero_index_map(arg, faces):
     and that is only visible after twelve minutes of GPU time.
     """
     arg = arg.strip()
-    if "=" not in arg:
+    if arg.startswith("@"):
+        picks = read_picks(arg[1:])
+    elif "=" not in arg:
         return {f["id"]: arg for f in faces}
-    picks = {}
-    for part in arg.replace(" ", "").split(","):
-        if not part:
-            continue
-        fid, _, idx = part.partition("=")
-        picks[fid] = idx
+    else:
+        picks = {}
+        for part in arg.replace(" ", "").split(","):
+            if not part:
+                continue
+            fid, _, idx = part.partition("=")
+            picks[fid] = idx
     unknown = sorted(set(picks) - {f["id"] for f in faces})
     if unknown:
         raise SystemExit(f"--hero names faces not in --face: {unknown}")
@@ -177,6 +203,13 @@ def hero_index_map(arg, faces):
 
 
 def cmd_variations(args):
+    # A picks file already names the faces. Repeating them in --face is a second
+    # list to keep in sync, and the two disagreeing is a silent no-op or a
+    # crash after the model has loaded.
+    if args.face is None and args.hero.startswith("@"):
+        args.face = ",".join(read_picks(args.hero[1:]))
+    if args.face is None:
+        raise SystemExit("--face is required unless --hero is a @picks file")
     faces = _faces_from(args.face)
     specs = variation_specs(args.per_face)
     if args.indices:
@@ -365,7 +398,8 @@ def main():
     c.set_defaults(fn=cmd_candidates)
 
     v = sub.add_parser("variations", help="stage 2: hero -> the coverage grid")
-    v.add_argument("--face", required=True)
+    v.add_argument("--face", default=None,
+               help="ids, or omitted when --hero is a @picks file")
     v.add_argument("--hero", default="000",
                help="one index for all faces (003), or per-face "
                     "pairs (f_cauz_20s_avg=002,m_slav_30s_avg=000)")
