@@ -53,8 +53,12 @@ jobs:
           if [ -z "$U" ]; then echo "::error::DOCKERHUB_USERNAME is empty or missing"; fail=1; fi
           if [ -z "$T" ]; then echo "::error::DOCKERHUB_TOKEN is empty or missing"; fail=1; fi
           echo "username: ${#U} chars, token: ${#T} chars"
+          # Say which kind of wrong it is -- the value itself can never be shown,
+          # so a generic "invalid character" leaves nothing to act on.
           case "$U" in
-            *[![:alnum:]-_]*) echo "::error::DOCKERHUB_USERNAME contains a space, newline or other invalid character. Docker Hub usernames are lowercase letters, digits, - and _ only. Re-add the secret with no surrounding spaces or quotes."; fail=1 ;;
+            *@*)  echo "::error::DOCKERHUB_USERNAME looks like an email address. Docker Hub accepts an email to sign in, but the registry needs the USERNAME -- the short name shown at the top right of hub.docker.com."; fail=1 ;;
+            *[[:space:]]*) echo "::error::DOCKERHUB_USERNAME contains a space or newline, almost certainly picked up while pasting. Re-add it with the cursor ending immediately after the last character."; fail=1 ;;
+            *[![:alnum:]_-]*) echo "::error::DOCKERHUB_USERNAME contains a character outside letters, digits, - and _. Check for quotes, or for the whole 'docker login -u name' line being stored instead of just the name."; fail=1 ;;
           esac
           case "$U" in
             *[[:upper:]]*) echo "::warning::DOCKERHUB_USERNAME has uppercase letters; Docker Hub usernames are lowercase." ;;
