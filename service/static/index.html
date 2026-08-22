@@ -1,0 +1,180 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Lookzi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1a1a19; --muted: #6b6b66; --line: #e3e2de;
+    --card: #ffffff; --accent: #1a1a19; --accent-fg: #ffffff; --bad: #b4381f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a; --fg: #eceae4; --muted: #97958d; --line: #2c2c31;
+      --card: #1e1e23; --accent: #eceae4; --accent-fg: #16161a; --bad: #e8785c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 21px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 26px; }
+  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px;
+            color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+            padding: 4px 11px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: #2e9e5b; } .dot.bad { background: var(--bad); }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em;
+       color: var(--muted); margin: 30px 0 11px; font-weight: 600; }
+  .models { display: grid; gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); }
+  .model { border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+           background: var(--card); cursor: pointer; padding: 0;
+           text-align: left; color: inherit; font: inherit; }
+  .model[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .model img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;
+               background: var(--line); }
+  .model span { display: block; padding: 7px 8px; font-size: 11px; color: var(--muted);
+                line-height: 1.35; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 12px; color: var(--muted); }
+  input[type=file], select, input[type=text] {
+    font: inherit; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--card); color: var(--fg); }
+  button.go { font: inherit; font-weight: 600; padding: 10px 20px; border: 0;
+              border-radius: 8px; background: var(--accent); color: var(--accent-fg);
+              cursor: pointer; }
+  button.go:disabled { opacity: .45; cursor: not-allowed; }
+  .out { margin-top: 22px; border: 1px solid var(--line); border-radius: 12px;
+         background: var(--card); padding: 16px; display: none; }
+  .out.show { display: block; }
+  .out img { max-width: 100%; border-radius: 8px; display: block; }
+  .msg { font-size: 13px; color: var(--muted); }
+  .msg.err { color: var(--bad); }
+</style>
+
+<main>
+  <h1>Lookzi</h1>
+  <div class="sub">Kiyimni modelga kiydirish</div>
+  <div class="status"><span class="dot" id="dot"></span><span id="statustext">tekshirilmoqda…</span></div>
+
+  <h2>Model</h2>
+  <div class="models" id="models"></div>
+
+  <h2>Kiyim</h2>
+  <div class="row">
+    <div class="field">
+      <label for="garment">Kiyim rasmi</label>
+      <input type="file" id="garment" accept="image/*">
+    </div>
+    <div class="field">
+      <label for="mode">Turi</label>
+      <select id="mode">
+        <option value="upper">Ustki kiyim</option>
+        <option value="lower">Pastki kiyim</option>
+        <option value="overall">To'liq</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="person">Yoki o'z rasmingiz</label>
+      <input type="file" id="person" accept="image/*">
+    </div>
+    <button class="go" id="go" disabled>Kiydirish</button>
+  </div>
+
+  <div class="out" id="out">
+    <div class="msg" id="msg"></div>
+    <img id="result" alt="" hidden>
+  </div>
+</main>
+
+<script>
+let selected = null, models = [];
+
+async function health() {
+  try {
+    const h = await (await fetch('/health')).json();
+    const dot = document.getElementById('dot');
+    const txt = document.getElementById('statustext');
+    if (h.error) { dot.className = 'dot bad'; txt.textContent = h.error; }
+    else if (h.ready) {
+      dot.className = 'dot ok';
+      txt.textContent = `tayyor · ${h.models} model · navbatda ${h.queued}`;
+    } else {
+      dot.className = 'dot';
+      txt.textContent = `model yuklanmoqda… ${Math.round(h.uptime_seconds)}s`;
+    }
+    document.getElementById('go').disabled = !h.ready || !selected && !document.getElementById('person').files.length;
+  } catch (e) {
+    document.getElementById('statustext').textContent = 'xizmatga ulanib bo’lmadi';
+  }
+}
+
+async function loadModels() {
+  models = await (await fetch('/models')).json();
+  const box = document.getElementById('models');
+  box.innerHTML = '';
+  for (const m of models) {
+    const b = document.createElement('button');
+    b.className = 'model';
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<img src="${m.preview}" alt="" loading="lazy"><span>${m.label}</span>`;
+    b.onclick = () => {
+      selected = m.id;
+      [...box.children].forEach(c => c.setAttribute('aria-pressed', 'false'));
+      b.setAttribute('aria-pressed', 'true');
+      health();
+    };
+    box.appendChild(b);
+  }
+}
+
+document.getElementById('person').onchange = health;
+document.getElementById('garment').onchange = health;
+
+document.getElementById('go').onclick = async () => {
+  const g = document.getElementById('garment').files[0];
+  const out = document.getElementById('out');
+  const msg = document.getElementById('msg');
+  const img = document.getElementById('result');
+  out.className = 'out show'; img.hidden = true; msg.className = 'msg';
+  if (!g) { msg.textContent = 'Kiyim rasmini tanlang.'; return; }
+
+  const fd = new FormData();
+  fd.append('garment', g);
+  fd.append('mode', document.getElementById('mode').value);
+  const p = document.getElementById('person').files[0];
+  if (p) fd.append('person', p); else fd.append('model_id', selected);
+
+  msg.textContent = 'yuborilmoqda…';
+  document.getElementById('go').disabled = true;
+  try {
+    const r = await fetch('/tryon', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'xato');
+    // Polling, not a held connection: generation takes about eleven seconds and
+    // a queued request can wait much longer behind others.
+    const started = Date.now();
+    while (true) {
+      await new Promise(s => setTimeout(s, 1200));
+      const st = await (await fetch('/jobs/' + j.job_id)).json();
+      if (st.status === 'done') {
+        img.src = st.result + '?t=' + Date.now();
+        img.hidden = false;
+        msg.textContent = `tayyor · ${st.seconds}s`;
+        break;
+      }
+      if (st.status === 'failed') { msg.className = 'msg err'; msg.textContent = st.error; break; }
+      msg.textContent = `${st.status}… ${Math.round((Date.now() - started) / 1000)}s`;
+    }
+  } catch (e) {
+    msg.className = 'msg err'; msg.textContent = e.message;
+  }
+  health();
+};
+
+loadModels();
+health();
+setInterval(health, 4000);
+</script>

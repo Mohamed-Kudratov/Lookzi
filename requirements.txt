@@ -41,3 +41,10 @@ matplotlib==3.10.6
 # easy-dwpose must be installed separately with --no-deps; its own pins conflict
 # with the above:
 #     pip install easy-dwpose==1.0.2 --no-deps
+
+# The service: one warm model behind HTTP. Kept in the same requirements as the
+# pipeline because the service process is the pipeline process -- the model is
+# 55 GB of VRAM and cannot be split across a web tier and a worker tier.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9

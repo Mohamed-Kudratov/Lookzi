@@ -166,6 +166,30 @@ for _f in ROSTER:
     _f["features"] = ETHNICITY[_f["ethnicity"]]["features"]
 assert all(f["appearance"] for f in ROSTER)
 
+# Measured collisions -- eval/roster_distinctness.py, ArcFace cosine.
+#
+# These were promoted from second picks in the same slot on the assumption that
+# two candidates a person calls different are different. The matcher disagrees:
+# 0.579 and 0.499 against their originals, where 0.4 is the same-person
+# threshold and 0.5 is a confident match. They are one person twice.
+#
+# Kept rather than deleted -- their variations are real images and some were
+# picked out as the best in the set. But a catalogue that offers two identical
+# models is the exact failure the roster exists to avoid, so they are not
+# selectable. Clearing an entry here is all it takes to restore one, once it has
+# a genuinely different hero.
+DUPLICATE_OF = {
+    "f_slav_20s_slim_b": "f_slav_20s_slim",
+    "m_slav_30s_avg_b": "m_slav_30s_avg",
+    "f_slav_30s_avg_b": "f_slav_30s_avg",
+}
+
+
+def selectable_roster():
+    """Roster members a customer may choose: distinct people only."""
+    return [f for f in ROSTER if f["id"] not in DUPLICATE_OF]
+
+
 # --------------------------------------------------------------------------
 # Coverage axes for identity datasets
 # --------------------------------------------------------------------------
