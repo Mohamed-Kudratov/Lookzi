@@ -121,3 +121,66 @@ Before that is worth anything, the roster has to be distinct: our own
 measurement found four colliding pairs, three of them faces promoted from the
 same slot. A roster whose members a matcher confuses fails the same way theirs
 does, for a different reason.
+
+## The website, walked
+
+Read in a browser, not from the marketing copy.
+
+**Nothing works before you sign in.** Every call to action on the site --
+the hero button, all four feature cards, the closing banner -- points at
+`app.fashn.ai`, which redirects to `auth.fashn.ai`. The only ways in are
+Google, GitHub and Apple. No email and password, no phone, nothing local.
+
+**Their "Interactive Demo" section is empty.** The homepage reserves a
+672-pixel-tall container for it under the heading *"See it in action"* and
+renders nothing inside: no images, no video, no canvas, no controls, and no
+console errors. Whether it is broken, gated behind the cookie banner, or
+mounting only under conditions this browser does not meet, the effect on a
+first-time visitor is the same -- a screen of empty space where the
+try-before-you-buy is supposed to be.
+
+That is worth stating carefully rather than gloating over: it may be a
+transient failure, and it may render for other visitors. But the structure
+behind it is not transient. Even working, that section is a showcase, and the
+product itself stays behind the login wall.
+
+**The rest of the page** is hero, product-shot pairs, an App Store badge, the
+empty demo, a five-story testimonial carousel with named customers and
+countries, a logo marquee (About You, Pinterest, Shopify, MAGGY LONDON, Photo
+AI, Rush Order Tees and seven more), four feature cards that deep-link into the
+studio with the tool preselected -- `app.fashn.ai/studio?model=product-to-model`
+-- three blog posts, and a closing CTA.
+
+Worth copying: the deep links. Choosing a tool on the marketing page and
+landing in the studio with it already selected removes a step most products
+leave in.
+
+They are a UK company, FASHN LTD, London. They ship an iOS app, a status page,
+a changelog, a Discord, a GitHub org, and a research page. One of their five
+testimonials is from Russia -- the CIS is not untouched ground.
+
+## Image to video, the chain
+
+This is the strongest thing they have built and it is not a separate product.
+
+From their own page: *"After you have produced a high quality image from
+Product to Model, Try On, or Model Swap, run the Make a Video workflow."* In
+the Gallery you hover a finished image, click a video-camera icon, choose 5 or
+10 seconds, and submit. Every result is one click from becoming an ad.
+
+Three levels of control, in their words: by default it picks the motion for the
+subject -- *"camera moves for standalone products, body movement for on-model
+shots"* -- with an optional prompt, and an optional second image that directs
+how the clip ends (`end_image` in the API).
+
+| | 480p | 720p | 1080p |
+|---|---|---|---|
+| 5s | 1 credit | 3 | 6 |
+| 10s | 2 | 6 | 12 |
+
+Basic is capped at 720p; 1080p needs Pro. Two to three minutes per clip.
+
+The insight to take is not "add video". It is that **the finished image is a
+starting point, not an endpoint**. A seller who has just made a good image
+wants the next thing immediately, and the product that offers it there and then
+gets the second sale for free.
