@@ -36,6 +36,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from timing import phase, record  # noqa: E402
 from catalog import (ANGLES, article, feature_clause, BACKGROUNDS_TRAIN, CLOTHING_MODEST, CLOTHING_NEUTRAL,
                      DISTANCE_MIX, EXPRESSION_MIX, LIGHTING, REALISM_PERSON,
                      ROSTER)  # noqa: E402
@@ -139,9 +140,9 @@ def cmd_candidates(args):
     # half the bytes off the volume, and no cast on load.
     from save_bf16 import resolved_model_path
     model = resolved_model_path()
-    print(f"  model: {model}", flush=True)
-    pipe = ZImagePipeline.from_pretrained(model,
-                                          torch_dtype=torch.bfloat16).to("cuda")
+    with phase("zimage load", model):
+        pipe = ZImagePipeline.from_pretrained(model,
+                                              torch_dtype=torch.bfloat16).to("cuda")
     # One model load covers every face asked for. Loading costs minutes and a
     # candidate costs three seconds, so per-face invocations spend nearly all
     # their time reloading the same weights.
@@ -313,18 +314,18 @@ def cmd_variations(args):
     from diffusers import QwenImageTransformer2DModel
     from transformers import Qwen2_5_VLForConditionalGeneration
 
-    print("  loading transformer (device_map)", flush=True)
-    transformer = QwenImageTransformer2DModel.from_pretrained(
-        model_id, subfolder="transformer", torch_dtype=torch.bfloat16,
-        device_map={"": 0})
-    print("  loading text encoder (device_map)", flush=True)
-    text_encoder = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-        model_id, subfolder="text_encoder", torch_dtype=torch.bfloat16,
-        device_map={"": 0})
-    print("  assembling pipeline", flush=True)
-    pipe = QwenImageEditPlusPipeline.from_pretrained(
-        model_id, transformer=transformer, text_encoder=text_encoder,
-        torch_dtype=torch.bfloat16)
+    with phase("transformer load", "device_map"):
+        transformer = QwenImageTransformer2DModel.from_pretrained(
+            model_id, subfolder="transformer", torch_dtype=torch.bfloat16,
+            device_map={"": 0})
+    with phase("text encoder load", "device_map"):
+        text_encoder = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            model_id, subfolder="text_encoder", torch_dtype=torch.bfloat16,
+            device_map={"": 0})
+    with phase("pipeline assemble"):
+        pipe = QwenImageEditPlusPipeline.from_pretrained(
+            model_id, transformer=transformer, text_encoder=text_encoder,
+            torch_dtype=torch.bfloat16)
     # The VAE is 0.2 GB and loads either way; the two already placed would be
     # copied a second time.
     pipe.vae.to("cuda")
@@ -347,6 +348,7 @@ def cmd_variations(args):
         from pipeline import (LIGHTNING_REPO, LIGHTNING_WEIGHTS,
                               _lora_config_from_state_dict, _strip_lora_prefix)
 
+        _t_lightning = time.time()
         print("  lightning: fetching", flush=True)
         path = hf_hub_download(LIGHTNING_REPO, LIGHTNING_WEIGHTS[args.lightning])
         print("  lightning: reading", flush=True)
@@ -361,15 +363,19 @@ def cmd_variations(args):
         pipe.transformer.add_adapter(lcfg, adapter_name="lightning")
         print("  lightning: loading weights", flush=True)
         set_peft_model_state_dict(pipe.transformer, sd, adapter_name="lightning")
-        print("  lightning: ready", flush=True)
+        record("lightning adapter", time.time() - _t_lightning,
+               f"{args.lightning}-step")
+        print(f"  lightning: ready ({time.time() - _t_lightning:.1f}s)", flush=True)
         steps, cfg = args.lightning, 1.0
     print(f"  sampling: {steps} steps, cfg {cfg}\n", flush=True)
 
     fields = ["id", "angle", "distance", "lighting", "background",
               "expression", "seconds", "error"]
     ok = failed = 0
+    _t_run = time.time()
 
     for face, hero_path in jobs:
+      _t_face = time.time()
       clothes = (CLOTHING_MODEST if face["modest"] else CLOTHING_NEUTRAL)
       hero = Image.open(hero_path).convert("RGB")
       print(f"\n--- {face['id']} ---", flush=True)
@@ -432,7 +438,13 @@ def cmd_variations(args):
             for k in sorted(existing):
                 wr.writerow({c: existing[k].get(c, "") for c in fields})
 
-    print(f"\n{ok} made, {failed} failed -> {out}")
+      record("face", time.time() - _t_face, face["id"])
+
+    elapsed_run = time.time() - _t_run
+    record("generate", elapsed_run, f"{ok} images, {failed} failed")
+    per = elapsed_run / ok if ok else 0
+    print(f"\n{ok} made, {failed} failed in {elapsed_run / 60:.1f} min "
+          f"({per:.1f}s each) -> {out}")
     print(f"Now curate:  python elements/curate.py --group {face['id']}")
     return 1 if failed else 0
 
