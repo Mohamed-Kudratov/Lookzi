@@ -351,6 +351,8 @@ def cmd_variations(args):
         _t_lightning = time.time()
         print("  lightning: fetching", flush=True)
         path = hf_hub_download(LIGHTNING_REPO, LIGHTNING_WEIGHTS[args.lightning])
+        from localfile import cached_local
+        path = cached_local(path)
         print("  lightning: reading", flush=True)
         sd = QwenImageEditPlusPipeline.lora_state_dict(load_file(path))
         sd, prefix = _strip_lora_prefix(sd)
