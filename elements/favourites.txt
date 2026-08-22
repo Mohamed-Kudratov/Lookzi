@@ -1,0 +1,17 @@
+# Variations the roster's owner picked out as the ones that work.
+#
+# Not an input to any script. It is the only record of which finished images
+# actually landed, and that judgement is otherwise lost in a chat log -- it
+# tells us which angle, distance and lighting combinations are worth weighting
+# more heavily when the coverage grid is next revised, and which faces are
+# carrying the roster.
+
+f_cauz_20s_hijab__008
+f_cauz_20s_hijab__026
+f_cauz_20s_slim__005
+f_slav_20s_slim__008
+f_slav_20s_slim__028
+f_slav_30s_avg__009
+f_slav_30s_avg_b__008
+m_cauz_20s_slim__004
+m_slav_30s_avg__005
