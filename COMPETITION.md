@@ -1,101 +1,123 @@
-# Competitive landscape
+# FASHN AI — what they actually ship
 
-Researched 2026-08-14. Figures for private companies are self-reported or from
-funding announcements; treat revenue claims as directional.
+Read from their own pages and API docs, August 2026. Numbers are theirs unless
+marked as ours.
 
-## The one number that matters
+## The product surface
 
-**FASHN.ai sells try-on at $0.075/image list, dropping below $0.04 at volume.**
+Nine API endpoints, and the app is a front end over the same models:
 
-Our measured compute cost on the current model is **$0.066/image**. At the market
-price that is roughly a cent of margin at list, and **negative margin** at volume
-pricing — before any of the cost of running a company.
-
-With the Lightning 8-step LoRA that cost falls roughly 10× to ~$0.007/image.
-That is the whole difference between a business and an experiment. The
-optimisation work is not a nice-to-have; it is the viability condition.
-
-## Service 1 — live try-on: the hard side
-
-**Google gave it away.** On 2026-04-30 Google shut down its standalone Doppl app
-and moved virtual try-on into Search, Shopping and AI Mode. It is free, it works
-from a **single selfie** (since Dec 2025), and it covers billions of listings
-from Macy's, Kohl's, Walmart and Nordstrom.
-
-Every giant has already in-housed the capability:
-
-| Buyer | What they bought | When |
+| Endpoint | What it does | Their latency |
 |---|---|---|
-| Walmart | Zeekit (~$200M) | 2021 |
-| Snap | Fit Analytics, Vertebrae | 2021 |
-| Meta | Presize | 2022 |
-| Zalando | Fashwell | — |
-| Browzwear | Lalaland.ai | 2025 |
+| `tryon-max` | garment onto a person, up to 4K | 10–55s |
+| `product-to-model` | flat-lay or ghost mannequin → on-model | 10–55s |
+| `model-swap` | replace the person, keep garment, pose, light, background | 10–55s |
+| `model-create` | generate a model with chosen demographics | 10–55s |
+| `face-to-model` | a real face → a fashion model photo | 10–55s |
+| `image-to-video` | motion clip from one still, with camera moves | 1–3 min |
+| `edit` | pose, background, detail refinement | 10–55s |
+| `reframe` | recompose, change aspect ratio | 10–55s |
+| `background-remove` | cutout with transparency | 1–3s |
 
-Independent players:
+The app adds Brush Edit, 4K Upscaling, Face Swap, Change Aspect Ratio. SDKs in
+TypeScript and Python. API outputs expire after three days.
 
-| Company | Where | Raised | Status |
+## The API shape
+
+`POST /v1/run` with `model_name` and an `inputs` object, then poll the returned
+`id`. Shared parameters across endpoints: `resolution` (`1k`/`2k`/`4k`),
+`generation_mode` (`fast`/`balanced`/`quality`), `seed` (default 42),
+`num_images` (1–4), `output_format`, `return_base64`. Limits: 30 MiB per image,
+minimum 15×15 px, aspect ratio between 1:16 and 16:1.
+
+Worth copying: seed defaulting to a fixed value rather than random, so a result
+is reproducible by default. Ours already does this.
+
+## What it costs a customer
+
+| Plan | Price | Credits |
+|---|---|---|
+| Free | — | 10 credits, once |
+| Basic | $19/mo | 200 |
+| Pro | $49/mo | 750 + 50 daily |
+| Agency | $99/mo | 1 500 + 100 daily |
+
+Top-ups at $0.10/credit, 100 minimum, valid 12 months. Per image:
+
+| Mode | 1k | 2k | 4k |
 |---|---|---|---|
-| **FASHN.ai** | Tel Aviv, 2022 | ~$2M / largely self-funded | alive, sets the price floor; open-sourced v1.5 under Apache 2.0 |
-| **Doji** | US, 2024 | **$14M seed** (Thrive Capital, Seven Seven Six) | well funded, consumer app with AI avatars |
-| **Veesual** | Paris, 2020 | $7.5M seed (AXA VP, Techstars) | enterprise, ~20 staff, US/EU/AU clients |
+| fast | 1 | 2 | 3 |
+| balanced | 2 | 3 | 4 |
+| quality | 3 | 4 | 5 |
 
-Read that table honestly: FASHN open-sourced its model and prices at $0.04, and
-Google does it for nothing. **A generic try-on API sold to Western online retail
-is not a business we can win.**
+`face_reference` adds 3 credits. So a 4K quality image with a locked face is
+8 credits — about **$0.76** at the Basic rate, or $0.80 on top-ups.
 
-## Service 2 — AI photo studio: the healthier side
+Our measured cost at 8-step Lightning is **$0.0061** an image, at 512×896.
+That is not the same product as their 4K, and the comparison is only honest
+once we match resolution.
 
-Not commoditised by Google, and there is direct evidence of demand:
+## Consistent Models — how it actually works
 
-| Company | Raised | Signal |
-|---|---|---|
-| **Botika** | **$18M** total ($8M seed; Stardom, Secret Chord, Seedcamp) | 3,000+ brands; **9× revenue and 11× customers** year over year |
-| Lalaland.ai | $4M over 6 years | **acquired by Browzwear, 2025** — absorbed rather than scaled |
-| Veesual | $7.5M | also sells "Switch Model" imagery |
+This is the finding that matters most, because it is the tool they position as
+best-in-class and the one our roster competes with directly.
 
-Botika's growth is the strongest signal in this whole survey: brands will pay
-for on-model imagery, and they will pay repeatedly. Lalaland is the cautionary
-half — six years, $4M, and an acqui-hire outcome. Being good at the model is not
-the same as being good at the business.
+**They do not train anything.** The mechanism is a Face Reference: one image
+anchors identity, and every tool accepts it. Their words: *"Face Reference
+anchors identity to a single face across all tools"*, and it *"adapts to new
+hairstyles, expressions, and lighting while keeping the core likeness"*. It
+costs 3 extra credits and adds about 20 seconds.
 
-The underlying driver is returns. Retail calls them the "silent killer" of
-margin; Catches claims a 10% conversion lift and 20–30× ROI for brand partners.
-That is the number a seller actually buys.
+Their own guidance admits the weakness. The blog tells customers to *"vary one
+or two elements at a time and keep the core attributes steady"* and warns off
+*"drastically different lighting styles or extreme camera angles"* — which is
+the known failure mode of zero-shot identity adapters. Identity survives small
+changes and drifts under large ones.
 
-## Where we are not commoditised
+Uploading your own face is **Agency only**, $99/month. Everyone below that
+picks from a shared gallery of FASHN Faces — so two competing brands on the
+Basic plan can be advertising with the same model.
 
-Google's try-on runs on **Google's** surfaces, against **Google's** catalogue.
-It does not appear inside a merchant's own product page, and it does not serve a
-seller running a shop through Telegram or Instagram in Uzbekistan or the wider
-CIS. Neither do Botika, Veesual or Doji — none of them are localised here.
+## Where they are genuinely ahead
 
-That geography is a real moat while it lasts, and it is the one advantage that
-does not depend on having a better model than Google.
+- Nine shipped endpoints against our one and a half.
+- 4K output; we generate at 512×896 and have not built upscaling.
+- Video shipped; ours is unstarted.
+- Documented API, two SDKs, team seats, three-day retention policy.
+- Testimonials, logos, funding, and a team.
 
-## What this implies
+None of that is close. Treat it as the reference implementation, not as
+something to catch up with feature by feature.
 
-1. **Do not sell a generic try-on API to Western retail.** The price is set at
-   $0.04 by a competitor who open-sourced their model, and the incumbent gives
-   it away.
-2. **Lead with Service 2.** Botika proves demand, Google does not compete there,
-   and the margin per job is thick enough to absorb a heavy model.
-3. **Ship Service 1 as part of a local product**, not as an API — bundled with
-   sizing, style recommendation and the seller's own storefront, in the market
-   where none of these companies operate.
-4. **Get the cost per image under a cent** before selling anything at volume.
-   That is the Lightning work, and it is a precondition, not an optimisation.
-5. **Sell the returns number, not the technology.** Nobody buys a diffusion
-   model; they buy fewer returns and higher conversion.
+## Where they cannot follow
 
-## Sources
+- **Telegram.** They are web and API only. The sellers in this market run their
+  businesses inside Telegram, and a bot is not a smaller version of the web app
+  — it is the whole product for that customer.
+- **Local payment.** International cards only. A seller in Tashkent frequently
+  cannot pay $19 a month to a foreign processor at all. Price is irrelevant to
+  someone who cannot complete the transaction.
+- **Language.** No Uzbek, no Russian.
+- **Who the models look like.** Their roster is generic and global; ours is
+  Central Asian across ages 20 to 50. Modest wear — hijab, long sleeves, full
+  coverage — is a category they do not address and a large part of this market.
+- **Exclusivity at the bottom of the range.** Their own model costs $99/month.
+  Ours can be included far lower, because a roster we generate ourselves has no
+  per-customer marginal cost.
 
-- [Google Shopping AI Mode and virtual try-on](https://blog.google/products-and-platforms/products/shopping/google-shopping-ai-mode-virtual-try-on-update/)
-- [Google's try-on expands to more countries](https://techcrunch.com/2025/10/08/googles-virtual-try-on-shopping-tool-expands-to-more-countries-now-lets-you-try-on-shoes/)
-- [CNBC — 'Silent killers': AI and retail's returns problem](https://www.cnbc.com/2026/04/05/ai-retail-start-ups-virtual-try-on-tech-margins.html)
-- [Doji raises $14M](https://techcrunch.com/2025/05/15/doji-raises-14m-to-make-virtual-try-ons-fun-through-ai-avatars)
-- [Botika raises $8M](https://app.dealroom.co/news/feed/botika-raises-8m-for-ai-fashion-models)
-- [Browzwear acquires Lalaland](https://thenextweb.com/news/browzwear-snaps-up-dutch-ai-fashion-model-startup-lalaland)
-- [Veesual raises $7.5M](https://www.prnewswire.com/news-releases/ai-powered-virtual-try-on-technology-platform-for-the-fashion-industry-veesual-raises-7-5-million-announces-us-expansion-with-new-eileen-fisher-partnership-302119247.html)
-- [FASHN API pricing](https://fashn.ai/products/api)
-- [Walmart / Zeekit](https://www.retaildive.com/news/will-virtual-fitting-rooms-push-walmart-to-the-fashion-forefront/602245/)
+## The one technical opening
+
+Their consistency is zero-shot and drifts under exactly the conditions a
+catalogue needs — many angles, many lighting setups, one person. A LoRA trained
+per roster member does not drift, because identity is in the weights rather
+than inferred at inference time.
+
+We measured our current two-stage method at **0.684** mean ArcFace similarity
+to the hero across 300 variations, 299 of 300 above the same-person threshold.
+That is already strong without training. Training would push it higher and,
+more usefully, make it *measurable against a claim they cannot match*.
+
+Before that is worth anything, the roster has to be distinct: our own
+measurement found four colliding pairs, three of them faces promoted from the
+same slot. A roster whose members a matcher confuses fails the same way theirs
+does, for a different reason.
