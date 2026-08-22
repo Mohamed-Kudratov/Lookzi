@@ -42,14 +42,59 @@ KEY=$(tr -d ' \t\r\n' < "$KEY_FILE")
 
 # Fail now, not in four hours. A key that cannot read cannot stop either, and
 # the whole point is that nobody is awake to notice.
-probe=$(curl -s --max-time 20 -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $KEY" -X POST https://api.runpod.io/graphql \
-    -d '{"query":"query { myself { id } }"}')
-case "$probe" in
-    *UNAUTHORIZED*|*"errors"*)
-        say "key rejected by the API -- not watching. Response: ${probe:0:120}"
-        exit 3 ;;
-esac
+#
+# Positive proof only. The first version asked whether the response *looked
+# like* an error and treated everything else as success -- so an empty body, a
+# timeout, or any unanticipated shape all passed. It cheerfully accepted a pod
+# id pasted in place of a key and reported "key accepted", which is the exact
+# failure it was written to prevent.
+check_key() {
+    local body code
+    body=$(curl -s --max-time 20 -w '
+%{http_code}' -H "Content-Type: application/json"         -H "Authorization: Bearer $KEY" -X POST https://api.runpod.io/graphql         -d '{"query":"query { myself { id pods { id } } }"}')
+    code=$(printf '%s' "$body" | tail -1)
+    body=$(printf '%s' "$body" | sed '$d')
+    [ "$code" = "200" ] || { echo "http $code"; return 1; }
+    # The account id must be present. UNAUTHORIZED returns 200 with a null
+    # myself, so the status code alone proves nothing.
+    printf '%s' "$body" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception as exc:
+    print(f"unparseable response: {exc}"); raise SystemExit(1)
+if d.get("errors"):
+    print(str(d["errors"])[:150]); raise SystemExit(1)
+me = (d.get("data") or {}).get("myself")
+if not me or not me.get("id"):
+    print("no account id in response"); raise SystemExit(1)
+pods = [p["id"] for p in (me.get("pods") or [])]
+import os
+if os.environ["RUNPOD_POD_ID"] not in pods:
+    # Reading is not enough -- the key must be able to see this pod, or the
+    # stop mutation will fail on a key that passed every other check.
+    print(f"key cannot see pod {os.environ['RUNPOD_POD_ID']}"); raise SystemExit(1)
+print("ok")
+' || return 1
+}
+
+if [ "${#KEY}" -lt 30 ]; then
+    say "key in $KEY_FILE is ${#KEY} characters -- too short to be an API key."
+    say "A RunPod API key is about 50 characters. ${#KEY} characters is the"
+    say "length of a pod id; create a key at runpod.io/console/user/settings."
+    exit 3
+fi
+
+# One retry, because a transient network failure is not a bad key -- but a
+# failure that persists is treated as fatal either way.
+if ! reason=$(check_key); then
+    sleep 10
+    if ! reason=$(check_key); then
+        say "key rejected: $reason"
+        say "not watching -- a key that cannot read this pod cannot stop it"
+        exit 3
+    fi
+fi
 say "key accepted; watching $LOG for a finished run"
 
 while true; do
