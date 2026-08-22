@@ -43,6 +43,38 @@ from catalog import (ANGLES, article, feature_clause, BACKGROUNDS_TRAIN, CLOTHIN
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def _limit_threads():
+    """Match the thread pools to the cgroup CPU quota, not to /proc/cpuinfo.
+
+    RunPod's host has 128 cores and the container is allowed 13.6 of them, but
+    nproc reports the host figure, so torch starts 128 OpenMP threads against a
+    tenth of that quota. Every parallel tensor op then spends its time in futex
+    contention rather than work.
+
+    It is not a small effect. Converting the 810 MB Lightning LoRA -- pure CPU
+    tensor work -- ran for over twenty minutes at roughly 0.6 cores of useful
+    throughput before this, with 196 threads alive and the main thread parked in
+    futex_do_wait. It looked exactly like a deadlock and was diagnosed as one
+    twice.
+
+    Set before torch is imported anywhere, because OMP reads its environment at
+    library load and ignores changes afterwards.
+    """
+    try:
+        quota, period = open("/sys/fs/cgroup/cpu.max").read().split()
+        if quota == "max":
+            return
+        n = max(1, int(int(quota) / int(period)))
+    except (OSError, ValueError):
+        return
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+                "NUMEXPR_NUM_THREADS"):
+        os.environ.setdefault(var, str(n))
+
+
+_limit_threads()
+
+
 def face_by_id(face_id):
     for f in ROSTER:
         if f["id"] == face_id:
