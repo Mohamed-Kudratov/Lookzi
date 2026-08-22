@@ -26,6 +26,11 @@
 set -uo pipefail
 
 LOG="${1:-/workspace/s2.log}"
+# A backstop, in hours. The watcher is the primary mechanism, but it is a
+# process on the same pod as the job -- it can be OOM-killed, or wedged by the
+# same network filesystem that wedges everything else here. A deadline costs
+# nothing when the watcher works and saves a night of billing when it does not.
+DEADLINE_H="${DEADLINE_HOURS:-6}"
 KEY_FILE="${RUNPOD_KEY_FILE:-/workspace/.runpod_key}"
 STATE="/workspace/autostop.state"
 # The marker every hero.py run prints when it is done, success or not.
@@ -97,6 +102,9 @@ if ! reason=$(check_key); then
 fi
 say "key accepted; watching $LOG for a finished run"
 
+deadline=$(( $(date +%s) + ${DEADLINE_H%.*} * 3600 ))
+say "deadline: ${DEADLINE_H}h from now, whatever happens"
+
 while true; do
     if ! pgrep -f 'hero\.py' > /dev/null; then
         say "hero.py is gone"
@@ -104,6 +112,13 @@ while true; do
     fi
     if grep -aqE "$DONE_RE" "$LOG" 2>/dev/null; then
         say "run reported finished"
+        break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        # Deliberately stops a job that is still running. An overrun means
+        # something is wrong, and paying for a wedged pod until morning is the
+        # worse of the two outcomes -- everything generated is on the volume.
+        say "deadline reached with the job still running -- stopping anyway"
         break
     fi
     sleep 30

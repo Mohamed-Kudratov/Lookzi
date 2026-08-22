@@ -183,3 +183,27 @@ retrying is what causes this, and each retry makes it worse.
 `HF_HOME` must point at the **volume**, not the container disk. `runpod_setup.sh`
 sets `/workspace/hf_cache`. Anything outside the volume mount is wiped when the
 pod stops.
+
+## The pod cannot stop itself with the key it is given
+
+RunPod injects `RUNPOD_API_KEY` into every pod, and `runpodctl` is already on
+the image, so `runpodctl stop pod $RUNPOD_POD_ID` looks like it should work.
+It does not. The injected key is pod-scoped:
+
+| | |
+|---|---|
+| `runpodctl get pod` | `Error: Unauthorized` |
+| GraphQL `{ myself { id } }` | 200, `UNAUTHORIZED`, `myself: null` |
+| REST `GET /v1/pods/{id}` | 403 |
+
+All three tested on the pod. Configuring `runpodctl` with the injected key
+succeeds -- it writes `/root/.runpod/config.toml` -- and then still returns
+Unauthorized, which makes it look like a configuration problem rather than a
+permissions one.
+
+An account-level key is required, created at runpod.io/console/user/settings
+with read/write permission and written to `/workspace/.runpod_key` from a shell
+on the pod. `autostop.sh` reads it from there.
+
+Note that the GraphQL endpoint returns HTTP 200 for an unauthorized request,
+with the failure in the body. Checking the status code alone proves nothing.
