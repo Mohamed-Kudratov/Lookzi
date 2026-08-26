@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""The job queue, in Postgres.
+
+It was an in-memory `Queue()` inside the web process. That has three faults
+that only appear once there is more than one user: a restart loses every queued
+job, no second worker can ever see the queue, and the customer has no history
+because nothing was written down.
+
+A table fixes all three at once, and the queue becomes the history.
+
+The claim is the only interesting part:
+
+    SELECT ... FOR UPDATE SKIP LOCKED
+
+Without SKIP LOCKED, two workers reading at the same moment either block on
+each other -- serialising the whole fleet through one row -- or both take the
+same job and the customer is charged twice for one image. SKIP LOCKED tells
+Postgres to step over rows another transaction already holds, so every worker
+walks away with a different job and none of them wait.
+
+Nothing here imports torch or touches a GPU. It is the same code whether the
+worker on the other end is a real A100 or the stub in fake_worker.py.
+"""
+import json
+import os
+import socket
+import uuid
+
+import psycopg
+from psycopg.rows import dict_row
+
+DSN = os.environ.get("DATABASE_URL", "postgresql://lookzi:lookzi@localhost:5432/lookzi")
+
+# A worker that dies mid-job leaves the row in 'running' for ever. Anything
+# claimed longer ago than this is assumed dead and returned to the queue.
+STALE_AFTER = os.environ.get("JOB_STALE_AFTER", "15 minutes")
+MAX_ATTEMPTS = int(os.environ.get("JOB_MAX_ATTEMPTS", "3"))
+
+WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
+
+
+def connect():
+    return psycopg.connect(DSN, row_factory=dict_row, autocommit=False)
+
+
+# ---------------------------------------------------------------------------
+# writing
+
+def submit(conn, user_id, tool, params, model_id=None, cost=1,
+           priority=100, idem_key=None):
+    """Charge the customer and queue the job, or neither.
+
+    One transaction on purpose. Charging in one statement and inserting in
+    another leaves a window where a crash takes the credit and produces no
+    image, which is the failure a customer notices and never forgives.
+
+    Returns (job, charged). `charged` is False when an identical request has
+    already been queued -- a retried HTTP call, a double tap in Telegram -- in
+    which case the original job comes back and no second credit is taken.
+    """
+    with conn.transaction():
+        if idem_key:
+            existing = conn.execute(
+                "SELECT * FROM jobs WHERE user_id = %s AND idem_key = %s",
+                (user_id, idem_key)).fetchone()
+            if existing:
+                return existing, False
+
+        # Locking the user row first serialises concurrent submissions by the
+        # same person, so two requests cannot both read a balance of 1 and both
+        # decide they can afford it.
+        row = conn.execute(
+            "SELECT credits FROM users WHERE id = %s FOR UPDATE",
+            (user_id,)).fetchone()
+        if row is None:
+            raise LookupError(f"no such user: {user_id}")
+        if row["credits"] < cost:
+            raise InsufficientCredit(row["credits"], cost)
+
+        job = conn.execute(
+            """INSERT INTO jobs (user_id, tool, model_id, params, credits_cost,
+                                 priority, idem_key)
+               VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+            (user_id, tool, model_id, json.dumps(params), cost, priority,
+             idem_key)).fetchone()
+
+        conn.execute("UPDATE users SET credits = credits - %s WHERE id = %s",
+                     (cost, user_id))
+        conn.execute(
+            """INSERT INTO credit_entries (user_id, delta, reason, job_id)
+               VALUES (%s, %s, 'job', %s)""",
+            (user_id, -cost, job["id"]))
+        return job, True
+
+
+class InsufficientCredit(Exception):
+    def __init__(self, have, need):
+        super().__init__(f"{have} credits, needs {need}")
+        self.have, self.need = have, need
+
+
+# ---------------------------------------------------------------------------
+# reading, by workers
+
+def claim(conn, tools=None, worker_id=WORKER_ID):
+    """Take one job, or return None.
+
+    Ordered by priority then age, so a paid tier can jump the queue by carrying
+    a lower number while everything within a tier stays first-come.
+
+    `tools` lets a worker pool restrict itself -- the video pool should never
+    pick up a try-on job, because the two need different models resident.
+    """
+    with conn.transaction():
+        job = conn.execute(
+            f"""SELECT * FROM jobs
+                 WHERE status = 'queued'
+                   AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
+                 ORDER BY priority, created_at
+                 FOR UPDATE SKIP LOCKED
+                 LIMIT 1""",
+            (tools, tools)).fetchone()
+        if job is None:
+            return None
+        conn.execute(
+            """UPDATE jobs SET status = 'running', claimed_by = %s,
+                               claimed_at = now(), started_at = now(),
+                               attempts = attempts + 1
+                WHERE id = %s""",
+            (worker_id, job["id"]))
+        job["status"] = "running"
+        return job
+
+
+def claim_batch(conn, size, tools=None, worker_id=WORKER_ID):
+    """Take up to `size` jobs that can run in one forward pass.
+
+    Batching is what makes one GPU worth roughly twice as much: a single image
+    leaves most of the card idle, and four together take about twice as long
+    rather than four times.
+
+    The catch is that a batch has to be uniform -- same resolution, same step
+    count -- so jobs are grouped by that signature and only the first group is
+    returned. Mixing shapes into one tensor is not possible, and mixing step
+    counts would give some images more denoising than they were charged for.
+    """
+    with conn.transaction():
+        rows = conn.execute(
+            """SELECT * FROM jobs
+                WHERE status = 'queued'
+                  AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
+                ORDER BY priority, created_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT %s""",
+            (tools, tools, size * 4)).fetchall()
+        if not rows:
+            return []
+
+        def bucket(j):
+            p = j["params"] or {}
+            return (j["tool"], p.get("width"), p.get("height"), p.get("steps"))
+
+        first = bucket(rows[0])
+        batch = [r for r in rows if bucket(r) == first][:size]
+        conn.execute(
+            """UPDATE jobs SET status = 'running', claimed_by = %s,
+                               claimed_at = now(), started_at = now(),
+                               attempts = attempts + 1
+                WHERE id = ANY(%s)""",
+            (worker_id, [r["id"] for r in batch]))
+        for r in batch:
+            r["status"] = "running"
+        return batch
+
+
+# ---------------------------------------------------------------------------
+# finishing
+
+def finish(conn, job_id, object_key, kind="image", width=None, height=None,
+           seconds=None):
+    with conn.transaction():
+        conn.execute(
+            """INSERT INTO results (job_id, object_key, kind, width, height, seconds)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (job_id, object_key, kind, width, height, seconds))
+        conn.execute(
+            "UPDATE jobs SET status = 'done', finished_at = now() WHERE id = %s",
+            (job_id,))
+
+
+def fail(conn, job_id, error, refund=True):
+    """Mark a job failed, retrying it if it has attempts left.
+
+    Credit comes back only when the job is finally given up on. Refunding on
+    every attempt and re-charging on every retry would put two entries in the
+    ledger for one image and make the history unreadable.
+    """
+    with conn.transaction():
+        job = conn.execute("SELECT * FROM jobs WHERE id = %s FOR UPDATE",
+                           (job_id,)).fetchone()
+        if job is None:
+            return None
+        if job["attempts"] < MAX_ATTEMPTS:
+            conn.execute(
+                """UPDATE jobs SET status = 'queued', claimed_by = NULL,
+                                   claimed_at = NULL, error = %s
+                    WHERE id = %s""", (error[:2000], job_id))
+            return "requeued"
+
+        conn.execute(
+            """UPDATE jobs SET status = 'failed', finished_at = now(), error = %s
+                WHERE id = %s""", (error[:2000], job_id))
+        if refund:
+            # The unique index on (job_id, reason) makes a second refund a
+            # no-op rather than free credit.
+            conn.execute(
+                """INSERT INTO credit_entries (user_id, delta, reason, job_id)
+                   VALUES (%s, %s, 'refund', %s)
+                   ON CONFLICT DO NOTHING""",
+                (job["user_id"], job["credits_cost"], job_id))
+            conn.execute("UPDATE users SET credits = credits + %s WHERE id = %s",
+                         (job["credits_cost"], job["user_id"]))
+        return "failed"
+
+
+def release_stale(conn):
+    """Return jobs held by workers that are no longer alive.
+
+    A pod reclaimed mid-job leaves its rows in 'running' with nobody working
+    on them. Without this they sit there until someone notices, and the
+    customer waits for an image that will never arrive.
+    """
+    with conn.transaction():
+        rows = conn.execute(
+            f"""UPDATE jobs SET status = 'queued', claimed_by = NULL, claimed_at = NULL
+                 WHERE status = 'running'
+                   AND claimed_at < now() - INTERVAL '{STALE_AFTER}'
+                 RETURNING id""").fetchall()
+        return [r["id"] for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# reading, by the app
+
+def status(conn, job_id):
+    job = conn.execute(
+        """SELECT j.*, r.object_key, r.kind, r.seconds
+             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+            WHERE j.id = %s""", (job_id,)).fetchone()
+    if job and job["status"] == "queued":
+        job["position"] = conn.execute(
+            """SELECT count(*) AS n FROM jobs
+                WHERE status = 'queued'
+                  AND (priority, created_at) < (%s, %s)""",
+            (job["priority"], job["created_at"])).fetchone()["n"] + 1
+    return job
+
+
+def depth(conn, tools=None):
+    return conn.execute(
+        """SELECT
+             count(*) FILTER (WHERE status = 'queued')  AS queued,
+             count(*) FILTER (WHERE status = 'running') AS running
+           FROM jobs
+          WHERE (%s::text[] IS NULL OR tool = ANY(%s::text[]))""",
+        (tools, tools)).fetchone()
+
+
+def history(conn, user_id, limit=50):
+    return conn.execute(
+        """SELECT j.id, j.tool, j.model_id, j.status, j.credits_cost,
+                  j.created_at, j.finished_at, r.object_key, r.seconds
+             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+            WHERE j.user_id = %s
+            ORDER BY j.created_at DESC LIMIT %s""",
+        (user_id, limit)).fetchall()
