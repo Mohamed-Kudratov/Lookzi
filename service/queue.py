@@ -132,6 +132,21 @@ def claim(conn, tools=None, worker_id=WORKER_ID):
         return job
 
 
+def batch_key(job):
+    """What makes two jobs runnable in the same forward pass.
+
+    Shapes cannot be stacked into one tensor, and mixing step counts would
+    give some images more denoising than they were charged for. Tool is in the
+    key because two tools may want different adapters resident.
+
+    Lifted out of the query so it can be tested without a database, which
+    matters: this is the rule the whole batching gain rests on, and it is
+    silent when it is wrong -- a bad key does not crash, it just never batches.
+    """
+    p = job.get("params") or {}
+    return (job.get("tool"), p.get("width"), p.get("height"), p.get("steps"))
+
+
 def claim_batch(conn, size, tools=None, worker_id=WORKER_ID):
     """Take up to `size` jobs that can run in one forward pass.
 
@@ -156,12 +171,8 @@ def claim_batch(conn, size, tools=None, worker_id=WORKER_ID):
         if not rows:
             return []
 
-        def bucket(j):
-            p = j["params"] or {}
-            return (j["tool"], p.get("width"), p.get("height"), p.get("steps"))
-
-        first = bucket(rows[0])
-        batch = [r for r in rows if bucket(r) == first][:size]
+        first = batch_key(rows[0])
+        batch = [r for r in rows if batch_key(r) == first][:size]
         conn.execute(
             """UPDATE jobs SET status = 'running', claimed_by = %s,
                                claimed_at = now(), started_at = now(),

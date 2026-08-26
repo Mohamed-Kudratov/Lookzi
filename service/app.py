@@ -1,253 +1,242 @@
 #!/usr/bin/env python3
-"""The try-on service: one warm model, a queue, and an HTTP interface.
+"""The web tier. It never touches the model.
 
-Everything before this ran as scripts on a pod. A product cannot: the model
-takes five to ten minutes to load and 55 GB of VRAM to hold, so it has to be
-loaded once and kept, and requests have to wait their turn rather than each
-paying the load again.
+The first version of this file loaded 55 GB into the same process that served
+HTTP. That works for one person on one pod and for nothing else: the web tier
+could not restart without a ten-minute reload, could not run on a cheap CPU
+box, and could not be more than one machine.
 
-That single constraint decides the shape. One process owns the GPU. One worker
-thread pulls from a queue, because two requests sampling at once on one card is
-slower than doing them in order and risks an OOM that kills both. HTTP handlers
-never touch the model -- they enqueue and return a job id, since a request that
-blocks for eleven seconds behind four others in front of it times out somewhere
-in between.
+Now it holds no weights at all. It writes jobs to Postgres and reads results
+back; workers on other machines do the work. Two consequences follow, and they
+are the whole point:
 
-Two products, one endpoint. Virtual try-on puts a garment on a customer's own
-photo; product-to-model puts it on a roster model. They are the same operation
-with a different person image, which is the architectural bet in ROADMAP.md --
-so the API takes either `person` (an upload) or `model_id` (a roster member),
-and nothing downstream knows the difference.
+  the site stays up when every GPU is asleep, off, or reclaimed
+  the site costs about ten dollars a month instead of a thousand
 
-    uvicorn service.app:app --host 0.0.0.0 --port 7860
+    uvicorn service.app:app --host 0.0.0.0 --port 8000
 """
-import io
 import os
-import sys
-import threading
-import time
-import traceback
 import uuid
-from collections import OrderedDict
-from queue import Queue
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from PIL import Image
+import psycopg
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import BaseModel, Field
+
+from . import queue as q
+from . import storage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "elements"))
 
-OUT_DIR = os.environ.get("SERVICE_OUT", "/workspace/service_out")
-ELEMENTS_OUT = os.environ.get("ELEMENTS_OUT", "/workspace/elements_out")
-MODEL_PATH = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
-LORA_DIR = os.environ.get("LORA_DIR", os.path.join(ROOT, "weights"))
-LIGHTNING = int(os.environ.get("LIGHTNING", "8"))
-# Finished jobs are kept so a client that polls late still gets its result, but
-# not forever -- each entry pins a PNG and the pod's disk is not large.
-MAX_JOBS = int(os.environ.get("MAX_JOBS", "500"))
-
-app = FastAPI(title="Lookzi")
-
-_state = {"ready": False, "error": None, "load_seconds": None, "started": time.time()}
-_pipe = None
-_queue = Queue()
-_jobs = OrderedDict()
-_lock = threading.Lock()
+app = FastAPI(title="Lookzi", version="0.2")
 
 
-def _hero_path(face_id):
-    """The chosen candidate for a roster member, whichever index it was.
-
-    picks.txt holds the choice, but a face can exist on disk without being in
-    picks yet -- during curation that is the normal state, not an error.
-    """
-    from hero import read_picks
+def db():
+    conn = q.connect()
     try:
-        idx = read_picks(os.path.join(ROOT, "elements", "picks.txt")).get(face_id)
-    except SystemExit:
-        idx = None
-    if idx:
-        p = os.path.join(ELEMENTS_OUT, "heroes", face_id, f"{idx}.png")
-        if os.path.exists(p):
-            return p
-    d = os.path.join(ELEMENTS_OUT, "heroes", face_id)
-    if os.path.isdir(d):
-        for name in sorted(os.listdir(d)):
-            if name.endswith(".png"):
-                return os.path.join(d, name)
-    return None
+        yield conn
+    finally:
+        conn.close()
 
 
-def _catalogue():
-    """Selectable roster members that actually have an image on disk.
+# ---------------------------------------------------------------------------
+# identity
+#
+# The MVP signs people in through Telegram, which supplies an id with every
+# message, so there is no password to check here. The header is read straight
+# into an identity lookup; email and password arrive later as a second row in
+# the same table rather than a change to any of this. See docs/AUTH.md.
 
-    Both conditions matter. A member hidden by DUPLICATE_OF is a measured
-    collision and must not be offered; a member with no hero has never been
-    generated and would fail at request time rather than at listing time.
+def current_user(conn=Depends(db), x_telegram_id: str = Header(default=None)):
+    if not x_telegram_id:
+        raise HTTPException(401, "no identity")
+    row = conn.execute(
+        """SELECT u.* FROM users u
+             JOIN identities i ON i.user_id = u.id
+            WHERE i.kind = 'telegram' AND i.value = %s""",
+        (x_telegram_id,)).fetchone()
+    if row is None:
+        row = _create_user(conn, "telegram", x_telegram_id)
+    if row["blocked_at"]:
+        raise HTTPException(403, "account blocked")
+    return row
+
+
+def _create_user(conn, kind, value):
+    """Sign-up is implicit: the first message creates the account.
+
+    Asking a Telegram user to register would be asking them to do something
+    Telegram has already done. The trial credits are granted through the
+    ledger, not by writing a number into users, so the balance and its history
+    agree from the first row.
     """
-    from catalog import selectable_roster
-    out = []
-    for f in selectable_roster():
-        p = _hero_path(f["id"])
-        if not p:
-            continue
-        out.append({
-            "id": f["id"],
-            "label": f"{f['appearance']}, {f['age']}, {f['build']} build",
-            "gender": f["gender"],
-            "age": f["age"],
-            "modest": f["modest"],
-            "preview": f"/models/{f['id']}/preview",
-        })
-    return out
+    with conn.transaction():
+        user = conn.execute(
+            "INSERT INTO users (credits) VALUES (0) RETURNING *").fetchone()
+        conn.execute(
+            """INSERT INTO identities (user_id, kind, value, verified_at)
+               VALUES (%s, %s, %s, now())""", (user["id"], kind, value))
+        grant = int(os.environ.get("TRIAL_CREDITS", "20"))
+        conn.execute(
+            """INSERT INTO credit_entries (user_id, delta, reason)
+               VALUES (%s, %s, 'grant')""", (user["id"], grant))
+        conn.execute("UPDATE users SET credits = %s WHERE id = %s",
+                     (grant, user["id"]))
+        user["credits"] = grant
+    return user
 
 
-def _load():
-    t = time.time()
-    try:
-        from pipeline import LayeringVTONPipeline
-        global _pipe
-        _pipe = LayeringVTONPipeline(MODEL_PATH, LORA_DIR, lightning=LIGHTNING)
-        _state["load_seconds"] = round(time.time() - t, 1)
-        _state["ready"] = True
-        print(f"[service] model ready in {_state['load_seconds']}s", flush=True)
-    except Exception as exc:
-        # Recorded rather than raised: the process must stay up to report why it
-        # is unusable. A container that exits on a load failure restarts and
-        # fails again, five minutes at a time, with the reason in a log nobody
-        # is reading.
-        _state["error"] = f"{type(exc).__name__}: {exc}"
-        traceback.print_exc()
-
-
-def _worker():
-    from utils import process_inputs
-    while True:
-        job_id = _queue.get()
-        with _lock:
-            job = _jobs.get(job_id)
-        if job is None:
-            _queue.task_done()
-            continue
-        job["status"] = "running"
-        job["started"] = time.time()
-        try:
-            person = Image.open(job["person_path"]).convert("RGB")
-            garment = Image.open(job["garment_path"]).convert("RGB")
-            pp, pg, ppose = process_inputs(person, garment, None)
-            result = _pipe(person_img=pp, garment_img=pg, pose_img=ppose,
-                           description=job["description"], mode=job["mode"],
-                           seed=job["seed"])
-            out = os.path.join(OUT_DIR, f"{job_id}.png")
-            result.save(out)
-            job["result"] = out
-            job["status"] = "done"
-        except Exception as exc:
-            job["status"] = "failed"
-            job["error"] = f"{type(exc).__name__}: {exc}"
-            traceback.print_exc()
-        finally:
-            job["seconds"] = round(time.time() - job["started"], 1)
-            _queue.task_done()
-
-
-@app.on_event("startup")
-def _startup():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    threading.Thread(target=_load, daemon=True).start()
-    threading.Thread(target=_worker, daemon=True).start()
-
+# ---------------------------------------------------------------------------
+# health and catalogue
 
 @app.get("/health")
-def health():
-    return {
-        "ready": _state["ready"],
-        "error": _state["error"],
-        "load_seconds": _state["load_seconds"],
-        "uptime_seconds": round(time.time() - _state["started"], 1),
-        "queued": _queue.qsize(),
-        "models": len(_catalogue()),
-    }
+def health(conn=Depends(db)):
+    """Reports the queue, and says plainly whether any worker is alive.
+
+    A customer waiting on an image is owed the difference between "busy" and
+    "nothing is running", and so is whoever is on call.
+    """
+    d = q.depth(conn)
+    workers = conn.execute(
+        """SELECT count(DISTINCT claimed_by) AS n FROM jobs
+            WHERE status = 'running' AND claimed_at > now() - INTERVAL '2 minutes'"""
+    ).fetchone()["n"]
+    return {"ok": True, "queued": d["queued"], "running": d["running"],
+            "workers_seen": workers}
 
 
 @app.get("/models")
-def models():
-    return _catalogue()
+def models(conn=Depends(db)):
+    rows = conn.execute(
+        """SELECT id, display_name, age, gender, ethnicity, build, modest, hero_key
+             FROM models
+            WHERE duplicate_of IS NULL
+            ORDER BY gender, age""").fetchall()
+    for r in rows:
+        r["preview"] = storage.presigned_get(r.pop("hero_key")) if r["hero_key"] else None
+    return rows
 
 
-@app.get("/models/{face_id}/preview")
-def preview(face_id: str):
-    p = _hero_path(face_id)
-    if not p:
-        raise HTTPException(404, f"no image for {face_id}")
-    return FileResponse(p, media_type="image/png")
+# ---------------------------------------------------------------------------
+# uploads
+#
+# The browser and the bot upload straight to object storage with a signed link.
+# Routing a 20 MB photo through the web tier would make every upload web-tier
+# load, for no benefit, and it is the first thing that falls over under a crowd.
+
+class UploadRequest(BaseModel):
+    kind: str = Field("garment", pattern="^(garment|person)$")
+    content_type: str = "image/png"
 
 
-@app.post("/tryon")
-async def tryon(garment: UploadFile = File(...),
-                person: UploadFile = File(None),
-                model_id: str = Form(None),
-                mode: str = Form("upper"),
-                description: str = Form(""),
-                seed: int = Form(42)):
-    if not _state["ready"]:
-        raise HTTPException(503, _state["error"] or "model still loading")
-    if person is None and not model_id:
-        raise HTTPException(400, "send either a person image or a model_id")
+@app.post("/uploads")
+def create_upload(req: UploadRequest, user=Depends(current_user)):
+    key = storage.key_for(f"uploads/{req.kind}", user["id"])
+    return {"key": key,
+            "url": storage.presigned_put(key, content_type=req.content_type)}
 
-    job_id = uuid.uuid4().hex[:12]
-    gp = os.path.join(OUT_DIR, f"{job_id}_garment.png")
-    Image.open(io.BytesIO(await garment.read())).convert("RGB").save(gp)
 
-    if person is not None:
-        pp = os.path.join(OUT_DIR, f"{job_id}_person.png")
-        Image.open(io.BytesIO(await person.read())).convert("RGB").save(pp)
-        source = "upload"
-    else:
-        pp = _hero_path(model_id)
-        if not pp:
-            raise HTTPException(404, f"unknown model {model_id}")
-        source = model_id
+# ---------------------------------------------------------------------------
+# jobs
 
-    job = {"id": job_id, "status": "queued", "person_path": pp, "garment_path": gp,
-           "mode": mode, "description": description or "the garment", "seed": seed,
-           "source": source, "queued_at": time.time()}
-    with _lock:
-        _jobs[job_id] = job
-        while len(_jobs) > MAX_JOBS:
-            _jobs.popitem(last=False)
-    _queue.put(job_id)
-    return {"job_id": job_id, "status": "queued", "position": _queue.qsize()}
+class JobRequest(BaseModel):
+    tool: str = "product-to-model"
+    garment_key: str
+    person_key: str | None = None
+    model_id: str | None = None
+    mode: str = Field("upper", pattern="^(upper|lower|overall)$")
+    description: str = ""
+    seed: int = 42
+    idem_key: str | None = None
+
+
+@app.post("/jobs", status_code=201)
+def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
+    if not req.person_key and not req.model_id:
+        raise HTTPException(400, "send either person_key or model_id")
+
+    person_key = req.person_key
+    if not person_key:
+        row = conn.execute(
+            "SELECT hero_key FROM models WHERE id = %s AND duplicate_of IS NULL",
+            (req.model_id,)).fetchone()
+        if row is None or not row["hero_key"]:
+            raise HTTPException(404, f"unknown model {req.model_id}")
+        person_key = row["hero_key"]
+
+    params = {"person_key": person_key, "garment_key": req.garment_key,
+              "mode": req.mode, "description": req.description, "seed": req.seed,
+              "width": 768, "height": 1024, "steps": 8}
+    try:
+        job, charged = q.submit(
+            conn, user["id"], req.tool, params, model_id=req.model_id,
+            cost=1, priority=_priority(user), idem_key=req.idem_key)
+    except q.InsufficientCredit as exc:
+        raise HTTPException(402, f"{exc.have} credits left, this costs {exc.need}")
+
+    return {"job_id": str(job["id"]), "status": job["status"], "charged": charged}
+
+
+def _priority(user):
+    """Lower runs first. Paid tiers jump the queue.
+
+    This is also what makes an always-warm worker pay for itself: the free tier
+    fills the troughs the paid tier leaves behind, so the card is never idle
+    and never in a paying customer's way.
+    """
+    return {"trial": 200, "seller": 100, "brand": 50}.get(user["plan"], 200)
 
 
 @app.get("/jobs/{job_id}")
-def job_status(job_id: str):
-    with _lock:
-        job = _jobs.get(job_id)
-    if job is None:
+def job_status(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
+    job = q.status(conn, job_id)
+    if job is None or job["user_id"] != user["id"]:
         raise HTTPException(404, "unknown job")
-    public = {k: v for k, v in job.items()
-              if k not in ("person_path", "garment_path", "result")}
-    public["result"] = f"/jobs/{job_id}/result" if job.get("result") else None
-    return public
+    out = {"job_id": str(job["id"]), "status": job["status"],
+           "tool": job["tool"], "model_id": job["model_id"],
+           "credits": job["credits_cost"], "created_at": job["created_at"],
+           "seconds": job.get("seconds"), "error": job.get("error")}
+    if job["status"] == "queued":
+        out["position"] = job.get("position")
+    if job.get("object_key"):
+        out["result_url"] = storage.presigned_get(job["object_key"])
+    return out
 
 
-@app.get("/jobs/{job_id}/result")
-def job_result(job_id: str):
-    with _lock:
-        job = _jobs.get(job_id)
-    if job is None or not job.get("result"):
-        raise HTTPException(404, "no result")
-    return FileResponse(job["result"], media_type="image/png")
+@app.get("/jobs")
+def list_jobs(conn=Depends(db), user=Depends(current_user), limit: int = 50):
+    rows = q.history(conn, user["id"], limit=min(limit, 200))
+    for r in rows:
+        r["job_id"] = str(r.pop("id"))
+        k = r.pop("object_key", None)
+        r["result_url"] = storage.presigned_get(k) if k else None
+    return rows
 
+
+@app.get("/me")
+def me(user=Depends(current_user)):
+    return {"id": user["id"], "plan": user["plan"], "credits": user["credits"]}
+
+
+# ---------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
 def index():
     p = os.path.join(HERE, "static", "index.html")
     if not os.path.exists(p):
-        return JSONResponse({"error": "no UI installed"}, status_code=404)
+        return RedirectResponse("/docs")
     with open(p, encoding="utf-8") as fh:
         return HTMLResponse(fh.read())
+
+
+@app.exception_handler(psycopg.errors.UndefinedTable)
+def no_schema(request, exc):
+    """A missing table means the migration has not run.
+
+    Saying so beats a 500 with a stack trace, which is what this looked like
+    the first time and cost twenty minutes.
+    """
+    return JSONResponse(
+        {"error": "database not migrated",
+         "hint": "psql $DATABASE_URL -f service/db/001_initial.sql"},
+        status_code=503)

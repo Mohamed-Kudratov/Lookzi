@@ -1,0 +1,11 @@
+# The web tier and the fake worker. Deliberately no torch, no diffusers, no
+# CUDA: this half runs on a $10 CPU box and must stay small enough to do so.
+# The GPU worker installs the repository's own requirements.txt on top.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+psycopg[binary]>=3.2
+boto3>=1.35
+pillow>=10.4
+pydantic>=2.9
+httpx>=0.27

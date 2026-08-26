@@ -1,0 +1,83 @@
+# The whole product on one machine, with no GPU.
+#
+#   docker compose up --build
+#   open http://localhost:8000/docs
+#
+# Four containers stand in for four production services: Postgres for the
+# managed database, MinIO for Cloudflare R2, the web tier as itself, and a
+# stub worker where the GPU pool will be. Nothing here imports torch, so the
+# stack builds in under a minute and runs on a laptop.
+#
+# Production changes the addresses, not the code.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: lookzi
+      POSTGRES_PASSWORD: lookzi
+      POSTGRES_DB: lookzi
+    ports: ["5432:5432"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Postgres runs everything in this directory on first start, so the
+      # schema is applied before anything can connect to an empty database.
+      - ./service/db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lookzi -d lookzi"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: lookzi
+      MINIO_ROOT_PASSWORD: lookzi-dev-secret
+    ports: ["9000:9000", "9001:9001"]
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    command: uvicorn service.app:app --host 0.0.0.0 --port 8000 --reload
+    environment: &svc-env
+      DATABASE_URL: postgresql://lookzi:lookzi@db:5432/lookzi
+      S3_ENDPOINT: http://storage:9000
+      S3_KEY: lookzi
+      S3_SECRET: lookzi-dev-secret
+      S3_BUCKET: lookzi
+      PYTHONUNBUFFERED: "1"
+    ports: ["8000:8000"]
+    volumes:
+      # Mounted rather than copied so an edit is live without a rebuild.
+      - ./service:/app/service
+      - ./elements:/app/elements
+    depends_on:
+      db: { condition: service_healthy }
+      storage: { condition: service_healthy }
+
+  worker:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    command: python -m service.fake_worker
+    environment:
+      <<: *svc-env
+      # A stub is for exercising the interface, not for waiting out a real
+      # generation. Set it to 14.3 to feel the true latency.
+      FAKE_SECONDS: "2"
+      WORKER_NAME: fake-1
+    volumes:
+      - ./service:/app/service
+    depends_on:
+      db: { condition: service_healthy }
+      storage: { condition: service_healthy }
+
+volumes:
+  db-data:
+  minio-data:
