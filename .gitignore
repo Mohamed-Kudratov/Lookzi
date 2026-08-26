@@ -13,3 +13,6 @@ result.png
 outputs/
 elements/out/
 elements/manifest.csv
+
+# Secrets: never committed.
+.env

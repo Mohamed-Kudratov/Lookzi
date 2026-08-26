@@ -78,6 +78,20 @@ services:
       db: { condition: service_healthy }
       storage: { condition: service_healthy }
 
+  bot:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    command: python -m service.bot
+    environment:
+      <<: *svc-env
+      # Read from .env, never written into this file. Without it the bot
+      # refuses to start rather than running as nobody.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in .env}
+    volumes:
+      - ./service:/app/service
+    depends_on:
+      db: { condition: service_healthy }
+      storage: { condition: service_healthy }
+
 volumes:
   db-data:
   minio-data:
