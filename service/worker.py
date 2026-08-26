@@ -35,10 +35,23 @@ POLL_SECONDS = float(os.environ.get("WORKER_POLL_SECONDS", "1.0"))
 SWEEP_EVERY = float(os.environ.get("WORKER_SWEEP_SECONDS", "60"))
 
 
+def tools_from_env():
+    """The tool list this worker handles, or None for all of them.
+
+    Read here rather than in each worker, because it was read in one and
+    forgotten in the other: the stub then claimed every job in the table,
+    which is what a video worker would do to try-on jobs in production.
+    """
+    raw = os.environ.get("WORKER_TOOLS", "")
+    return [t.strip() for t in raw.split(",") if t.strip()] or None
+
+
 class Worker:
-    def __init__(self, handler, tools=None, name=None, batch_size=1):
+    def __init__(self, handler, tools=..., name=None, batch_size=1):
         self.handler = handler
-        self.tools = tools
+        # Ellipsis, not None: None is a meaningful value here -- "claim
+        # anything" -- and has to stay distinguishable from "not specified".
+        self.tools = tools_from_env() if tools is ... else tools
         self.name = name or q.WORKER_ID
         self.batch_size = batch_size
         self.stopping = False

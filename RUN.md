@@ -40,30 +40,47 @@ docker compose up --build
 Five containers: Postgres, MinIO, the web tier, a stub worker, the bot. No CUDA
 in any of them, so it builds in about a minute.
 
-Then load the roster into the database:
+Then load the roster, and give each model a photograph:
 
 ```bash
 docker compose exec web python -m service.seed_models
 ```
 
+```bash
+docker compose exec web python -m service.seed_heroes --placeholder assets
+```
+
+The second command assigns stand-in images so a model can be chosen locally.
+The roster's own photographs live on the pod; when it is running, point at
+them instead with `--dir /workspace/elements_out/heroes`.
+
 | | |
 |---|---|
-| API and docs | <http://localhost:8000/docs> |
-| Storage console | <http://localhost:9000> — `lookzi` / `lookzi-dev-secret` |
+| API and docs | <http://localhost:8080/docs> |
+| Storage console | <http://localhost:9001> — `lookzi` / `lookzi-dev-secret` |
+| Database | `localhost:5433` |
 | Bot | send it a photo |
+
+The ports are deliberately not the obvious ones. A developer machine often
+already runs Postgres on 5432 or something on 8000, and when it does, Docker
+wins only the IPv6 address — so `127.0.0.1` reaches the other program instead.
+The symptom is not a clear conflict: the database answers and rejects the
+password, and the web port returns a 404 from a server that looks like ours.
 
 ## Checking it
 
 ```bash
-python tests/test_service_logic.py     # no database needed
-python tests/test_flow.py              # needs Postgres; skips without it
+python tests/test_service_logic.py                     # no database needed
+DATABASE_URL=postgresql://lookzi:lookzi@127.0.0.1:5433/lookzi python tests/test_flow.py
+API_BASE=http://127.0.0.1:8080 python tests/smoke_api.py
 ```
 
 The first covers rules that fail silently — a batch key that never groups, a
-priority that puts the free tier first. The second covers the ones that only
-appear against a real database: that charging is atomic, that three workers
-claiming at once take three different jobs, that a refund cannot be taken
-twice.
+priority that puts the free tier first. The second covers what only appears
+against a real database: that charging is atomic, that three workers claiming
+at once take three different jobs, that a refund cannot be taken twice. The
+third puts one job through the door a customer uses — HTTP, a presigned
+upload, a worker in another container, a signed link back.
 
 ## What you will see
 

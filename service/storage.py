@@ -23,8 +23,15 @@ ENDPOINT = os.environ.get("S3_ENDPOINT", "http://localhost:9000")
 BUCKET = os.environ.get("S3_BUCKET", "lookzi")
 REGION = os.environ.get("S3_REGION", "auto")
 PUBLIC_BASE = os.environ.get("S3_PUBLIC_BASE", "")
+# Presigned links are handed to a browser or a phone, so they must name an
+# address that side can resolve. Inside the compose network the bucket is
+# `storage:9000`, which means nothing outside it -- a link generated with the
+# internal endpoint is a link nobody can open. In production both are the same
+# public R2 hostname and this collapses to one value.
+PUBLIC_ENDPOINT = os.environ.get("S3_PUBLIC_ENDPOINT", ENDPOINT)
 
 _client = None
+_public_client = None
 
 
 def client():
@@ -42,6 +49,29 @@ def client():
                           retries={"max_attempts": 3, "mode": "standard"}),
         )
     return _client
+
+
+def public_client():
+    """A client whose signatures name the outside address.
+
+    The signature covers the host, so a link cannot simply be string-replaced
+    after the fact -- it has to be signed against the endpoint the caller will
+    use.
+    """
+    global _public_client
+    if PUBLIC_ENDPOINT == ENDPOINT:
+        return client()
+    if _public_client is None:
+        _public_client = boto3.client(
+            "s3",
+            endpoint_url=PUBLIC_ENDPOINT,
+            region_name=REGION,
+            aws_access_key_id=os.environ.get("S3_KEY", "lookzi"),
+            aws_secret_access_key=os.environ.get("S3_SECRET", "lookzi-dev-secret"),
+            config=Config(s3={"addressing_style": "path"},
+                          retries={"max_attempts": 3, "mode": "standard"}),
+        )
+    return _public_client
 
 
 def ensure_bucket():
@@ -87,7 +117,7 @@ def presigned_get(key, seconds=3600):
     """
     if PUBLIC_BASE:
         return f"{PUBLIC_BASE.rstrip('/')}/{key}"
-    return client().generate_presigned_url(
+    return public_client().generate_presigned_url(
         "get_object", Params={"Bucket": BUCKET, "Key": key}, ExpiresIn=seconds)
 
 
@@ -98,7 +128,7 @@ def presigned_put(key, seconds=900, content_type="image/png"):
     file in memory and forwards it. That turns every upload into web-tier load
     for no benefit, and it is the first thing to fall over under a crowd.
     """
-    return client().generate_presigned_url(
+    return public_client().generate_presigned_url(
         "put_object",
         Params={"Bucket": BUCKET, "Key": key, "ContentType": content_type},
         ExpiresIn=seconds)

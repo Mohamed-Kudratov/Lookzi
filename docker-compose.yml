@@ -17,7 +17,12 @@ services:
       POSTGRES_USER: lookzi
       POSTGRES_PASSWORD: lookzi
       POSTGRES_DB: lookzi
-    ports: ["5432:5432"]
+    # 5433 on the host, not 5432. A developer machine often already runs
+    # Postgres, and when it does the container silently loses the race for the
+    # IPv4 address -- connections land on the local server instead, which
+    # answers and then rejects the password. The symptom looks like a wrong
+    # password rather than a wrong server, and costs an hour.
+    ports: ["5433:5432"]
     volumes:
       - db-data:/var/lib/postgresql/data
       # Postgres runs everything in this directory on first start, so the
@@ -53,12 +58,21 @@ services:
       S3_KEY: lookzi
       S3_SECRET: lookzi-dev-secret
       S3_BUCKET: lookzi
+      # What the container talks to, and what it tells the outside world.
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:9000
       PYTHONUNBUFFERED: "1"
-    ports: ["8000:8000"]
+    # 8080 on the host. As with the database, a developer machine often has
+    # something on the obvious port already, and Docker then wins only the
+    # IPv6 address -- so 127.0.0.1 reaches the other program and the symptom
+    # is a 404 from a server that looks like ours.
+    ports: ["8080:8000"]
     volumes:
       # Mounted rather than copied so an edit is live without a rebuild.
       - ./service:/app/service
       - ./elements:/app/elements
+      # Stand-in photographs for local development, so a model can be chosen
+      # before the roster's own images come off the pod.
+      - ./assets:/app/assets:ro
     depends_on:
       db: { condition: service_healthy }
       storage: { condition: service_healthy }
@@ -72,20 +86,35 @@ services:
       # generation. Set it to 14.3 to feel the true latency.
       FAKE_SECONDS: "2"
       WORKER_NAME: fake-1
+      # A worker with no filter claims every job in the table, including ones
+      # meant for another pool -- a video worker would swallow try-on work and
+      # reload its model between each. Declaring the list is how pools stay
+      # apart, and it is also what keeps a running worker from eating the
+      # integration test's jobs.
+      WORKER_TOOLS: product-to-model,virtual-try-on,model-swap,packshot
     volumes:
       - ./service:/app/service
     depends_on:
       db: { condition: service_healthy }
       storage: { condition: service_healthy }
 
+  # Behind a profile, so the rest of the stack comes up without a bot token.
+  #
+  #   docker compose up                    database, storage, web, worker
+  #   docker compose --profile bot up      ... and the bot
+  #
+  # It was a required variable, which meant a missing token stopped Postgres
+  # from starting. A component nobody has configured yet should be absent, not
+  # fatal to everything around it.
   bot:
+    profiles: ["bot"]
     build: { context: ., dockerfile: docker/web.Dockerfile }
     command: python -m service.bot
     environment:
       <<: *svc-env
-      # Read from .env, never written into this file. Without it the bot
-      # refuses to start rather than running as nobody.
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in .env}
+      # Read from .env, never written into this file. The bot itself refuses
+      # to start when it is empty, and says so.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     volumes:
       - ./service:/app/service
     depends_on:

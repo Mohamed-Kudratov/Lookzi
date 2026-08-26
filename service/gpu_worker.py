@@ -27,7 +27,6 @@ from .worker import Worker
 MODEL_PATH = os.environ.get("MODEL_PATH", "Qwen/Qwen-Image-Edit-2509")
 LORA_DIR = os.environ.get("LORA_DIR", "weights")
 LIGHTNING = int(os.environ.get("LIGHTNING", "8"))
-TOOLS = [t for t in os.environ.get("WORKER_TOOLS", "").split(",") if t] or None
 
 _pipe = None
 
@@ -77,7 +76,7 @@ def main():
     storage.ensure_bucket()
     load()
     name = os.environ.get("WORKER_NAME", f"gpu:{q.WORKER_ID}")
-    Worker(handle, tools=TOOLS, name=name).run()
+    Worker(handle, name=name).run()
 
 
 if __name__ == "__main__":

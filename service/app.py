@@ -160,8 +160,16 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
         row = conn.execute(
             "SELECT hero_key FROM models WHERE id = %s AND duplicate_of IS NULL",
             (req.model_id,)).fetchone()
-        if row is None or not row["hero_key"]:
+        # Two different problems, and they were reported as one. A model that
+        # does not exist is a client mistake; a model whose photograph has not
+        # been uploaded yet is ours, and saying "unknown model" about it sends
+        # whoever is debugging to look in entirely the wrong place.
+        if row is None:
             raise HTTPException(404, f"unknown model {req.model_id}")
+        if not row["hero_key"]:
+            raise HTTPException(
+                503, f"model {req.model_id} has no photograph yet — "
+                     "run service.seed_heroes")
         person_key = row["hero_key"]
 
     params = {"person_key": person_key, "garment_key": req.garment_key,

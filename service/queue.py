@@ -40,7 +40,25 @@ WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
 
 
 def connect():
-    return psycopg.connect(DSN, row_factory=dict_row, autocommit=False)
+    """Autocommit, with explicit transactions where they are needed.
+
+    Not a style preference -- the alternative is broken. Without autocommit,
+    any bare conn.execute() outside a transaction block opens a transaction
+    that never closes, and every later `with conn.transaction()` becomes a
+    savepoint inside it rather than a transaction of its own. Nothing commits.
+
+    That is not theoretical: the web tier reads a user, then submits a job, on
+    the same connection. Under the old setting the read opened the transaction,
+    the submit wrote into it, the request returned a job id, the connection
+    closed, and Postgres rolled the whole thing back. The customer would have
+    been charged for a job no worker could see, and then not charged either,
+    because the charge went with it. Silent, and total.
+
+    With autocommit, a bare execute commits as it goes and every
+    `with conn.transaction()` is a real transaction that commits at the end of
+    the block -- which is what the rest of this module assumes.
+    """
+    return psycopg.connect(DSN, row_factory=dict_row, autocommit=True)
 
 
 # ---------------------------------------------------------------------------
@@ -111,25 +129,32 @@ def claim(conn, tools=None, worker_id=WORKER_ID):
     `tools` lets a worker pool restrict itself -- the video pool should never
     pick up a try-on job, because the two need different models resident.
     """
+    # One statement, with the lock taken inside a subquery.
+    #
+    # The obvious form -- SELECT ... ORDER BY ... FOR UPDATE SKIP LOCKED
+    # LIMIT 1, then UPDATE -- is wrong, and wrong silently. Postgres sorts
+    # before it locks, so every session picks the same first row; the ones
+    # that lose the race skip it and return nothing rather than moving to the
+    # next row, because LIMIT has already been applied. Three workers polling
+    # a queue of three jobs came back with one job and two empty hands, which
+    # in production is a fleet where only one worker ever does anything.
+    #
+    # Putting the lock in a subquery lets each session settle on its own row
+    # before the outer statement claims it.
     with conn.transaction():
-        job = conn.execute(
-            f"""SELECT * FROM jobs
-                 WHERE status = 'queued'
-                   AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
-                 ORDER BY priority, created_at
-                 FOR UPDATE SKIP LOCKED
-                 LIMIT 1""",
-            (tools, tools)).fetchone()
-        if job is None:
-            return None
-        conn.execute(
+        return conn.execute(
             """UPDATE jobs SET status = 'running', claimed_by = %s,
                                claimed_at = now(), started_at = now(),
                                attempts = attempts + 1
-                WHERE id = %s""",
-            (worker_id, job["id"]))
-        job["status"] = "running"
-        return job
+                WHERE id = (
+                      SELECT id FROM jobs
+                       WHERE status = 'queued'
+                         AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
+                       ORDER BY priority, created_at
+                       FOR UPDATE SKIP LOCKED
+                       LIMIT 1)
+             RETURNING *""",
+            (worker_id, tools, tools)).fetchone()
 
 
 def batch_key(job):
@@ -159,28 +184,41 @@ def claim_batch(conn, size, tools=None, worker_id=WORKER_ID):
     returned. Mixing shapes into one tensor is not possible, and mixing step
     counts would give some images more denoising than they were charged for.
     """
+    # Same shape as claim(), for the same reason: the rows are locked inside
+    # the subquery, then claimed by the outer UPDATE. Candidates are drawn
+    # wider than the batch because they still have to be filtered down to one
+    # uniform shape afterwards.
     with conn.transaction():
         rows = conn.execute(
-            """SELECT * FROM jobs
-                WHERE status = 'queued'
-                  AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
-                ORDER BY priority, created_at
-                FOR UPDATE SKIP LOCKED
-                LIMIT %s""",
-            (tools, tools, size * 4)).fetchall()
-        if not rows:
-            return []
-
-        first = batch_key(rows[0])
-        batch = [r for r in rows if batch_key(r) == first][:size]
-        conn.execute(
             """UPDATE jobs SET status = 'running', claimed_by = %s,
                                claimed_at = now(), started_at = now(),
                                attempts = attempts + 1
-                WHERE id = ANY(%s)""",
-            (worker_id, [r["id"] for r in batch]))
-        for r in batch:
-            r["status"] = "running"
+                WHERE id IN (
+                      SELECT id FROM jobs
+                       WHERE status = 'queued'
+                         AND (%s::text[] IS NULL OR tool = ANY(%s::text[]))
+                       ORDER BY priority, created_at
+                       FOR UPDATE SKIP LOCKED
+                       LIMIT %s)
+             RETURNING *""",
+            (worker_id, tools, tools, size * 4)).fetchall()
+        if not rows:
+            return []
+
+        # The claim already happened, so anything outside the chosen shape has
+        # to go back. Releasing rather than holding it keeps a worker from
+        # sitting on jobs another pool could be running.
+        rows.sort(key=lambda r: (r["priority"], r["created_at"]))
+        first = batch_key(rows[0])
+        batch = [r for r in rows if batch_key(r) == first][:size]
+        keep = {r["id"] for r in batch}
+        spare = [r["id"] for r in rows if r["id"] not in keep]
+        if spare:
+            conn.execute(
+                """UPDATE jobs SET status = 'queued', claimed_by = NULL,
+                                   claimed_at = NULL, started_at = NULL,
+                                   attempts = attempts - 1
+                    WHERE id = ANY(%s)""", (spare,))
         return batch
 
 
@@ -222,15 +260,23 @@ def fail(conn, job_id, error, refund=True):
             """UPDATE jobs SET status = 'failed', finished_at = now(), error = %s
                 WHERE id = %s""", (error[:2000], job_id))
         if refund:
-            # The unique index on (job_id, reason) makes a second refund a
-            # no-op rather than free credit.
-            conn.execute(
+            # The balance moves only if the ledger entry was actually written.
+            #
+            # The unique index already stopped a second refund from being
+            # recorded, but the UPDATE beneath it ran regardless -- so calling
+            # fail() twice left one refund in the ledger and two in the
+            # balance. The two then disagreed permanently, and the balance is
+            # the number the customer spends. RETURNING makes the insert say
+            # whether it happened, and the balance follows it.
+            written = conn.execute(
                 """INSERT INTO credit_entries (user_id, delta, reason, job_id)
                    VALUES (%s, %s, 'refund', %s)
-                   ON CONFLICT DO NOTHING""",
-                (job["user_id"], job["credits_cost"], job_id))
-            conn.execute("UPDATE users SET credits = credits + %s WHERE id = %s",
-                         (job["credits_cost"], job["user_id"]))
+                   ON CONFLICT DO NOTHING
+                RETURNING id""",
+                (job["user_id"], job["credits_cost"], job_id)).fetchone()
+            if written:
+                conn.execute("UPDATE users SET credits = credits + %s WHERE id = %s",
+                             (job["credits_cost"], job["user_id"]))
         return "failed"
 
 
