@@ -1,0 +1,1136 @@
+<title>Lookzi Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+
+<style>
+/* Light is the default. Dark follows the operating system unless the visitor
+   has chosen otherwise -- the toggle stamps data-theme, and both stamps beat
+   the media query, so an explicit choice wins in either direction. */
+:root{
+  --paper:#F7F6F3; --surface:#FFFFFF; --surface-2:#EFEEE9;
+  --ink:#16181C; --ink-2:#5A6066; --ink-3:#8B9198;
+  --line:#E4E2DC; --line-2:#CFCCC3;
+  --brand:#3B4BA0; --brand-soft:#E7E9F7; --on-brand:#FFFFFF;
+  --saffron:#8A6A1C; --saffron-soft:#F6EED6;
+  --teal:#1F6B7A;  --teal-soft:#DCEDF1;
+  --green:#2F6B45; --green-soft:#DDEEE3;
+  --clay:#A9472F;
+  --shadow:0 1px 2px rgba(22,24,28,.05), 0 14px 34px -20px rgba(22,24,28,.34);
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111318; --surface:#191C22; --surface-2:#22262E;
+    --ink:#F2F1ED; --ink-2:#B4B9C0; --ink-3:#848A93;
+    --line:#2C313A; --line-2:#3D434D;
+    --brand:#8E9BEC; --brand-soft:#242A47; --on-brand:#0F1117;
+    --saffron:#DFBB65; --saffron-soft:#2C2617;
+    --teal:#5FBACA;  --teal-soft:#14282D;
+    --green:#6FBF8D; --green-soft:#16281D;
+    --clay:#D0785E;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 16px 40px -22px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111318; --surface:#191C22; --surface-2:#22262E;
+  --ink:#F2F1ED; --ink-2:#B4B9C0; --ink-3:#848A93;
+  --line:#2C313A; --line-2:#3D434D;
+  --brand:#8E9BEC; --brand-soft:#242A47; --on-brand:#0F1117;
+  --saffron:#DFBB65; --saffron-soft:#2C2617;
+  --teal:#5FBACA;  --teal-soft:#14282D;
+  --green:#6FBF8D; --green-soft:#16281D;
+  --clay:#D0785E;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 16px 40px -22px rgba(0,0,0,.85);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 16px/1.6 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
+h1,h2,h3{font-family:Archivo,ui-sans-serif,sans-serif;font-variation-settings:"wdth" 112,"wght" 800;
+  letter-spacing:-.03em;margin:0;text-wrap:balance}
+.mono{font:500 10px/1.4 "Martian Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.wrap{width:min(1180px,100% - 40px);margin-inline:auto}
+
+/* ---- header ---- */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 92%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar .wrap{display:flex;align-items:center;gap:20px;height:70px}
+.logo{font-family:Archivo;font-variation-settings:"wdth" 122,"wght" 800;font-size:23px;
+  letter-spacing:-.05em;text-decoration:none;color:var(--ink);background:none;border:0;padding:0}
+.nav{display:flex;gap:2px;margin-inline-start:14px}
+.nav button{border:0;background:transparent;color:var(--ink-2);padding:9px 12px;border-radius:8px}
+.nav button:hover,.nav button[aria-expanded="true"]{background:var(--surface);color:var(--ink)}
+.nav-actions{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
+.icon-btn{width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:8px;
+  display:grid;place-items:center}
+.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7}
+.primary{background:var(--brand);color:var(--on-brand);border:1px solid var(--brand);
+  padding:11px 18px;border-radius:999px;font-weight:600}
+.secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line-2);
+  padding:10px 16px;border-radius:8px}
+.full{width:100%}
+.dropdown{position:absolute;inset-inline-start:0;margin-top:6px;width:min(520px,calc(100vw - 40px));
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+  padding:10px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:150ms var(--ease);z-index:60}
+.dropdown[data-open="true"]{opacity:1;transform:none;pointer-events:auto}
+.drop-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.drop-item{display:flex;gap:12px;padding:11px;border-radius:8px;text-decoration:none;color:var(--ink);
+  border:0;background:transparent;text-align:start;width:100%;align-items:flex-start}
+.drop-item:hover{background:var(--paper)}
+.drop-item .soft{width:34px;height:34px;border-radius:8px;background:var(--brand-soft);color:var(--brand);
+  display:grid;place-items:center;flex:none}
+.drop-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.drop-item b{font-size:13.5px;font-weight:600;display:block}
+.drop-item span{font-size:12px;color:var(--ink-3)}
+.menu-host{position:relative}
+
+/* ---- generic screen furniture ---- */
+.screen{display:none;padding:34px 0 90px}
+.screen[data-active="true"]{display:block}
+.screen-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;
+  flex-wrap:wrap;margin-bottom:26px}
+.screen-head h1{font-size:clamp(30px,4vw,44px);margin-top:10px}
+.section{padding:74px 0}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
+  flex-wrap:wrap;margin-bottom:26px}
+.section-head h2{font-size:clamp(28px,3.6vw,42px);margin-top:12px}
+.section-head p{color:var(--ink-2);max-width:52ch;margin:0}
+.pill{display:inline-flex;align-items:center;gap:7px;width:max-content;padding:6px 10px;border-radius:999px;
+  background:var(--brand-soft);color:var(--brand);
+  font:500 10px/1 "Martian Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+
+/* ---- landing hero ---- */
+.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;padding:64px 0 40px}
+.hero-copy{display:grid;gap:20px;justify-items:start}
+.hero h1{font-size:clamp(42px,5.6vw,74px);line-height:.95}
+.hero p{font-size:18px;color:var(--ink-2);max-width:52ch;margin:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.collage{position:relative;min-height:460px}
+.collage figure{position:absolute;margin:0;border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;box-shadow:var(--shadow);background:var(--surface)}
+.collage img{width:100%;height:100%;object-fit:cover}
+.c-flat{width:41%;height:264px;inset-inline-start:0;top:26px;rotate:-5deg}
+.c-model{width:50%;height:376px;inset-inline-end:0;top:48px;rotate:4deg}
+.c-flat2{width:35%;height:222px;inset-inline-start:20%;bottom:0;rotate:3deg}
+
+/* ---- pipeline demo ---- */
+.demo{padding:16px;display:grid;gap:16px}
+.demo-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end}
+.group{display:grid;gap:8px}
+.thumbs{display:flex;gap:8px}
+.thumb{width:56px;height:56px;padding:0;border:1px solid var(--line);border-radius:8px;
+  overflow:hidden;background:var(--surface-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;opacity:.7;transition:150ms var(--ease)}
+.thumb[aria-pressed="true"]{border:2px solid var(--brand)}
+.thumb[aria-pressed="true"] img{opacity:1}
+.demo-body{display:grid;grid-template-columns:1.55fr .75fr;gap:16px}
+.stage{position:relative;border-radius:10px;overflow:hidden;background:var(--surface-2);min-height:520px}
+.stage>img{width:100%;height:100%;object-fit:cover;transition:opacity 300ms var(--ease)}
+.stage-veil{position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 26%,transparent);
+  opacity:0;pointer-events:none;transition:150ms var(--ease)}
+.stage-veil[data-on="true"]{opacity:1}
+.counter{position:absolute;top:14px;inset-inline-end:14px;padding:6px 9px;border-radius:6px;
+  background:color-mix(in srgb,var(--ink) 78%,transparent);color:var(--paper);
+  font:500 11px/1 "Martian Mono",monospace;font-variant-numeric:tabular-nums}
+.progress{position:absolute;inset-inline:12%;bottom:24px;height:5px;border-radius:99px;
+  background:color-mix(in srgb,var(--paper) 45%,transparent);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--paper)}
+.steps{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:18px 1fr;gap:12px;align-items:start;padding:12px 8px;
+  position:relative;border:0;background:transparent;text-align:start;border-radius:8px}
+.step:hover{background:var(--paper)}
+.step:not(:last-child)::after{content:"";position:absolute;inset-inline-start:16px;top:34px;bottom:-2px;
+  width:1px;background:var(--line)}
+.step[aria-pressed="true"]::after{background:var(--brand)}
+.step .dot{width:16px;height:16px;border:1px solid var(--ink-3);border-radius:50%;
+  background:var(--surface);margin-top:2px}
+.step[aria-pressed="true"] .dot{background:var(--brand);border-color:var(--brand);
+  box-shadow:inset 0 0 0 3px var(--surface)}
+.step b{font-size:13.5px;font-weight:600;display:block}
+.step span{font-size:12px;color:var(--ink-3)}
+
+/* ---- marquee ---- */
+.band{background:var(--brand-soft);padding:28px 0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,#0000,#000 10%,#000 90%,#0000);
+  mask-image:linear-gradient(90deg,#0000,#000 10%,#000 90%,#0000)}
+.marquee{display:flex;gap:64px;width:max-content;animation:marq 26s linear infinite}
+.band:hover .marquee{animation-play-state:paused}
+.marquee span{font-family:Archivo;font-variation-settings:"wdth" 108,"wght" 700;
+  font-size:17px;color:var(--brand);opacity:.7;white-space:nowrap}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+/* ---- before / after ---- */
+.compare{position:relative;height:440px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.compare img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.compare .before{object-fit:contain;background:var(--surface-2)}
+.compare .after{clip-path:inset(0 0 0 var(--split,50%))}
+.compare .handle{position:absolute;top:0;bottom:0;inset-inline-start:var(--split,50%);width:2px;
+  background:var(--surface);z-index:3;pointer-events:none}
+.compare .handle::after{content:"";position:absolute;top:50%;inset-inline-start:50%;
+  width:40px;height:40px;transform:translate(-50%,-50%);border-radius:50%;
+  background:var(--surface);box-shadow:var(--shadow)}
+.compare input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;
+  cursor:ew-resize;z-index:4}
+.compare .cap{position:absolute;bottom:14px;z-index:2;padding:6px 9px;border-radius:6px;
+  background:color-mix(in srgb,var(--ink) 76%,transparent);color:var(--paper);
+  font:500 10px/1 "Martian Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+.cap.l{inset-inline-start:14px}.cap.r{inset-inline-end:14px}
+
+/* ---- testimonials ---- */
+.quotes{display:grid;grid-template-columns:1fr 1.18fr 1fr;gap:16px;align-items:center}
+.quote{padding:26px;min-height:210px;display:grid;gap:12px;align-content:start;transition:300ms var(--ease)}
+.quote[data-side="true"]{filter:blur(1.4px);scale:.93;opacity:.6}
+.quote p{font-size:17.5px;line-height:1.45;margin:0}
+.quote b{font-weight:600}
+
+/* ---- zigzag features ---- */
+.zig{display:grid;gap:64px}
+.feature{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.feature:nth-child(even) .feature-copy{order:-1}
+.feature-media{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.feature-media img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.feature-copy{display:grid;gap:14px;justify-items:start}
+.feature-copy h2{font-size:clamp(26px,3vw,38px)}
+.feature-copy p{color:var(--ink-2);margin:0}
+
+/* ---- pricing ---- */
+.prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.price-card{padding:26px;display:grid;gap:16px;justify-items:start}
+.price-card[data-featured="true"]{border:2px solid var(--brand);translate:0 -8px}
+.amount{font-family:Archivo;font-variation-settings:"wdth" 108,"wght" 800;font-size:34px;
+  letter-spacing:-.03em}
+.amount small{font:400 13px/1 "Instrument Sans";color:var(--ink-2)}
+.price-card ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;color:var(--ink-2);font-size:14px}
+.price-card li{display:flex;gap:9px;align-items:start}
+.price-card li svg{width:15px;height:15px;flex:none;margin-top:4px;stroke:var(--brand);fill:none;stroke-width:2}
+.switch{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface);width:max-content}
+.switch button{border:0;background:transparent;padding:8px 13px;border-radius:6px;color:var(--ink-2)}
+.switch button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.pay{margin-top:18px;padding:20px;display:grid;gap:12px;justify-items:start}
+.pay-row{display:flex;gap:8px;flex-wrap:wrap}
+.pay-badge{padding:8px 13px;border:1px solid var(--line-2);border-radius:7px;font-weight:600;font-size:13px}
+
+/* ---- studio ---- */
+.studio{display:grid;grid-template-columns:214px minmax(0,1fr) 330px;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);min-height:660px}
+.rail{border-inline-end:1px solid var(--line);padding:12px;display:grid;gap:2px;align-content:start}
+.tool{display:flex;gap:11px;align-items:center;border:0;background:transparent;color:var(--ink-2);
+  padding:11px 12px;border-radius:8px;text-align:start;width:100%}
+.tool svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+.tool:hover{background:var(--paper)}
+.tool[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);
+  box-shadow:inset 2px 0 0 var(--brand)}
+.tool small{margin-inline-start:auto;font:500 9px/1 "Martian Mono",monospace;color:var(--ink-3)}
+.workspace{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--paper)}
+.canvas{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:var(--surface-2);min-height:500px}
+.canvas img{width:100%;height:100%;object-fit:cover}
+.canvas .tag{position:absolute;top:10px;inset-inline-start:10px;padding:5px 8px;border-radius:6px;
+  background:var(--surface);border:1px solid var(--line)}
+.panel{border-inline-start:1px solid var(--line);padding:18px;display:grid;gap:18px;align-content:start}
+.panel h3{font-size:15px;font-variation-settings:"wdth" 108,"wght" 700}
+.avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.avatar{aspect-ratio:1;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  background:var(--surface-2)}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar[aria-pressed="true"]{border:2px solid var(--brand)}
+.drop{border:1px dashed var(--line-2);border-radius:8px;padding:22px 14px;text-align:center;
+  color:var(--ink-2);background:var(--paper);font-size:13px}
+.segment{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;
+  border:1px solid var(--line);border-radius:9px}
+.segment button{border:0;background:transparent;padding:9px;border-radius:6px;color:var(--ink-2);font-size:13px}
+.segment button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);font-weight:600}
+.state{display:flex;gap:9px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:9px}
+.state .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.state[data-state="waiting"] .dot,.state[data-state="starting"] .dot{background:var(--saffron)}
+.state[data-state="running"] .dot{background:var(--teal)}
+.state[data-state="done"] .dot{background:var(--green)}
+.state b{font-size:13.5px;font-weight:600;display:block}
+
+/* ---- library ---- */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+.chip{border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+  padding:8px 13px;border-radius:999px;font-size:13px}
+.chip[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);font-weight:600}
+.library{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
+.model-card{overflow:hidden;transition:150ms var(--ease)}
+.model-card:hover{translate:0 -2px}
+.model-card .ph{aspect-ratio:3/4;overflow:hidden;background:var(--surface-2)}
+.model-card img{width:100%;height:100%;object-fit:cover;transition:300ms var(--ease)}
+.model-card:hover img{scale:1.04}
+.model-card .meta{padding:12px;display:grid;gap:5px}
+.model-card b{font-size:14px;font-weight:600}
+.commission{border:1px dashed var(--line-2);border-radius:12px;display:grid;place-items:center;
+  text-align:center;padding:22px;gap:10px;color:var(--ink-2);min-height:260px}
+
+/* ---- queue ---- */
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-radius:10px;
+  background:var(--saffron-soft);border:1px solid color-mix(in srgb,var(--saffron) 36%,var(--line));
+  color:var(--ink);margin-bottom:16px;font-size:14px}
+.banner .mono{margin-inline-start:auto;color:var(--ink-2)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th,td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:start;font-size:13.5px}
+tbody tr:last-child td{border-bottom:0}
+th{font:500 10px/1 "Martian Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+td img{width:44px;height:56px;object-fit:cover;border-radius:6px}
+td .num{font-family:"Martian Mono",monospace;font-size:11.5px;font-variant-numeric:tabular-nums}
+.status{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;
+  font:500 10px/1 "Martian Mono",monospace;letter-spacing:.06em;text-transform:uppercase}
+.status[data-state="waiting"]{background:var(--saffron-soft);color:var(--saffron)}
+.status[data-state="running"]{background:var(--teal-soft);color:var(--teal)}
+.status[data-state="done"]{background:var(--green-soft);color:var(--green)}
+.status .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ---- result ---- */
+.result{display:grid;grid-template-columns:minmax(0,1.4fr) 320px;gap:18px;align-items:start}
+.result-main{padding:14px;display:grid;gap:12px}
+.result-main>img{width:100%;max-height:620px;object-fit:contain;border-radius:8px;background:var(--surface-2)}
+.vars{display:flex;gap:8px}
+.vars button{padding:0;border:1px solid var(--line);border-radius:7px;overflow:hidden;
+  width:76px;height:92px;background:var(--surface-2)}
+.vars img{width:100%;height:100%;object-fit:cover}
+.vars button[aria-pressed="true"]{border:2px solid var(--brand)}
+.side{padding:20px;display:grid;gap:16px}
+.kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.kv:last-of-type{border-bottom:0}
+.kv dt{font:500 10px/1.6 "Martian Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.kv dd{margin:0;font-size:13.5px;font-weight:500}
+
+/* ---- video ---- */
+.video-card{padding:22px;display:grid;gap:18px;max-width:760px}
+.video-card>img{width:100%;max-height:400px;object-fit:cover;border-radius:10px}
+.options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.option{border:1px solid var(--line);border-radius:9px;padding:13px;background:var(--paper);
+  color:var(--ink-2);text-align:start}
+.option[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);font-weight:600}
+.field{display:grid;gap:6px}
+.field label{font:500 10px/1 "Martian Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.field input{border:1px solid var(--line);background:var(--paper);padding:11px;border-radius:8px;width:100%}
+.estimate{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  border-top:1px solid var(--line);padding-top:16px}
+.estimate b{font-size:15px;font-variant-numeric:tabular-nums}
+
+/* ---- phones ---- */
+.phones{display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+.phone{width:330px;border:9px solid var(--ink);border-radius:30px;overflow:hidden;
+  background:var(--surface);display:flex;flex-direction:column;min-height:610px}
+.tg-head{display:flex;gap:10px;align-items:center;padding:12px 14px;
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.tg-head img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.tg-head b{font-size:13.5px;font-weight:600;display:block}
+.tg-head small{font-size:11px;color:var(--teal)}
+.tg-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:9px;background:var(--paper)}
+.bubble{max-width:82%;padding:9px 12px;border-radius:14px;font-size:12.5px;line-height:1.5;
+  background:var(--surface);border:1px solid var(--line)}
+.bubble.me{align-self:flex-end;background:var(--brand-soft);border-color:transparent;color:var(--ink)}
+.bubble img{width:100%;border-radius:9px;margin-top:8px}
+.bubble .g{width:100px}
+.inline{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.inline span{font-size:11px;padding:7px 9px;border-radius:6px;background:var(--brand-soft);color:var(--brand)}
+.ph-top{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid var(--line)}
+.ph-body{flex:1;padding:12px;display:grid;gap:11px;align-content:start}
+.ph-hero{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:var(--surface-2)}
+.ph-hero img{width:100%;height:100%;object-fit:cover}
+.ph-hero .status{position:absolute;top:10px;inset-inline-start:10px}
+.strip{display:flex;gap:8px;overflow-x:auto}
+.strip img{width:66px;height:84px;object-fit:cover;border-radius:8px;flex:none}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.tabs span{text-align:center;padding:13px 0 16px;font-size:10.5px;color:var(--ink-3)}
+.tabs span[data-on="true"]{color:var(--brand);box-shadow:inset 0 2px 0 var(--brand)}
+
+/* ---- settings ---- */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.settings .card{padding:22px;display:grid;gap:14px;align-content:start}
+.row{display:flex;justify-content:space-between;gap:16px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+
+/* ---- footer / toast ---- */
+footer{border-top:1px solid var(--line);padding:44px 0 60px}
+footer .wrap{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:28px}
+footer h4{font:500 10px/1 "Martian Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 12px}
+footer button{display:block;border:0;background:none;color:var(--ink-2);padding:5px 0;text-align:start}
+footer button:hover{color:var(--ink)}
+.toast{position:fixed;inset-inline-end:20px;bottom:20px;z-index:100;padding:12px 16px;border-radius:9px;
+  background:var(--ink);color:var(--paper);box-shadow:var(--shadow);
+  opacity:0;translate:0 8px;transition:150ms var(--ease);pointer-events:none;font-size:14px}
+.toast[data-on="true"]{opacity:1;translate:0}
+
+@media (max-width:980px){
+  .nav{display:none}
+  .hero,.demo-body,.studio,.result,.feature,.prices,.quotes{grid-template-columns:1fr}
+  .feature:nth-child(even) .feature-copy{order:0}
+  .rail{border-inline-end:0;border-bottom:1px solid var(--line);display:flex;overflow-x:auto}
+  .tool{min-width:170px}
+  .panel{border-inline-start:0;border-top:1px solid var(--line)}
+  .workspace{grid-template-columns:1fr}
+  .quote[data-side="true"]{filter:none;scale:1;opacity:1}
+  footer .wrap{grid-template-columns:1fr 1fr}
+  .demo-controls{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .collage{min-height:400px}
+  .options{grid-template-columns:1fr}
+  footer .wrap{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+}
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <button class="logo" data-go="landing">lookzi</button>
+    <nav class="nav" aria-label="Main">
+      <span class="menu-host"><button aria-expanded="false" aria-haspopup="true" data-menu="products">Products</button></span>
+      <span class="menu-host"><button aria-expanded="false" aria-haspopup="true" data-menu="solutions">Solutions</button></span>
+      <button data-go="pricing">Pricing</button>
+      <span class="menu-host"><button aria-expanded="false" aria-haspopup="true" data-menu="resources">Resources</button></span>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme" aria-label="Switch between light and dark">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg>
+      </button>
+      <button class="secondary" data-go="settings">Sign in</button>
+      <button class="primary" data-go="studio">Open Studio</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================ LANDING ============================ -->
+<section class="screen" id="landing" data-active="true">
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-copy">
+        <span class="pill">AI fashion studio · built for sellers</span>
+        <h1>From a garment photo to a campaign-ready model.</h1>
+        <p>Photograph a garment flat on a table. Lookzi puts it on a consistent Central Asian model in about 14 seconds — then turns that result into video.</p>
+        <div class="actions">
+          <button class="primary" data-scroll="pipeline">Try it — no account</button>
+          <button class="secondary" data-go="models">See the models</button>
+        </div>
+        <span class="mono">Demo generation · nothing to install</span>
+      </div>
+      <div class="collage">
+        <figure class="c-flat"><img src="data:image/jpeg;base64,{{g1}}" alt="A grey sweater photographed flat"></figure>
+        <figure class="c-model"><img src="data:image/jpeg;base64,{{p1}}" alt="A model wearing the grey sweater"></figure>
+        <figure class="c-flat2"><img src="data:image/jpeg;base64,{{g2}}" alt="A navy coat photographed flat"></figure>
+      </div>
+    </div>
+
+    <section class="section" id="pipeline">
+      <div class="section-head">
+        <div><span class="pill">Signature demo</span><h2>One garment. Five transformations.</h2></div>
+        <p>Choose a garment and a model, then generate. The counter shows the real figure a signed-in job takes on a warm GPU.</p>
+      </div>
+      <div class="card demo">
+        <div class="demo-controls">
+          <div class="group"><span class="mono">1 · Garment</span><div class="thumbs" id="pickG"></div></div>
+          <div class="group"><span class="mono">2 · Model</span><div class="thumbs" id="pickM"></div></div>
+          <button class="primary" id="generate">Generate</button>
+        </div>
+        <div class="demo-body">
+          <div class="stage">
+            <img id="stageImg" src="data:image/jpeg;base64,{{p1}}" alt="The garment shown on the chosen model">
+            <div class="stage-veil" id="veil"></div>
+            <div class="counter" id="counter">Ready · 14.3s</div>
+            <div class="progress"><i id="bar"></i></div>
+          </div>
+          <div class="steps" id="steps"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="band"><div class="marquee" id="marquee"></div></div>
+
+  <div class="wrap">
+    <section class="section">
+      <div class="section-head">
+        <div><span class="pill">Before / after</span><h2>The flat lay disappears.</h2></div>
+        <p>Drag the handle, or focus it and use the arrow keys.</p>
+      </div>
+      <div class="compare" id="compare">
+        <img class="before" src="data:image/jpeg;base64,{{g1}}" alt="The garment as the seller photographed it">
+        <img class="after" src="data:image/jpeg;base64,{{hero}}" alt="The same garment worn by a Lookzi model">
+        <span class="cap l">Seller photo</span><span class="cap r">Lookzi</span>
+        <div class="handle" id="handle"></div>
+        <input type="range" min="0" max="100" value="50" id="split" aria-label="Compare the seller photo with the Lookzi result">
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><div><span class="pill">Seller stories</span><h2>Made for the catalogue grind.</h2></div></div>
+      <div class="quotes">
+        <article class="card quote" data-side="true">
+          <span class="mono">Tashkent · womenswear</span>
+          <p>“We photograph ten new arrivals before lunch and the model stays the same person across the whole feed.”</p>
+          <b>Malika</b>
+        </article>
+        <article class="card quote">
+          <span class="mono">Samarkand · modest wear</span>
+          <p>“The useful part is not the image. It is that the model, the seed and the settings can be repeated tomorrow.”</p>
+          <b>Aziza</b>
+        </article>
+        <article class="card quote" data-side="true">
+          <span class="mono">Brand · catalogue</span>
+          <p>“Our product pages finally look like one collection instead of forty unrelated shoots.”</p>
+          <b>Bekzod</b>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="zig">
+        <div class="feature">
+          <div class="feature-media"><img src="data:image/jpeg;base64,{{p2}}" alt="A model wearing a garment produced by virtual try-on"></div>
+          <div class="feature-copy">
+            <span class="pill">Virtual try-on</span>
+            <h2>Put the product on the person.</h2>
+            <p>Keep the garment exactly as it is and change who wears it, how they stand, and where. Built for seller photographs, not studio plates.</p>
+            <div class="actions"><button class="secondary" data-go="studio">Open the tool</button></div>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-media"><img src="data:image/jpeg;base64,{{p3}}" alt="The same model appearing across several products"></div>
+          <div class="feature-copy">
+            <span class="pill">Consistent models</span>
+            <h2>One face across the whole catalogue.</h2>
+            <p>Thirteen models, ages 20 to 50, including modest wear. Pick one and it stays the same person on every product you shoot.</p>
+            <div class="actions"><button class="secondary" data-go="models">Browse the roster</button></div>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-media"><img src="data:image/jpeg;base64,{{p1}}" alt="A still frame from a generated product video"></div>
+          <div class="feature-copy">
+            <span class="pill">Short video</span>
+            <h2>Make the finished image move.</h2>
+            <p>Five or ten seconds from any result. Set the resolution, add a motion note if you want one, and see what it costs before you commit.</p>
+            <div class="actions"><button class="secondary" data-go="video">Open the video panel</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><span class="pill">Pricing</span><h2>Start small. Scale with the catalogue.</h2></div>
+        <div class="switch" id="billing">
+          <button aria-pressed="true">Monthly</button><button aria-pressed="false">Yearly · save</button>
+        </div>
+      </div>
+      <div class="prices">
+        <div class="card price-card">
+          <span class="mono">Free trial</span><h3>Try</h3>
+          <div class="amount">[PRICE]</div>
+          <ul>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>20 images, once</li>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>All 13 models</li>
+          </ul>
+          <button class="secondary" data-go="studio">Start</button>
+        </div>
+        <div class="card price-card" data-featured="true">
+          <span class="pill">Most popular</span><span class="mono">Seller</span><h3>Studio</h3>
+          <div class="amount">[PRICE] <small>/ month</small></div>
+          <ul>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Credits that roll over</li>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Telegram bot</li>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Priority in the queue</li>
+          </ul>
+          <button class="primary" data-go="studio">Choose Studio</button>
+        </div>
+        <div class="card price-card">
+          <span class="mono">Brand</span><h3>Catalogue</h3>
+          <div class="amount">[PRICE] <small>/ month</small></div>
+          <ul>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>A model that is yours alone</li>
+            <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>API access</li>
+          </ul>
+          <button class="secondary" data-go="settings">Talk to us</button>
+        </div>
+      </div>
+      <div class="card pay">
+        <b>Uzbek payment cards</b>
+        <p style="color:var(--ink-2);margin:0">A local card is a first-class checkout option, not a footnote. It is the reason a seller here can buy at all.</p>
+        <div class="pay-row"><span class="pay-badge">UZCARD</span><span class="pay-badge">HUMO</span><span class="pay-badge">Visa</span><span class="pay-badge">Mastercard</span></div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============================ STUDIO ============================ -->
+<section class="screen" id="studio">
+  <div class="wrap">
+    <div class="screen-head">
+      <div><span class="pill">Studio</span><h1>Make a product image.</h1></div>
+      <span class="mono">Warm generation · 14.3s</span>
+    </div>
+    <div class="studio">
+      <aside class="rail" id="tools" aria-label="Tools"></aside>
+      <div class="workspace">
+        <div class="canvas"><span class="tag mono">Garment</span><img src="data:image/jpeg;base64,{{g1}}" alt="The uploaded garment"></div>
+        <div class="canvas"><span class="tag mono">Result</span><img src="data:image/jpeg;base64,{{p1}}" alt="The generated image of the model wearing it"></div>
+      </div>
+      <aside class="panel">
+        <div class="group"><h3>Model</h3><div class="avatars" id="studioModels"></div><span class="mono" id="studioName">Nigora · 25 · Uzbek</span></div>
+        <div class="group"><h3>Garment</h3><div class="drop">Drop a JPG, PNG or WEBP<br><span class="mono">max 20 MB</span></div></div>
+        <div class="group"><h3>Fits on</h3>
+          <div class="segment" id="fits">
+            <button aria-pressed="true">Upper</button><button aria-pressed="false">Lower</button><button aria-pressed="false">Full</button>
+          </div>
+        </div>
+        <div class="state" data-state="running">
+          <span class="dot"></span>
+          <div><b>GPU warm</b><span class="mono">3 queued · about 42s</span></div>
+        </div>
+        <button class="primary full" data-toast="Queued. The result will arrive in Telegram.">Generate · 1 credit</button>
+        <span class="mono">You can close this — the result arrives in Telegram.</span>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ MODELS ============================ -->
+<section class="screen" id="models">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Model library</span><h1>Find the right face.</h1></div></div>
+    <div class="chips" id="filters"></div>
+    <div class="library" id="library"></div>
+  </div>
+</section>
+
+<!-- ============================ QUEUE ============================ -->
+<section class="screen" id="queue">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Queue</span><h1>Everything in flight.</h1></div></div>
+    <div class="banner">
+      <b>GPU is starting.</b> The first job begins in about 7 minutes.
+      <span class="mono">You can close this page</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Preview</th><th>File</th><th>Model</th><th>Tool</th><th>Credits</th><th>State</th></tr></thead>
+        <tbody id="queueRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RESULT ============================ -->
+<section class="screen" id="result">
+  <div class="wrap">
+    <div class="screen-head">
+      <div><span class="pill">Result</span><h1>Repeatable by design.</h1></div>
+      <button class="primary" data-go="video">Make a video</button>
+    </div>
+    <div class="result">
+      <div class="card result-main">
+        <img src="data:image/jpeg;base64,{{p1}}" alt="The finished image" id="resultImg">
+        <div class="vars" id="vars"></div>
+      </div>
+      <div class="card side">
+        <dl style="margin:0">
+          <div class="kv"><dt>Model</dt><dd>Nigora · 25 · Uzbek</dd></div>
+          <div class="kv"><dt>Tool</dt><dd>Product to Model</dd></div>
+          <div class="kv"><dt>Fits on</dt><dd>Upper</dd></div>
+          <div class="kv"><dt>Steps</dt><dd>8 · Lightning</dd></div>
+          <div class="kv"><dt>Seed</dt><dd>42</dd></div>
+          <div class="kv"><dt>Time</dt><dd>14.3s</dd></div>
+        </dl>
+        <button class="primary full" data-go="video">Make a video</button>
+        <button class="secondary full" data-toast="Four variations queued.">Four more variations</button>
+        <button class="secondary full" data-toast="Same garment queued on Bekzod.">Same garment, another model</button>
+        <button class="secondary full" data-toast="Downloading the full-resolution PNG.">Download PNG</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ VIDEO ============================ -->
+<section class="screen" id="video">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Short video</span><h1>Make the result move.</h1></div></div>
+    <div class="card video-card">
+      <img src="data:image/jpeg;base64,{{p1}}" alt="The still the clip will be generated from">
+      <div class="group"><span class="mono">Duration</span>
+        <div class="options" id="duration">
+          <button class="option" data-mult="1" aria-pressed="true">5 seconds</button>
+          <button class="option" data-mult="2" aria-pressed="false">10 seconds</button>
+        </div>
+      </div>
+      <div class="group"><span class="mono">Resolution</span>
+        <div class="options" id="resolution">
+          <button class="option" data-base="1" aria-pressed="true">480p</button>
+          <button class="option" data-base="3" aria-pressed="false">720p</button>
+          <button class="option" data-base="6" aria-pressed="false">1080p</button>
+        </div>
+      </div>
+      <div class="field"><label for="motion">Motion note · optional</label>
+        <input id="motion" placeholder="a slow turn toward the camera"></div>
+      <div class="field"><label for="endframe">End frame · optional</label>
+        <div class="drop" id="endframe">Drop the frame the clip should end on</div></div>
+      <div class="estimate">
+        <div><span class="mono">Estimate</span><b>2–3 minutes · <span id="cost">1</span> credits</b></div>
+        <button class="primary" data-toast="Video job added to the queue.">Generate video</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TELEGRAM ============================ -->
+<section class="screen" id="telegram">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Telegram</span><h1>Where the work actually happens.</h1></div></div>
+    <div class="phones">
+      <div class="phone">
+        <div class="tg-head"><img src="data:image/jpeg;base64,{{f2}}" alt=""><div><b>Lookzi</b><small>bot · online</small></div></div>
+        <div class="tg-body">
+          <div class="bubble me">Sends a photo<img class="g" src="data:image/jpeg;base64,{{g1}}" alt="A garment photographed flat"></div>
+          <div class="bubble">Got it. Which model should wear this?</div>
+          <div class="bubble me">Nigora</div>
+          <div class="bubble">Upper body, lower body, or the full outfit?</div>
+          <div class="bubble me">Upper</div>
+          <div class="bubble"><b>Queued — third in line.</b> The GPU is off, so this starts in about 7 minutes. I will send the image here. You can close Telegram.</div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="tg-head"><img src="data:image/jpeg;base64,{{f2}}" alt=""><div><b>Lookzi</b><small>bot · online</small></div></div>
+        <div class="tg-body">
+          <div class="bubble">Ready — 14.3 seconds.<img src="data:image/jpeg;base64,{{p1}}" alt="The finished image of the model wearing the garment">
+            <span class="inline"><span>4 variations</span><span>Another model</span><span>Make a video</span></span>
+          </div>
+          <div class="bubble">1 credit used. 239 left.</div>
+          <div class="bubble me">Another model</div>
+          <div class="bubble">Queued for Bekzod. The GPU is warm now — about 15 seconds.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ MOBILE ============================ -->
+<section class="screen" id="mobile">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Phone</span><h1>Used standing in a shop.</h1></div></div>
+    <div class="phones">
+      <div class="phone">
+        <div class="ph-top"><span class="logo" style="font-size:17px">lookzi</span><span class="mono">239</span></div>
+        <div class="ph-body">
+          <div class="ph-hero">
+            <img src="data:image/jpeg;base64,{{p1}}" alt="The finished image">
+            <span class="status" data-state="done"><i class="dot"></i>done · 14.3s</span>
+          </div>
+          <span class="mono">Model</span>
+          <div class="strip">
+            <img src="data:image/jpeg;base64,{{f1}}" alt="Nigora">
+            <img src="data:image/jpeg;base64,{{f2}}" alt="Bekzod">
+            <img src="data:image/jpeg;base64,{{f3}}" alt="Aziza">
+            <img src="data:image/jpeg;base64,{{f1}}" alt="Kamola">
+          </div>
+          <button class="primary full">Upload a garment</button>
+        </div>
+        <div class="tabs"><span data-on="true">Studio</span><span>Queue</span><span>Models</span><span>Me</span></div>
+      </div>
+      <div class="phone">
+        <div class="ph-top"><span class="logo" style="font-size:17px">lookzi</span><span class="mono">239</span></div>
+        <div class="ph-body">
+          <div class="state" data-state="starting"><span class="dot"></span>
+            <div><b>Third in queue</b><span class="mono">GPU starting · ~7 min</span></div></div>
+          <div class="ph-hero"><img src="data:image/jpeg;base64,{{p3}}" alt="A previous result"></div>
+          <span class="mono" style="line-height:1.6">Results arrive in Telegram. You do not need to keep this open.</span>
+        </div>
+        <div class="tabs"><span>Studio</span><span data-on="true">Queue</span><span>Models</span><span>Me</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SETTINGS ============================ -->
+<section class="screen" id="settings">
+  <div class="wrap">
+    <div class="screen-head"><div><span class="pill">Settings</span><h1>Account and workspace.</h1></div></div>
+    <div class="settings">
+      <div class="card">
+        <h3>Account</h3>
+        <div class="field"><label for="s-name">Name</label><input id="s-name" value="Lookzi seller"></div>
+        <div class="field"><label for="s-mail">Email</label><input id="s-mail" value="seller@example.com"></div>
+        <div class="field"><label for="s-tg">Telegram</label><input id="s-tg" value="@lookzi_seller"></div>
+        <button class="secondary" data-toast="Account saved.">Save changes</button>
+      </div>
+      <div class="card">
+        <h3>API key</h3>
+        <div class="field"><label for="s-key">Production key</label>
+          <input id="s-key" value="lk_live_0000000000000000" readonly></div>
+        <button class="secondary" id="copyKey">Copy key</button>
+        <h3 style="margin-top:6px">Team</h3>
+        <div class="row"><span>Aziza · owner</span><span class="mono">active</span></div>
+        <div class="row"><span>Bekzod · editor</span><span class="mono">active</span></div>
+      </div>
+      <div class="card">
+        <h3>Billing</h3>
+        <div class="row"><span>August 2026</span><span class="mono">[PRICE]</span></div>
+        <div class="row"><span>July 2026</span><span class="mono">[PRICE]</span></div>
+        <div class="row"><span>June 2026</span><span class="mono">[PRICE]</span></div>
+      </div>
+      <div class="card">
+        <h3>Why you wait</h3>
+        <p style="color:var(--ink-2);margin:0">The GPU shuts down after ten idle minutes, which is what keeps the price low. Waiting is always stated: queued, starting, running, or delivered — never a spinner.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <button class="logo" data-go="landing">lookzi</button>
+      <p style="color:var(--ink-2);max-width:34ch">AI fashion production for the sellers and brands of Central Asia.</p>
+    </div>
+    <div><h4>Product</h4>
+      <button data-go="studio">Studio</button><button data-go="models">Models</button><button data-go="video">Video</button></div>
+    <div><h4>Workflow</h4>
+      <button data-go="queue">Queue</button><button data-go="result">Result</button><button data-go="telegram">Telegram</button></div>
+    <div><h4>Account</h4>
+      <button data-go="pricing">Pricing</button><button data-go="mobile">Phone</button><button data-go="settings">Settings</button></div>
+  </div>
+</footer>
+
+<div class="dropdown" id="dropdown" role="menu" aria-label="Menu"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var IMG = {
+  g:["{{g1}}","{{g2}}","{{g3}}"],
+  p:["{{p1}}","{{p2}}","{{p3}}"],
+  f:["{{f1}}","{{f2}}","{{f3}}"]
+};
+var b64 = function(s){ return "data:image/jpeg;base64," + s; };
+
+// ---- icons -----------------------------------------------------------
+// One shape per tool. A single glyph repeated seven times is a placeholder
+// pretending to be a design -- the rail is the main navigation of the app and
+// the icons are what makes it scannable at a glance.
+var ICON = {
+  tryon:'<path d="M8 4 4 6v5h3v9h10v-9h3V6l-4-2-4 2Z"/>',
+  p2m:'<rect x="3" y="4" width="7" height="7" rx="1"/><path d="M17 4v4M15 6h4"/><path d="M7 15v5M14 20v-5a3 3 0 0 1 6 0v5"/>',
+  packshot:'<path d="M12 3 3 7v10l9 4 9-4V7l-9-4Z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  swap:'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M14 6h5v5M10 18H5v-5"/>',
+  create:'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/>',
+  consistent:'<circle cx="9" cy="9" r="3"/><circle cx="15" cy="15" r="3"/><path d="M9 12v3h3"/>',
+  video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 11 5-3v8l-5-3"/>'
+};
+function svg(d){ return '<svg viewBox="0 0 24 24" aria-hidden="true">'+d+'</svg>'; }
+
+// ---- screens ---------------------------------------------------------
+// Every section is hidden except the active one, landing included. The
+// original kept landing permanently visible, so "open studio" left the
+// marketing page stacked above the workspace.
+var SCREENS = ["landing","studio","models","queue","result","video","telegram","mobile","settings"];
+function go(id){
+  if (id === "pricing") { go("landing"); setTimeout(function(){ scrollTo("pipeline"); }, 30); return; }
+  if (SCREENS.indexOf(id) < 0) return;
+  SCREENS.forEach(function(s){
+    var el = $(s); if (el) el.setAttribute("data-active", String(s === id));
+  });
+  closeMenu();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (history.replaceState) history.replaceState(null, "", "#" + id);
+}
+function scrollTo(id){ var el = $(id); if (el) el.scrollIntoView({ behavior:"smooth", block:"start" }); }
+
+document.addEventListener("click", function(e){
+  var g = e.target.closest("[data-go]");       if (g) { go(g.dataset.go); return; }
+  var s = e.target.closest("[data-scroll]");   if (s) { scrollTo(s.dataset.scroll); return; }
+  var t = e.target.closest("[data-toast]");    if (t) { toast(t.dataset.toast); }
+});
+
+var toastTimer;
+function toast(msg){
+  var el = $("toast");
+  el.textContent = msg;
+  el.setAttribute("data-on","true");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.setAttribute("data-on","false"); }, 2600);
+}
+
+// ---- theme -----------------------------------------------------------
+// No stamp at all means "follow the system", which is the default. The button
+// only writes a stamp once the visitor has actually chosen.
+try {
+  var saved = localStorage.getItem("lookzi-theme");
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+} catch (e) {}
+$("theme").addEventListener("click", function(){
+  var root = document.documentElement;
+  var dark = root.getAttribute("data-theme") === "dark" ||
+    (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+  var next = dark ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  try { localStorage.setItem("lookzi-theme", next); } catch (e) {}
+});
+
+// ---- menus -----------------------------------------------------------
+var MENUS = {
+  products:[["Virtual Try-On","Garment onto a person","tryon","studio"],
+            ["Product to Model","Flat lay onto a model","p2m","studio"],
+            ["Packshot","Clean catalogue cutout","packshot","studio"],
+            ["Model Swap","Keep the garment, change who","swap","studio"],
+            ["Model Creation","A new face on request","create","models"],
+            ["Consistent Models","One person, whole catalogue","consistent","models"],
+            ["Short Video","Five or ten seconds","video","video"]],
+  solutions:[["Telegram sellers","Where most of them work","tryon","telegram"],
+             ["Instagram catalogues","Feeds that look like one shoot","consistent","models"],
+             ["Brand teams","Exclusive models and API","create","settings"],
+             ["Modest wear","A category nobody else serves","p2m","models"]],
+  resources:[["Queue","How waiting works","video","queue"],
+             ["Model roster","Thirteen faces","create","models"],
+             ["Pricing","Credits and local cards","packshot","pricing"],
+             ["Settings","Keys and team","swap","settings"]]
+};
+var openBtn = null;
+function closeMenu(){
+  var d = $("dropdown");
+  d.setAttribute("data-open","false");
+  if (openBtn) openBtn.setAttribute("aria-expanded","false");
+  openBtn = null;
+}
+document.querySelectorAll("[data-menu]").forEach(function(btn){
+  btn.addEventListener("click", function(e){
+    e.stopPropagation();
+    var d = $("dropdown"), items = MENUS[btn.dataset.menu];
+    if (openBtn === btn) { closeMenu(); return; }
+    closeMenu();
+    d.innerHTML = '<div class="drop-grid">' + items.map(function(it){
+      return '<button class="drop-item" role="menuitem" data-go="'+it[3]+'">'+
+             '<span class="soft">'+svg(ICON[it[2]])+'</span>'+
+             '<span><b>'+it[0]+'</b><span>'+it[1]+'</span></span></button>';
+    }).join("") + '</div>';
+    var host = btn.parentElement.getBoundingClientRect();
+    d.style.insetInlineStart = Math.max(20, host.left) + "px";
+    d.style.top = (host.bottom + window.scrollY) + "px";
+    d.style.position = "absolute";
+    d.setAttribute("data-open","true");
+    btn.setAttribute("aria-expanded","true");
+    openBtn = btn;
+  });
+});
+document.addEventListener("click", function(e){
+  if (!e.target.closest("#dropdown") && !e.target.closest("[data-menu]")) closeMenu();
+});
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeMenu(); });
+
+// ---- pipeline demo ---------------------------------------------------
+var STEPS = [
+  ["Product to Model","the base generation"],
+  ["Change Pose","same person, new stance"],
+  ["Change Background","studio, street, plain"],
+  ["Make a Video","five or ten seconds"],
+  ["Model Swap","same garment, another face"]
+];
+var NAMES = ["Nigora · 25 · Uzbek","Bekzod · 22 · Uzbek","Aziza · 31 · Tajik"];
+var gi = 0, mi = 0, busy = false;
+
+function pressGroup(container, el){
+  container.querySelectorAll("[aria-pressed]").forEach(function(b){
+    b.setAttribute("aria-pressed", String(b === el));
+  });
+}
+function thumbs(container, list, alts, onPick){
+  container.innerHTML = list.map(function(src, i){
+    return '<button class="thumb" aria-pressed="'+(i===0)+'" data-i="'+i+'">'+
+           '<img src="'+b64(src)+'" alt="'+alts[i]+'"></button>';
+  }).join("");
+  container.addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b || busy) return;
+    pressGroup(container, b); onPick(+b.dataset.i);
+  });
+}
+thumbs($("pickG"), IMG.g, ["Grey sweater","Navy coat","Black trousers"], function(i){
+  gi = i; reset("press generate");
+});
+thumbs($("pickM"), IMG.f, NAMES, function(i){ mi = i; reset("press generate"); });
+
+$("steps").innerHTML = STEPS.map(function(s, i){
+  return '<button class="step" aria-pressed="'+(i===0)+'" data-i="'+i+'">'+
+         '<span class="dot"></span><span><b>'+s[0]+'</b><span>'+s[1]+'</span></span></button>';
+}).join("");
+$("steps").addEventListener("click", function(e){
+  var b = e.target.closest(".step"); if (!b || busy) return;
+  pressGroup($("steps"), b);
+  swap(IMG.p[(+b.dataset.i) % IMG.p.length]);
+});
+
+function swap(src){
+  var img = $("stageImg");
+  img.style.opacity = 0;
+  setTimeout(function(){ img.src = b64(src); img.style.opacity = 1; }, 160);
+}
+function reset(msg){
+  $("counter").textContent = msg === "press generate" ? "Ready · 14.3s" : msg;
+  $("bar").style.width = "0";
+  $("veil").setAttribute("data-on","false");
+}
+$("generate").addEventListener("click", function(){
+  if (busy) return;
+  busy = true; this.disabled = true;
+  $("veil").setAttribute("data-on","true");
+  var t0 = performance.now(), DUR = 1500, btn = this;
+  (function tick(now){
+    var k = Math.min(1, (now - t0) / DUR);
+    $("bar").style.width = (k * 100) + "%";
+    $("counter").textContent = "Generating · " + (14.3 * (1 - k)).toFixed(1) + "s";
+    if (k < 1) { requestAnimationFrame(tick); return; }
+    swap(IMG.p[mi]);
+    $("counter").textContent = "Done · 14.3s";
+    $("veil").setAttribute("data-on","false");
+    busy = false; btn.disabled = false;
+  })(t0);
+});
+
+// ---- marquee ---------------------------------------------------------
+var BRANDS = ["ZARINA","MODANA","ATLAS HOME","SILK ROAD","TOSHKENT DENIM","ADRAS"];
+$("marquee").innerHTML = BRANDS.concat(BRANDS).map(function(b){
+  return "<span>" + b + "</span>";
+}).join("");
+
+// ---- before / after --------------------------------------------------
+// A range input rather than pointer maths: it drags with the mouse, responds
+// to arrow keys, and announces itself. The original was pointer-only, which
+// locked out anyone using a keyboard.
+var split = $("split");
+function applySplit(){
+  var v = split.value + "%";
+  $("compare").style.setProperty("--split", v);
+  $("handle").style.insetInlineStart = v;
+}
+split.addEventListener("input", applySplit);
+applySplit();
+
+// ---- studio ----------------------------------------------------------
+var TOOLS = [["Virtual Try-On","tryon"],["Product to Model","p2m"],["Packshot","packshot"],
+             ["Model Swap","swap"],["Model Creation","create"],["Consistent Models","consistent"],
+             ["Short Video","video","soon"]];
+$("tools").innerHTML = TOOLS.map(function(t, i){
+  return '<button class="tool" aria-pressed="'+(i===1)+'">'+svg(ICON[t[1]])+'<span>'+t[0]+'</span>'+
+         (t[2] ? '<small>soon</small>' : '') + '</button>';
+}).join("");
+$("tools").addEventListener("click", function(e){
+  var b = e.target.closest(".tool"); if (b) pressGroup(this, b);
+});
+
+$("studioModels").innerHTML = IMG.f.concat([IMG.f[0]]).map(function(src, i){
+  return '<button class="avatar" aria-pressed="'+(i===0)+'"><img src="'+b64(src)+
+         '" alt="'+(NAMES[i % NAMES.length])+'"></button>';
+}).join("");
+$("studioModels").addEventListener("click", function(e){
+  var b = e.target.closest(".avatar"); if (!b) return;
+  pressGroup(this, b);
+  $("studioName").textContent = NAMES[[].indexOf.call(this.children, b) % NAMES.length];
+});
+$("fits").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if (b) pressGroup(this, b);
+});
+
+// ---- library ---------------------------------------------------------
+var ROSTER = [
+  ["Nigora","25 · Uzbek · slim",0,["30 poses","exclusive"]],
+  ["Bekzod","22 · Uzbek · slim",1,["30 poses","exclusive"]],
+  ["Aziza","31 · Tajik · average",2,["30 poses"]],
+  ["Kamola","50 · Kazakh · average",0,["30 poses"]],
+  ["Rustam","47 · Uzbek · average",1,["30 poses"]],
+  ["Malika","38 · Uzbek · fuller",2,["30 poses","modest"]]
+];
+$("filters").innerHTML = ["All 13","Women","Men","20s","30s","40s+","Modest wear","Exclusive"]
+  .map(function(f, i){ return '<button class="chip" aria-pressed="'+(i===0)+'">'+f+'</button>'; }).join("");
+$("filters").addEventListener("click", function(e){
+  var b = e.target.closest(".chip"); if (b) pressGroup(this, b);
+});
+$("library").innerHTML = ROSTER.map(function(r){
+  return '<article class="card model-card"><div class="ph"><img src="'+b64(IMG.p[r[2]])+
+    '" alt="'+r[0]+', '+r[1]+'"></div><div class="meta"><b>'+r[0]+'</b>'+
+    '<span class="mono">'+r[1]+'</span><span class="mono" style="color:var(--brand)">'+
+    r[3].join(" · ")+'</span></div></article>';
+}).join("") + '<div class="commission"><b>Commission a model</b>'+
+  '<span class="mono" style="line-height:1.6">Yours alone · about three days</span>'+
+  '<button class="secondary" data-toast="We will be in touch about a commissioned model.">Request</button></div>';
+
+// ---- queue -----------------------------------------------------------
+var JOBS = [
+  ["sweater_grey.png","10:42 · seed 42","Nigora","Product to Model",1,"done",0],
+  ["coat_navy.png","10:44 · seed 42","Bekzod","Product to Model",1,"running",1],
+  ["trousers_black.png","10:44 · 2nd in line","Aziza","Product to Model",1,"waiting",2],
+  ["sweater_grey.png","10:45 · 4 variations","Kamola","Consistent Models",4,"waiting",0]
+];
+$("queueRows").innerHTML = JOBS.map(function(j){
+  return '<tr><td><img src="'+b64(IMG.g[j[6]])+'" alt=""></td>'+
+    '<td><b>'+j[0]+'</b><br><span class="num">'+j[1]+'</span></td>'+
+    '<td>'+j[2]+'</td><td>'+j[3]+'</td><td class="num">'+j[4]+'</td>'+
+    '<td><span class="status" data-state="'+j[5]+'"><i class="dot"></i>'+j[5]+'</span></td></tr>';
+}).join("");
+
+// ---- result variations -----------------------------------------------
+$("vars").innerHTML = IMG.p.map(function(src, i){
+  return '<button aria-pressed="'+(i===0)+'"><img src="'+b64(src)+'" alt="Variation '+(i+1)+'"></button>';
+}).join("");
+$("vars").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if (!b) return;
+  pressGroup(this, b);
+  $("resultImg").src = b.querySelector("img").src;
+});
+
+// ---- video cost ------------------------------------------------------
+// Resolution sets the base; ten seconds doubles it. The previous version
+// computed `8 + duration - 8 + resolution`, which is just the two data
+// attributes added together and produced 20 credits for a clip that costs 12.
+function updateCost(){
+  var base = +$("resolution").querySelector('[aria-pressed="true"]').dataset.base;
+  var mult = +$("duration").querySelector('[aria-pressed="true"]').dataset.mult;
+  $("cost").textContent = base * mult;
+}
+["duration","resolution"].forEach(function(id){
+  $(id).addEventListener("click", function(e){
+    var b = e.target.closest(".option"); if (!b) return;
+    pressGroup(this, b); updateCost();
+  });
+});
+updateCost();
+
+// ---- settings --------------------------------------------------------
+$("copyKey").addEventListener("click", function(){
+  var v = $("s-key").value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(v).then(function(){ toast("API key copied."); },
+      function(){ toast("Could not copy — select the field and copy manually."); });
+  } else {
+    toast("Could not copy — select the field and copy manually.");
+  }
+});
+
+// ---- deep link -------------------------------------------------------
+var hash = location.hash.slice(1);
+if (SCREENS.indexOf(hash) >= 0) go(hash);
+window.addEventListener("hashchange", function(){
+  var h = location.hash.slice(1);
+  if (SCREENS.indexOf(h) >= 0) go(h);
+});
+})();
+</script>

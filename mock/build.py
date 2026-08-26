@@ -10,7 +10,9 @@ import io, json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 imgs = json.load(open(os.path.join(HERE, "images.json")))
-src = io.open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
+tpl = sys.argv[1] if len(sys.argv) > 1 else "template.html"
+out_name = sys.argv[2] if len(sys.argv) > 2 else "lookzi-product-book.html"
+src = io.open(os.path.join(HERE, tpl), encoding="utf-8").read()
 
 holes = set(re.findall(r"\{\{(\w+)\}\}", src))
 missing = sorted(holes - set(imgs))
@@ -25,7 +27,7 @@ out = re.sub(r"\{\{(\w+)\}\}", lambda m: imgs[m.group(1)], src)
 # A hole left behind is a broken image the eye skips over in a long page.
 assert "{{" not in out, "unsubstituted hole remains"
 
-dst = os.path.join(HERE, "lookzi-product-book.html")
+dst = os.path.join(HERE, out_name)
 io.open(dst, "w", encoding="utf-8").write(out)
 print(f"  {len(holes)} images inlined -> {dst}")
 print(f"  {len(out) / 1024:.0f} KB")
