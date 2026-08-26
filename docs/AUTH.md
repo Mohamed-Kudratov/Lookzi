@@ -22,8 +22,15 @@ Forgotten password:
    someone pretending to be support, and it carries a single-use token.
 3. The link opens a form where they set a new password.
 
-Security matters more here than in most products because these accounts hold
-credit balances. A stolen account is stolen money.
+Sign-in is by password. Passwordless sign-in -- a link mailed on every login --
+was proposed and rejected: these accounts hold credit balances, and handing out
+a link that logs someone straight in was judged too much to put in an inbox.
+
+One fact to carry forward rather than rediscover. Password and magic link share
+the same worst case: whoever controls the inbox controls the account, because
+password reset runs through that inbox either way. The lever that actually
+protects a balance is a second factor, not the choice between them. Add TOTP
+when money is real.
 
 ## What the MVP does instead
 
