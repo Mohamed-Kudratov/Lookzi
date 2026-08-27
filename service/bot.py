@@ -362,10 +362,15 @@ def confirm(conn, chat_id, user, data):
     lines.append(f"Costs <b>{tool['cost']}</b> "
                  f"of your <b>{user['credits']}</b> credits.")
 
+    # Three buttons, because stopping and starting again are different wishes.
+    # Somebody who spots the wrong model wants to go back to the beginning;
+    # somebody who has changed their mind entirely wants to be left alone, and
+    # offering them a fresh menu is not an answer.
     set_state(conn, chat_id, user["id"], "await_confirm", data)
     send(chat_id, "\n".join(lines),
          [[{"text": f"Generate · {tool['cost']} credit", "callback_data": "go"}],
-          [{"text": "Start over", "callback_data": "cancel"}]])
+          [{"text": "Start over", "callback_data": "restart"},
+           {"text": "Cancel", "callback_data": "cancel"}]])
 
 
 def on_message(conn, msg):
@@ -384,8 +389,8 @@ def on_message(conn, msg):
         return
     if text.startswith("/cancel") or text.lower() in ("cancel", "stop"):
         set_state(conn, chat_id, user["id"], "idle", {})
-        send(chat_id, "Stopped. Nothing was charged.")
-        start(conn, chat_id, user)
+        send(chat_id, "Stopped. Nothing was charged.\n"
+                      "<i>/start whenever you want to begin again.</i>")
         return
     if text.startswith("/credits"):
         send(chat_id, f"<b>{user['credits']}</b> credits.")
@@ -461,7 +466,12 @@ def on_callback(conn, cb):
     # wants out.
     if value == "cancel":
         set_state(conn, chat_id, user["id"], "idle", {})
-        send(chat_id, "Stopped. Nothing was charged.")
+        send(chat_id, "Stopped. Nothing was charged.\n"
+                      "<i>/start whenever you want to begin again.</i>")
+        return
+
+    if value == "restart":
+        set_state(conn, chat_id, user["id"], "idle", {})
         start(conn, chat_id, user)
         return
 
