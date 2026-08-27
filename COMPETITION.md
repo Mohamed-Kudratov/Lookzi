@@ -184,3 +184,47 @@ The insight to take is not "add video". It is that **the finished image is a
 starting point, not an endpoint**. A seller who has just made a good image
 wants the next thing immediately, and the product that offers it there and then
 gets the second sale for free.
+
+## Their studio, and what to take from it
+
+Seen in the signed-in app, which the earlier passes could not reach.
+
+**The entry point is a sentence, not a tool.** "What will you create today?" over
+a free-text box, with Add images beside it and one Generate button. A newcomer
+does not have to know which of seven tools they need — they describe the
+outcome and the product routes it. Our rail asks them to know first.
+
+Under the box, four suggestion chips, each with a thumbnail: *Create a
+professional fashion photo with this product*, *Put this product on this
+model*, *I want to create an AI model*, *Change the colour of this garment*.
+Those are the four jobs stated as intentions rather than as features.
+
+Below that, **Studio Shortcuts** — large cards showing real before-and-after
+imagery per tool. Product to Model shows the flat-lay and the result together;
+Try-On shows one outfit on two models. The card *is* the explanation.
+
+Their rail: Home, Agent, Studio, Gallery, Elements, API, Updates, Help. Two
+things there we do not have. **Agent** is a conversational route into the same
+tools. **Elements** is a library of reusable pieces — faces, backgrounds,
+garments — that a customer builds up and reaches for again.
+
+Credits and an Upgrade button sit top right, always visible. Free tier shows
+"5 app credits", which is a smaller trial than their marketing page claims.
+
+### What to beat, in order
+
+1. **A prompt box that routes.** It removes the need to understand the product
+   before using it, and it is the single biggest difference between their front
+   door and ours. The routing itself is a small model or a keyword map over the
+   same `needs` contract we already have.
+2. **Tool cards made of our own output.** Their cards work because the picture
+   is the pitch. Ours would be stronger: the models are Central Asian and the
+   customer's buyers are too.
+3. **A gallery worth returning to.** Ours is a strip of thumbnails; theirs is a
+   place. Reruns, variations and downloads belong there.
+4. **Elements.** A seller who has found a face and a background that sell wants
+   them back tomorrow without hunting.
+
+None of this is where the moat is — the moat is Telegram, local payment and who
+the models look like. But the front door has to be good enough that a brand
+does not dismiss the product before reaching any of that.
