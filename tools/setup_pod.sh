@@ -71,16 +71,36 @@ else
     # volume is whatever survived the last pod, and on this one that was a
     # partial copy with no setup.py -- installable-looking until pip disagrees.
     pip uninstall -q -y diffusers 2>/dev/null || true
+
+    # The fork is excluded from the working tree by sparse-checkout: writing
+    # 2187 files onto a network volume is slow, and once the package is
+    # installed the source is dead weight -- and worse than dead weight, since
+    # a directory named "diffusers" in the working directory shadows the
+    # install. Excluding it does the same job as the Dockerfile's mv, without
+    # leaving a second copy behind.
+    #
+    # A wiped container disk takes the installed package with it, so the source
+    # has to come back for as long as pip needs it, then go again.
+    resparse=0
+    if [ ! -f "$REPO/diffusers/setup.py" ]        && [ "$(git -C "$REPO" config --get core.sparseCheckout)" = "true" ]; then
+        echo "  materialising the fork (sparse-checkout hides it)"
+        git -C "$REPO" sparse-checkout disable
+        resparse=1
+    fi
+
     if [ -f "$REPO/diffusers/setup.py" ]; then
         pip install -q --no-cache-dir "$REPO/diffusers"
-        rm -rf "$REPO/diffusers_src"
-        mv "$REPO/diffusers" "$REPO/diffusers_src"
     elif [ -f "$REPO/diffusers_src/setup.py" ]; then
         pip install -q --no-cache-dir "$REPO/diffusers_src"
     else
         echo "  !! no installable diffusers fork here." >&2
         echo "     Expected diffusers/setup.py. Restore the tree with a checkout." >&2
         exit 1
+    fi
+
+    if [ "$resparse" = "1" ]; then
+        echo "  hiding the fork again"
+        git -C "$REPO" sparse-checkout set --no-cone '/*' '!/diffusers/'
     fi
 fi
 
