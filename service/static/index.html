@@ -8,249 +8,316 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
 <style>
-/* Light by default; dark follows the operating system unless the visitor has
-   chosen otherwise. Both stamps beat the media query, so an explicit choice
-   wins in either direction. */
+/* Dark first. Every tool a photographer already uses is dark, because a bright
+   interface changes how you judge the picture sitting next to it -- and the
+   picture is the only thing on this screen that should carry colour. Light is
+   supported for anyone who wants it. */
 :root{
-  --paper:#F7F6F3; --surface:#FFFFFF; --surface-2:#EFEEE9;
-  --ink:#16181C; --ink-2:#5A6066; --ink-3:#8B9198;
-  --line:#E4E2DC; --line-2:#CFCCC3;
-  --brand:#3B4BA0; --brand-soft:#E7E9F7; --on-brand:#FFFFFF;
+  --bg:#0B0C0E; --panel:#131519; --panel-2:#1A1D22; --raised:#22262D;
+  --line:#23272E; --line-2:#333943;
+  --ink:#F1F0EC; --ink-2:#A2A8B0; --ink-3:#6C737C;
+  --brand:#7B8AF0; --brand-soft:#1D2340; --on-brand:#0B0C0E;
+  --wait:#D9B65E; --wait-soft:#2A2415;
+  --run:#5BB8C9;  --run-soft:#132A2F;
+  --done:#63BE87; --done-soft:#14271C;
+  --bad:#D4785D;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 18px 44px -24px rgba(0,0,0,.9);
+  --ease:cubic-bezier(.2,.7,.3,1);
+  --rail:216px; --panel-w:320px;
+}
+:root[data-theme="light"]{
+  --bg:#F5F5F2; --panel:#FFFFFF; --panel-2:#EFEEE9; --raised:#E6E5DF;
+  --line:#E2E0D9; --line-2:#CDCAC1;
+  --ink:#14161A; --ink-2:#575D65; --ink-3:#878D95;
+  --brand:#3B4BA0; --brand-soft:#E6E9F8; --on-brand:#FFFFFF;
   --wait:#8A6A1C; --wait-soft:#F6EED6;
   --run:#1F6B7A;  --run-soft:#DCEDF1;
   --done:#2F6B45; --done-soft:#DDEEE3;
   --bad:#A9472F;
-  --shadow:0 1px 2px rgba(22,24,28,.05), 0 14px 34px -20px rgba(22,24,28,.34);
-  --ease:cubic-bezier(.2,.7,.3,1);
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --paper:#111318; --surface:#191C22; --surface-2:#22262E;
-    --ink:#F2F1ED; --ink-2:#B4B9C0; --ink-3:#848A93;
-    --line:#2C313A; --line-2:#3D434D;
-    --brand:#8E9BEC; --brand-soft:#242A47; --on-brand:#0F1117;
-    --wait:#DFBB65; --wait-soft:#2C2617;
-    --run:#5FBACA;  --run-soft:#14282D;
-    --done:#6FBF8D; --done-soft:#16281D;
-    --bad:#D0785E;
-    --shadow:0 1px 2px rgba(0,0,0,.45), 0 16px 40px -22px rgba(0,0,0,.85);
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#111318; --surface:#191C22; --surface-2:#22262E;
-  --ink:#F2F1ED; --ink-2:#B4B9C0; --ink-3:#848A93;
-  --line:#2C313A; --line-2:#3D434D;
-  --brand:#8E9BEC; --brand-soft:#242A47; --on-brand:#0F1117;
-  --wait:#DFBB65; --wait-soft:#2C2617;
-  --run:#5FBACA;  --run-soft:#14282D;
-  --done:#6FBF8D; --done-soft:#16281D;
-  --bad:#D0785E;
-  --shadow:0 1px 2px rgba(0,0,0,.45), 0 16px 40px -22px rgba(0,0,0,.85);
+  --shadow:0 1px 2px rgba(20,22,26,.06), 0 16px 38px -24px rgba(20,22,26,.4);
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font:400 16px/1.6 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+  font:400 15px/1.5 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%}
-button,input{font:inherit;color:inherit}
-button{cursor:pointer}
-:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
-h1,h2,h3{font-family:Archivo,ui-sans-serif,sans-serif;
-  font-variation-settings:"wdth" 112,"wght" 800;letter-spacing:-.03em;margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .mono{font:500 10px/1.4 "Martian Mono",ui-monospace,monospace;
   letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-.wrap{width:min(980px,100% - 32px);margin-inline:auto}
 
-header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 92%,transparent);
-  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-header .wrap{display:flex;align-items:center;gap:14px;height:64px}
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-rows:56px 1fr;height:100dvh}
+.bar{display:flex;align-items:center;gap:14px;padding:0 16px;
+  border-bottom:1px solid var(--line);background:var(--panel)}
 .logo{font-family:Archivo;font-variation-settings:"wdth" 122,"wght" 800;
-  font-size:22px;letter-spacing:-.05em;background:none;border:0;padding:0;color:inherit}
-.spacer{margin-inline-start:auto}
-.credits{font:500 11px/1 "Martian Mono",monospace;border:1px solid var(--line-2);
-  padding:7px 10px;border-radius:999px;color:var(--ink-2)}
-.icon{width:38px;height:38px;border:1px solid var(--line);background:var(--surface);
-  border-radius:9px;display:grid;place-items:center}
-.icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+  font-size:20px;letter-spacing:-.05em}
+.bar .spacer{margin-inline-start:auto}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
+  border:1px solid var(--line-2);font:500 11px/1 "Martian Mono",monospace;color:var(--ink-2)}
+.chip i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip[data-s="running"]{color:var(--run);border-color:color-mix(in srgb,var(--run) 40%,transparent)}
+.chip[data-s="queued"]{color:var(--wait);border-color:color-mix(in srgb,var(--wait) 40%,transparent)}
+.iconbtn{width:38px;height:38px;border:1px solid var(--line);border-radius:9px;
+  display:grid;place-items:center;background:var(--panel-2);transition:150ms var(--ease)}
+.iconbtn:hover{border-color:var(--line-2);color:var(--ink)}
+.iconbtn svg{width:17px;height:17px}
 
-main{padding:28px 0 90px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
-.step{margin-bottom:18px;padding:20px}
-.step[hidden]{display:none}
-.step h2{font-size:19px;margin-bottom:4px}
-.step p.hint{color:var(--ink-2);margin:0 0 16px;font-size:14.5px}
+.body{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--panel-w);min-height:0}
 
-.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
-.tool{text-align:start;padding:16px;border:1px solid var(--line);border-radius:10px;
-  background:var(--paper);display:grid;gap:5px;transition:150ms var(--ease)}
-.tool:hover:not(:disabled){border-color:var(--brand);translate:0 -2px}
-.tool:disabled{opacity:.55;cursor:not-allowed}
-.tool b{font-size:14.5px;font-weight:600}
-.tool span{font-size:12.5px;color:var(--ink-2);line-height:1.45}
-.tool .soon{font:500 9px/1 "Martian Mono",monospace;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--wait)}
+/* ---------- rail ---------- */
+.rail{border-inline-end:1px solid var(--line);background:var(--panel);
+  padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.rail .mono{padding:6px 8px 8px}
+.tool{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;
+  border-radius:9px;text-align:start;color:var(--ink-2);transition:150ms var(--ease);
+  min-height:44px}
+.tool:hover:not(:disabled){background:var(--panel-2);color:var(--ink)}
+.tool[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);
+  box-shadow:inset 2px 0 0 var(--brand)}
+.tool:disabled{opacity:.42;cursor:not-allowed}
+.tool svg{width:19px;height:19px;flex:none}
+.tool b{font-size:13.5px;font-weight:500}
+.tool small{margin-inline-start:auto;font:500 8.5px/1 "Martian Mono",monospace;
+  letter-spacing:.1em;color:var(--wait)}
 
-.drop{border:1px dashed var(--line-2);border-radius:10px;padding:26px 16px;
-  text-align:center;color:var(--ink-2);background:var(--paper);cursor:pointer;
-  transition:150ms var(--ease)}
-.drop:hover,.drop.over{border-color:var(--brand);background:var(--brand-soft)}
-.drop input{display:none}
-.preview{display:flex;gap:14px;align-items:center}
-.preview img{width:86px;height:112px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+/* ---------- canvas ---------- */
+.canvas{min-width:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--bg)}
+.canvas-head{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.canvas-head h1{font-family:Archivo;font-variation-settings:"wdth" 112,"wght" 700;
+  font-size:17px;letter-spacing:-.02em;margin:0}
+.canvas-head p{margin:0;color:var(--ink-3);font-size:13px}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;min-height:0}
+.slot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  background:var(--panel);display:grid;place-items:center;min-height:0}
+.slot.drop{border-style:dashed;cursor:pointer}
+.slot.drop:hover,.slot.over{border-color:var(--brand);background:var(--brand-soft)}
+.slot img{width:100%;height:100%;object-fit:contain;background:var(--panel-2)}
+.slot .tag{position:absolute;top:10px;inset-inline-start:10px;z-index:2;
+  padding:5px 8px;border-radius:6px;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  border:1px solid var(--line)}
+.slot .empty{text-align:center;padding:24px;color:var(--ink-3);display:grid;gap:8px;justify-items:center}
+.slot .empty svg{width:26px;height:26px;color:var(--ink-3)}
+.slot .empty b{color:var(--ink-2);font-weight:500;font-size:13.5px}
+.slot .empty span{font-size:12px}
+.slot input[type=file]{display:none}
+.slot .swap{position:absolute;bottom:10px;inset-inline-end:10px;z-index:2;
+  padding:7px 11px;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  border:1px solid var(--line-2);color:var(--ink-2)}
+.slot .swap:hover{color:var(--ink);border-color:var(--brand)}
 
-.models{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-.model{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
-  background:var(--surface);text-align:start;transition:150ms var(--ease)}
-.model:hover{translate:0 -2px}
+.veil{position:absolute;inset:0;z-index:3;display:grid;place-items:center;gap:14px;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);text-align:center;padding:24px}
+.veil[hidden]{display:none}
+.veil .num{font:500 30px/1 "Martian Mono",monospace;font-variant-numeric:tabular-nums}
+.bar-track{width:190px;height:4px;border-radius:99px;background:var(--raised);overflow:hidden}
+.bar-track i{display:block;height:100%;width:0;background:var(--run);
+  transition:width 400ms var(--ease)}
+
+/* ---------- history ---------- */
+.strip{border-top:1px solid var(--line);background:var(--panel);padding:10px 18px;
+  display:flex;align-items:center;gap:10px;min-height:92px}
+.strip .mono{flex:none}
+.strip-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.strip a{flex:none;width:56px;height:72px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);background:var(--panel-2);transition:150ms var(--ease)}
+.strip a:hover{border-color:var(--brand);translate:0 -2px}
+.strip img{width:100%;height:100%;object-fit:cover}
+.strip .none{color:var(--ink-3);font-size:12.5px}
+
+/* ---------- right panel ---------- */
+.panel{border-inline-start:1px solid var(--line);background:var(--panel);
+  display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.panel-scroll{overflow-y:auto;padding:16px;display:grid;gap:18px;align-content:start}
+.group{display:grid;gap:9px}
+.group > .mono{display:flex;align-items:center;gap:8px}
+.group > .mono b{color:var(--brand);font-weight:500}
+.models{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.model{padding:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;
+  background:var(--panel-2);text-align:start;transition:150ms var(--ease)}
+.model:hover{border-color:var(--line-2);translate:0 -2px}
 .model[aria-pressed="true"]{border:2px solid var(--brand)}
-.model .ph{aspect-ratio:3/4;background:var(--surface-2);position:relative}
+.model .ph{aspect-ratio:3/4;position:relative;background:var(--raised)}
 .model .ph img{width:100%;height:100%;object-fit:cover}
-.model .sample{position:absolute;inset-inline:0;bottom:0;background:color-mix(in srgb,var(--bad) 92%,transparent);
-  color:#fff;font:500 8.5px/1.5 "Martian Mono",monospace;text-align:center;padding:3px}
-.model .meta{padding:8px 9px}
-.model b{display:block;font-size:13px;font-weight:600}
-.model span{font-size:11px;color:var(--ink-3)}
-
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;
-  border:1px solid var(--line);border-radius:10px;max-width:380px}
-.seg button{border:0;background:transparent;padding:10px;border-radius:7px;
-  color:var(--ink-2);font-size:14px}
+.model .sample{position:absolute;inset-inline:0;bottom:0;padding:2px;
+  background:color-mix(in srgb,var(--bad) 90%,transparent);color:#fff;
+  font:500 7.5px/1.4 "Martian Mono",monospace;text-align:center;letter-spacing:.06em}
+.model .meta{padding:6px 7px}
+.model b{display:block;font-size:11.5px;font-weight:500}
+.model span{font-size:10px;color:var(--ink-3)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;
+  border:1px solid var(--line);border-radius:9px}
+.seg button{padding:9px 4px;border-radius:6px;color:var(--ink-2);font-size:12.5px;
+  transition:150ms var(--ease);min-height:38px}
+.seg button:hover{color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);font-weight:600}
 
-.summary{display:grid;gap:8px;margin-bottom:16px}
-.summary div{display:flex;justify-content:space-between;gap:16px;padding:8px 0;
-  border-bottom:1px solid var(--line);font-size:14.5px}
-.summary div:last-child{border-bottom:0}
-.summary dt{color:var(--ink-3);font:500 10px/1.6 "Martian Mono",monospace;
-  letter-spacing:.08em;text-transform:uppercase}
-.summary dd{margin:0;font-weight:500}
+.foot{border-top:1px solid var(--line);padding:14px 16px;display:grid;gap:10px}
+.gpu{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:9px;
+  background:var(--panel-2);border:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
+.gpu i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink-3)}
+.gpu[data-s="warm"] i{background:var(--done)}
+.gpu[data-s="busy"] i{background:var(--run)}
+.go{width:100%;padding:14px;border-radius:10px;background:var(--brand);color:var(--on-brand);
+  font-weight:600;font-size:14.5px;transition:150ms var(--ease);min-height:48px}
+.go:hover:not(:disabled){filter:brightness(1.08)}
+.go:disabled{background:var(--raised);color:var(--ink-3);cursor:not-allowed}
+.need{font-size:12px;color:var(--ink-3);text-align:center;min-height:16px}
+.ghost{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line-2);
+  color:var(--ink-2);font-size:13px;transition:150ms var(--ease);min-height:42px}
+.ghost:hover{color:var(--ink);border-color:var(--brand)}
 
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.primary{background:var(--brand);color:var(--on-brand);border:1px solid var(--brand);
-  padding:12px 20px;border-radius:999px;font-weight:600}
-.primary:disabled{opacity:.5;cursor:not-allowed}
-.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line-2);
-  padding:11px 17px;border-radius:9px}
+.toast{position:fixed;inset-inline-end:18px;bottom:18px;z-index:60;max-width:340px;
+  padding:12px 15px;border-radius:10px;background:var(--panel);border:1px solid var(--line-2);
+  box-shadow:var(--shadow);font-size:13.5px;opacity:0;translate:0 8px;
+  transition:180ms var(--ease);pointer-events:none}
+.toast[data-on="true"]{opacity:1;translate:0}
+.toast[data-bad="true"]{border-color:var(--bad);color:var(--bad)}
 
-.state{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;
-  font:500 10px/1 "Martian Mono",monospace;letter-spacing:.06em;text-transform:uppercase}
-.state i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.state[data-s="queued"]{background:var(--wait-soft);color:var(--wait)}
-.state[data-s="running"]{background:var(--run-soft);color:var(--run)}
-.state[data-s="done"]{background:var(--done-soft);color:var(--done)}
-.state[data-s="failed"],.state[data-s="cancelled"]{background:var(--surface-2);color:var(--ink-2)}
-
-#result img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;
-  background:var(--surface-2)}
-.msg{font-size:14px;color:var(--ink-2);margin:12px 0 0}
-.msg.bad{color:var(--bad)}
-.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
-.hist a{display:block;border:1px solid var(--line);border-radius:8px;overflow:hidden;
-  background:var(--surface-2);aspect-ratio:3/4}
-.hist img{width:100%;height:100%;object-fit:cover}
-@media (max-width:560px){ .step{padding:16px} }
+@media (max-width:1100px){ :root{--rail:64px;--panel-w:280px} .tool b,.tool small{display:none}
+  .tool{justify-content:center} .rail > .mono{display:none} }
+@media (max-width:820px){
+  body{overflow:auto}
+  .app{grid-template-rows:56px auto}
+  .body{grid-template-columns:1fr}
+  .rail{flex-direction:row;overflow-x:auto;border-inline-end:0;border-bottom:1px solid var(--line)}
+  .tool{width:auto;justify-content:flex-start} .tool b{display:block}
+  .panel{border-inline-start:0;border-top:1px solid var(--line)}
+  .slots{grid-template-columns:1fr}
+  .slot{min-height:300px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
 
-<header><div class="wrap">
-  <button class="logo" id="home">lookzi</button>
-  <span class="spacer"></span>
-  <span class="credits" id="credits">—</span>
-  <button class="icon" id="theme" aria-label="Switch between light and dark">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>
-  </button>
-</div></header>
+<div class="app">
+  <div class="bar">
+    <span class="logo">lookzi</span>
+    <span class="mono" style="color:var(--ink-3)">studio</span>
+    <span class="spacer"></span>
+    <span class="chip" id="queue-chip" hidden><i></i><span id="queue-text"></span></span>
+    <span class="chip" id="credits">—</span>
+    <button class="iconbtn" id="theme" aria-label="Switch between light and dark" title="Light or dark">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>
+    </button>
+  </div>
 
-<main class="wrap">
+  <div class="body">
+    <nav class="rail" id="rail" aria-label="Tools"><span class="mono">Tools</span></nav>
 
-  <section class="card step" id="s-tool">
-    <h2>What would you like to do?</h2>
-    <p class="hint">Pick a job and I will ask for what I need.</p>
-    <div class="tools" id="tools"></div>
-  </section>
+    <section class="canvas">
+      <div class="canvas-head">
+        <h1 id="tool-name">Product → Model</h1>
+        <p id="tool-blurb"></p>
+      </div>
 
-  <section class="card step" id="s-upload" hidden>
-    <h2 id="upload-title">Send a photo</h2>
-    <p class="hint" id="upload-hint"></p>
-    <label class="drop" id="drop">
-      <input type="file" accept="image/*" id="file">
-      <span id="drop-label">Choose a photo, or drop one here</span>
-    </label>
-    <div class="row" style="margin-top:14px"><button class="ghost" data-cancel>Cancel</button></div>
-  </section>
+      <div class="slots">
+        <div class="slot drop" id="slot-a">
+          <span class="tag mono" id="tag-a">Garment</span>
+          <input type="file" accept="image/*" id="file-a">
+          <div class="empty" id="empty-a">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <b>Drop a photo</b><span>or click to choose</span>
+          </div>
+          <img id="img-a" alt="" hidden>
+          <button class="swap" id="swap-a" hidden>Replace</button>
+        </div>
 
-  <section class="card step" id="s-model" hidden>
-    <h2>Who should wear it?</h2>
-    <p class="hint" id="model-hint"></p>
-    <div class="models" id="models"></div>
-    <div class="row" style="margin-top:14px"><button class="ghost" data-cancel>Cancel</button></div>
-  </section>
+        <div class="slot" id="slot-b">
+          <span class="tag mono">Result</span>
+          <div class="empty" id="empty-b">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>
+            <b>Nothing yet</b><span>the finished image lands here</span>
+          </div>
+          <img id="img-b" alt="" hidden>
+          <div class="veil" id="veil" hidden>
+            <div>
+              <div class="num" id="veil-num">14.3s</div>
+              <div class="mono" id="veil-state" style="margin-top:8px">queued</div>
+              <div class="bar-track" style="margin-top:14px"><i id="veil-bar"></i></div>
+              <button class="ghost" id="cancel-job" style="margin-top:16px;width:auto;padding:9px 16px">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <section class="card step" id="s-mode" hidden>
-    <h2>Which part of the body does it cover?</h2>
-    <p class="hint">This tells the model where to put the garment.</p>
-    <div class="seg" id="modes"></div>
-    <div class="row" style="margin-top:14px"><button class="ghost" data-cancel>Cancel</button></div>
-  </section>
+      <div class="strip">
+        <span class="mono">Recent</span>
+        <div class="strip-scroll" id="strip"><span class="none">nothing yet</span></div>
+      </div>
+    </section>
 
-  <section class="card step" id="s-confirm" hidden>
-    <h2>Ready</h2>
-    <p class="hint">Nothing is charged until you press Generate.</p>
-    <dl class="summary" id="summary"></dl>
-    <div class="row">
-      <button class="primary" id="go">Generate</button>
-      <button class="ghost" id="restart">Start over</button>
-      <button class="ghost" data-cancel>Cancel</button>
-    </div>
-  </section>
+    <aside class="panel">
+      <div class="panel-scroll">
+        <div class="group" id="g-person" hidden>
+          <span class="mono">Your photo</span>
+          <div class="slot drop" style="aspect-ratio:4/3;min-height:0" id="slot-p">
+            <input type="file" accept="image/*" id="file-p">
+            <div class="empty" id="empty-p" style="padding:14px">
+              <b>Drop a photo</b><span>full body, facing the camera</span>
+            </div>
+            <img id="img-p" alt="" hidden>
+            <button class="swap" id="swap-p" hidden>Replace</button>
+          </div>
+        </div>
 
-  <section class="card step" id="s-wait" hidden>
-    <h2>Working</h2>
-    <div class="row" style="margin:6px 0 12px">
-      <span class="state" id="wait-state" data-s="queued"><i></i><span>queued</span></span>
-      <span class="mono" id="wait-detail"></span>
-    </div>
-    <p class="hint">You can close this page — the result is kept in your history.</p>
-    <div class="row"><button class="ghost" id="drop-job">Cancel this job</button></div>
-  </section>
+        <div class="group" id="g-model">
+          <span class="mono">Model <b id="model-name"></b></span>
+          <div class="models" id="models"></div>
+        </div>
 
-  <section class="card step" id="s-result" hidden>
-    <h2>Done</h2>
-    <p class="hint" id="result-meta"></p>
-    <div id="result"></div>
-    <div class="row" style="margin-top:14px">
-      <button class="primary" id="again">Make another</button>
-      <a class="ghost" id="download" download="lookzi.png" style="text-decoration:none">Download</a>
-    </div>
-  </section>
+        <div class="group" id="g-mode">
+          <span class="mono">Covers</span>
+          <div class="seg" id="modes"></div>
+        </div>
+      </div>
 
-  <section class="card step" id="s-hist" hidden>
-    <h2 style="font-size:15px">Recent</h2>
-    <div class="hist" id="hist"></div>
-  </section>
+      <div class="foot">
+        <div class="gpu" id="gpu" data-s="idle"><i></i><span id="gpu-text">checking…</span></div>
+        <button class="go" id="go" disabled>Generate</button>
+        <div class="need" id="need"></div>
+      </div>
+    </aside>
+  </div>
+</div>
 
-  <p class="msg" id="msg"></p>
-</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
 "use strict";
 
-// A browser has no identity of its own, so it mints one and keeps it. Not
-// authentication and not pretending to be: there is nothing to protect until
-// there is something to pay for. It becomes one of several identities on the
-// same account when sign-in arrives.
 var CLIENT = localStorage.getItem("lookzi-client");
 if (!CLIENT) {
   CLIENT = "web-" + (crypto.randomUUID ? crypto.randomUUID()
-                     : String(Date.now()) + Math.random().toString(16).slice(2));
+    : Date.now() + Math.random().toString(16).slice(2));
   localStorage.setItem("lookzi-client", CLIENT);
 }
 
 var $ = function (id) { return document.getElementById(id); };
-var state = {};      // tool, garment_key, person_key, model_id, mode
-var TOOLS = [], MODES = [], MODELS = [], poll = null;
+var TOOLS = [], MODES = [], MODELS = [], job = null, poll = null, health = null;
+var pick = {tool: null, garment_key: null, person_key: null, model_id: null, mode: null};
+
+// Stroked SVG on a 24 grid, one shape per tool. Emoji are not icons: they
+// render differently on every platform and carry no meaning at 19px.
+var ICON = {
+  "product-to-model":'<rect x="3" y="4" width="7" height="7" rx="1"/><path d="M17 4v4M15 6h4"/><path d="M7 15v5M14 20v-5a3 3 0 0 1 6 0v5"/>',
+  "virtual-try-on":'<path d="M8 4 4 6v5h3v9h10v-9h3V6l-4-2-4 2Z"/>',
+  "model-swap":'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M14 6h5v5M10 18H5v-5"/>',
+  "packshot":'<path d="M12 3 3 7v10l9 4 9-4V7l-9-4Z"/><path d="m3 7 9 4 9-4M12 11v10"/>',
+  "model-creation":'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/>',
+  "short-video":'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 11 5-3v8l-5-3"/>'
+};
+function svg(id) {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[id] || ICON["packshot"]) + '</svg>';
+}
 
 function api(path, opts) {
   opts = opts || {};
@@ -261,20 +328,22 @@ function api(path, opts) {
   }
   return fetch(path, opts).then(function (r) {
     return r.text().then(function (t) {
-      var body = t ? JSON.parse(t) : null;
-      if (!r.ok) throw new Error((body && body.detail) || r.statusText);
-      return body;
+      var b = t ? JSON.parse(t) : null;
+      if (!r.ok) throw new Error((b && b.detail) || r.statusText);
+      return b;
     });
   });
 }
 
-function show(id) {
-  ["s-tool","s-upload","s-model","s-mode","s-confirm","s-wait","s-result"]
-    .forEach(function (s) { $(s).hidden = s !== id; });
-  $("msg").textContent = "";
-  $("msg").className = "msg";
+var toastTimer;
+function toast(text, bad) {
+  var el = $("toast");
+  el.textContent = text;
+  el.dataset.bad = bad ? "true" : "false";
+  el.dataset.on = "true";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.dataset.on = "false"; }, 3600);
 }
-function fail(e) { $("msg").textContent = e.message || String(e); $("msg").className = "msg bad"; }
 
 // ---- theme ---------------------------------------------------------------
 try {
@@ -283,237 +352,247 @@ try {
 } catch (e) {}
 $("theme").onclick = function () {
   var root = document.documentElement;
-  var dark = root.getAttribute("data-theme") === "dark" ||
-    (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-  var next = dark ? "light" : "dark";
+  var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
   root.setAttribute("data-theme", next);
   try { localStorage.setItem("lookzi-theme", next); } catch (e) {}
 };
 
-// ---- the tool decides the rest of the flow -------------------------------
-// `needs` comes from the server, so switching a tool on is one edit there and
-// this page follows without being touched.
-function tool() { return TOOLS.find(function (t) { return t.id === state.tool; }); }
+// ---- the tool shapes the workspace ---------------------------------------
+// Nothing is hidden behind a step. Every input the current tool uses is on
+// screen at once and can be changed at any time -- which is the difference
+// between a studio and a form.
+function tool() { return TOOLS.find(function (t) { return t.id === pick.tool; }); }
 
-function next() {
+function selectTool(id) {
+  pick.tool = id;
+  pick.model_id = null; pick.mode = null;
   var t = tool();
-  for (var i = 0; i < t.needs.length; i++) {
-    var need = t.needs[i];
-    if ((need === "garment" || need === "person") && !state[need + "_key"]) return askPhoto(need);
-    if (need === "model" && !state.model_id) return askModel();
-    if (need === "mode" && !state.mode) return askMode();
-  }
-  return askConfirm();
+  $("tool-name").textContent = t.label;
+  $("tool-blurb").textContent = t.blurb;
+  [].forEach.call($("rail").querySelectorAll(".tool"), function (b) {
+    b.setAttribute("aria-pressed", String(b.dataset.id === id));
+  });
+
+  var needs = t.needs;
+  $("g-person").hidden = needs.indexOf("person") < 0;
+  $("g-model").hidden = needs.indexOf("model") < 0;
+  $("g-mode").hidden = needs.indexOf("mode") < 0;
+  $("slot-a").hidden = needs.indexOf("garment") < 0;
+  $("tag-a").textContent = "Garment";
+
+  if (needs.indexOf("mode") >= 0 && !pick.mode) { pick.mode = MODES[0].id; drawModes(); }
+  drawModels();
+  refit();
 }
 
-function askPhoto(kind) {
-  state._awaiting = kind;
-  $("upload-title").textContent = kind === "garment" ? "The garment" : "The person";
-  $("upload-hint").innerHTML = kind === "garment"
-    ? "A photo of the <b>garment</b>, laid flat."
-    : "A photo of the <b>person</b> — full body, facing the camera.";
-  $("drop-label").textContent = "Choose a photo, or drop one here";
-  $("file").value = "";
-  show("s-upload");
-}
-
-function askModel() {
-  var fake = MODELS.filter(function (m) { return m.hero_is_placeholder; }).length;
-  $("model-hint").innerHTML = fake
-    ? "<b>The photographs are samples</b> while the roster loads — the names and faces do not match yet."
-    : "Pick the face that fits your customer.";
+function drawModels() {
   $("models").innerHTML = MODELS.map(function (m) {
-    return '<button class="model" aria-pressed="false" data-id="' + m.id + '">' +
-      '<span class="ph">' +
-        (m.preview ? '<img src="' + m.preview + '" alt="' + m.display_name + '">' : '') +
-        (m.hero_is_placeholder ? '<span class="sample">sample</span>' : '') +
-      '</span><span class="meta"><b>' + m.display_name + '</b>' +
-      '<span>' + m.age + ' · ' + m.ethnicity.split(" ")[0] + '</span></span></button>';
+    return '<button class="model" aria-pressed="' + (m.id === pick.model_id) + '" data-id="' + m.id + '" ' +
+      'title="' + m.display_name + ', ' + m.age + '">' +
+      '<span class="ph">' + (m.preview ? '<img src="' + m.preview + '" alt="' + m.display_name + '">' : '') +
+      (m.hero_is_placeholder ? '<span class="sample">sample</span>' : '') + '</span>' +
+      '<span class="meta"><b>' + m.display_name + '</b><span>' + m.age + '</span></span></button>';
   }).join("");
-  show("s-model");
+  var chosen = MODELS.find(function (m) { return m.id === pick.model_id; });
+  $("model-name").textContent = chosen ? "· " + chosen.display_name : "";
 }
 
-function askMode() {
+function drawModes() {
   $("modes").innerHTML = MODES.map(function (m) {
-    return '<button aria-pressed="false" data-id="' + m.id + '">' + m.label + '</button>';
+    return '<button aria-pressed="' + (m.id === pick.mode) + '" data-id="' + m.id + '">' +
+      m.label.replace(" body", "").replace("Full outfit", "Full") + '</button>';
   }).join("");
-  show("s-mode");
 }
 
-function askConfirm() {
-  var t = tool(), rows = [["Job", t.label]];
-  if (state.model_id) {
-    var m = MODELS.find(function (x) { return x.id === state.model_id; });
-    if (m) rows.push(["Model", m.display_name + ", " + m.age]);
-  }
-  if (state.person_key) rows.push(["Person", "the photo you chose"]);
-  if (state.garment_key) rows.push(["Garment", "the photo you chose"]);
-  if (state.mode) {
-    var mo = MODES.find(function (x) { return x.id === state.mode; });
-    rows.push(["Covers", mo ? mo.label.toLowerCase() : state.mode]);
-  }
-  rows.push(["Cost", t.cost + (t.cost === 1 ? " credit" : " credits")]);
-  $("summary").innerHTML = rows.map(function (r) {
-    return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>";
-  }).join("");
+// The button says what is still missing rather than sitting dead and silent.
+function refit() {
+  var t = tool();
+  if (!t) return;
+  var missing = [];
+  t.needs.forEach(function (n) {
+    if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
+    if (n === "person" && !pick.person_key) missing.push("your photo");
+    if (n === "model" && !pick.model_id) missing.push("a model");
+    if (n === "mode" && !pick.mode) missing.push("which part of the body");
+  });
+  $("go").disabled = missing.length > 0 || !!job;
   $("go").textContent = "Generate · " + t.cost + " credit" + (t.cost === 1 ? "" : "s");
-  show("s-confirm");
+  $("need").textContent = missing.length
+    ? "Still needs " + missing.join(" and ")
+    : (job ? "" : "Nothing is charged until you press Generate");
 }
 
-// ---- uploading -----------------------------------------------------------
-// Straight to object storage with a signed link. Routing the photo through the
-// web tier would make every upload its load, for no benefit.
-function upload(file) {
-  var kind = state._awaiting;
-  $("drop-label").textContent = "Uploading…";
-  return api("/uploads", {method: "POST", body: {kind: kind, content_type: file.type || "image/jpeg"}})
-    .then(function (u) {
-      return fetch(u.url, {method: "PUT", body: file,
-                           headers: {"Content-Type": file.type || "image/jpeg"}})
-        .then(function (r) {
-          if (!r.ok) throw new Error("upload failed (" + r.status + ")");
-          state[kind + "_key"] = u.key;
-          next();
-        });
-    })
-    .catch(function (e) { fail(e); $("drop-label").textContent = "Choose a photo, or drop one here"; });
+// ---- uploads -------------------------------------------------------------
+// Straight to object storage with a signed link, so a 20 MB photo never
+// passes through the web tier.
+function wire(slotId, fileId, imgId, emptyId, swapId, kind) {
+  var slot = $(slotId), input = $(fileId);
+  slot.addEventListener("click", function (e) {
+    if (e.target.closest("button") && e.target.id !== swapId) return;
+    input.click();
+  });
+  input.addEventListener("change", function () { if (this.files[0]) send(this.files[0]); });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    slot.addEventListener(ev, function (e) { e.preventDefault(); slot.classList.add("over"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    slot.addEventListener(ev, function (e) { e.preventDefault(); slot.classList.remove("over"); });
+  });
+  slot.addEventListener("drop", function (e) {
+    if (e.dataTransfer.files[0]) send(e.dataTransfer.files[0]);
+  });
+
+  function send(file) {
+    var local = URL.createObjectURL(file);
+    $(imgId).src = local; $(imgId).hidden = false;
+    $(emptyId).hidden = true; $(swapId).hidden = false;
+    api("/uploads", {method: "POST", body: {kind: kind, content_type: file.type || "image/jpeg"}})
+      .then(function (u) {
+        return fetch(u.url, {method: "PUT", body: file,
+                             headers: {"Content-Type": file.type || "image/jpeg"}})
+          .then(function (r) {
+            if (!r.ok) throw new Error("upload failed (" + r.status + ")");
+            pick[kind + "_key"] = u.key;
+            refit();
+          });
+      })
+      .catch(function (e) {
+        toast(e.message, true);
+        $(imgId).hidden = true; $(emptyId).hidden = false; $(swapId).hidden = true;
+        pick[kind + "_key"] = null; refit();
+      });
+  }
 }
+wire("slot-a", "file-a", "img-a", "empty-a", "swap-a", "garment");
+wire("slot-p", "file-p", "img-p", "empty-p", "swap-p", "person");
 
-$("file").onchange = function () { if (this.files[0]) upload(this.files[0]); };
-["dragenter","dragover"].forEach(function (ev) {
-  $("drop").addEventListener(ev, function (e) { e.preventDefault(); this.classList.add("over"); });
-});
-["dragleave","drop"].forEach(function (ev) {
-  $("drop").addEventListener(ev, function (e) { e.preventDefault(); this.classList.remove("over"); });
-});
-$("drop").addEventListener("drop", function (e) {
-  if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
-});
-
-// ---- choosing ------------------------------------------------------------
+// ---- picking -------------------------------------------------------------
 $("models").addEventListener("click", function (e) {
   var b = e.target.closest(".model"); if (!b) return;
-  [].forEach.call(this.children, function (c) { c.setAttribute("aria-pressed", "false"); });
-  b.setAttribute("aria-pressed", "true");
-  state.model_id = b.dataset.id;
-  setTimeout(next, 120);
+  pick.model_id = b.dataset.id; drawModels(); refit();
 });
 $("modes").addEventListener("click", function (e) {
   var b = e.target.closest("button"); if (!b) return;
-  [].forEach.call(this.children, function (c) { c.setAttribute("aria-pressed", "false"); });
-  b.setAttribute("aria-pressed", "true");
-  state.mode = b.dataset.id;
-  setTimeout(next, 120);
+  pick.mode = b.dataset.id; drawModes(); refit();
 });
 
 // ---- running -------------------------------------------------------------
 $("go").onclick = function () {
-  var btn = this;
-  btn.disabled = true;
+  var t = tool();
+  $("go").disabled = true;
   api("/jobs", {method: "POST", body: {
-    tool: state.tool, garment_key: state.garment_key || state.person_key,
-    person_key: state.person_key || null, model_id: state.model_id || null,
-    mode: state.mode || "upper",
-    // The same request retried must not become a second job and a second
-    // charge; the server keys on this.
-    idem_key: state._idem || (state._idem = "web-" + Date.now() + "-" + Math.random().toString(16).slice(2))
-  }}).then(function (job) {
-    btn.disabled = false;
-    watch(job.job_id);
-  }).catch(function (e) { btn.disabled = false; fail(e); });
+    tool: pick.tool,
+    garment_key: pick.garment_key || pick.person_key,
+    person_key: pick.person_key || null,
+    model_id: pick.model_id || null,
+    mode: pick.mode || "upper",
+    // A retried request must not become a second job and a second charge.
+    idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
+  }}).then(function (j) { watch(j.job_id); })
+    .catch(function (e) { toast(e.message, true); refit(); });
 };
 
 function watch(id) {
-  state._job = id;
-  show("s-wait");
+  job = id;
+  $("img-b").hidden = true; $("empty-b").hidden = true;
+  $("veil").hidden = false; $("veil-bar").style.width = "0";
+  refit();
   clearInterval(poll);
-  var started = Date.now();
+  var t0 = Date.now();
   poll = setInterval(function () {
     api("/jobs/" + id).then(function (j) {
-      var el = $("wait-state");
-      el.dataset.s = j.status;
-      el.lastElementChild.textContent = j.status;
-      var secs = Math.round((Date.now() - started) / 1000);
-      $("wait-detail").textContent =
-        j.status === "queued" ? (j.position ? j.position + " in the queue" : "waiting") + " · " + secs + "s"
-                              : secs + "s";
-      $("drop-job").hidden = j.status !== "queued";
-      if (j.status === "done") { clearInterval(poll); done(j); }
+      var secs = (Date.now() - t0) / 1000;
+      $("veil-state").textContent = j.status === "queued"
+        ? (j.position ? j.position + " in the queue" : "queued") : j.status;
+      $("cancel-job").hidden = j.status !== "queued";
+      // Counts toward the measured figure rather than up from zero: the number
+      // people care about is how much longer, not how long so far.
+      var left = Math.max(0, 14.3 - secs);
+      $("veil-num").textContent = (j.status === "queued" ? secs : left).toFixed(1) + "s";
+      $("veil-bar").style.width = Math.min(100, (secs / 14.3) * 100) + "%";
+
+      if (j.status === "done") { clearInterval(poll); finish(j); }
       if (j.status === "failed" || j.status === "cancelled") {
-        clearInterval(poll); refresh(); show("s-tool");
-        $("msg").textContent = j.status === "failed"
-          ? "That one failed and the credit was returned." : "Cancelled.";
+        clearInterval(poll); job = null; $("veil").hidden = true; $("empty-b").hidden = false;
+        toast(j.status === "failed"
+          ? "That one failed — the credit was returned." : "Cancelled.", j.status === "failed");
+        refresh(); refit();
       }
-    }).catch(function (e) { clearInterval(poll); fail(e); });
-  }, 1500);
+    }).catch(function (e) { clearInterval(poll); job = null; $("veil").hidden = true; toast(e.message, true); refit(); });
+  }, 1200);
 }
 
-$("drop-job").onclick = function () {
-  api("/jobs/" + state._job + "/cancel", {method: "POST"})
-    .then(function (r) {
-      clearInterval(poll);
-      $("credits").textContent = r.credits + " credits";
-      show("s-tool");
-      $("msg").textContent = "Cancelled, and the credit is back.";
-    })
-    .catch(function (e) {
-      // 409 is not a fault: the GPU time is already being spent.
-      $("msg").textContent = "Too late — it is already being generated.";
-    });
+function finish(j) {
+  job = null;
+  $("veil").hidden = true;
+  $("img-b").src = j.result_url; $("img-b").hidden = false;
+  toast("Done in " + j.seconds + "s");
+  refresh(); refit();
+}
+
+$("cancel-job").onclick = function () {
+  if (!job) return;
+  api("/jobs/" + job + "/cancel", {method: "POST"}).then(function (r) {
+    clearInterval(poll); job = null;
+    $("veil").hidden = true; $("empty-b").hidden = false;
+    $("credits").textContent = r.credits + " credits";
+    toast("Cancelled, and the credit is back."); refit();
+  }).catch(function () {
+    toast("Too late — it is already being generated.", true);
+  });
 };
 
-function done(j) {
-  $("result").innerHTML = '<img src="' + j.result_url + '" alt="The finished image">';
-  $("download").href = j.result_url;
-  $("result-meta").textContent =
-    (j.seconds ? j.seconds + " seconds · " : "") + j.credits +
-    (j.credits === 1 ? " credit" : " credits");
-  show("s-result");
-  refresh();
-}
-
-// ---- getting out ---------------------------------------------------------
-document.addEventListener("click", function (e) {
-  if (!e.target.closest("[data-cancel]")) return;
-  state = {}; clearInterval(poll);
-  show("s-tool");
-  $("msg").textContent = "Stopped. Nothing was charged.";
-});
-$("restart").onclick = function () { state = {}; show("s-tool"); };
-$("again").onclick = function () { state = {}; show("s-tool"); };
-$("home").onclick = function () { state = {}; clearInterval(poll); show("s-tool"); };
-
-// ---- boot ----------------------------------------------------------------
+// ---- state ---------------------------------------------------------------
 function refresh() {
   api("/me").then(function (me) {
     $("credits").textContent = me.credits + (me.credits === 1 ? " credit" : " credits");
   }).catch(function () {});
-  api("/jobs?limit=12").then(function (rows) {
-    var withImages = rows.filter(function (r) { return r.result_url; });
-    $("s-hist").hidden = withImages.length === 0;
-    $("hist").innerHTML = withImages.map(function (r) {
-      return '<a href="' + r.result_url + '" target="_blank" rel="noopener">' +
-             '<img src="' + r.result_url + '" alt="' + r.tool + '"></a>';
-    }).join("");
+  api("/jobs?limit=20").then(function (rows) {
+    var done = rows.filter(function (r) { return r.result_url; });
+    $("strip").innerHTML = done.length
+      ? done.map(function (r) {
+          return '<a href="' + r.result_url + '" target="_blank" rel="noopener" ' +
+                 'title="' + r.tool + '"><img src="' + r.result_url + '" alt=""></a>';
+        }).join("")
+      : '<span class="none">nothing yet</span>';
   }).catch(function () {});
 }
 
+function heartbeat() {
+  api("/health").then(function (h) {
+    health = h;
+    var busy = h.running > 0, queued = h.queued > 0;
+    $("gpu").dataset.s = busy ? "busy" : (h.workers_seen ? "warm" : "idle");
+    $("gpu-text").textContent = busy ? "Worker busy"
+      : (h.workers ? (h.workers + " worker" + (h.workers===1?"":"s") + " ready") : "No worker running");
+    $("queue-chip").hidden = !(queued || busy);
+    $("queue-chip").dataset.s = busy ? "running" : "queued";
+    $("queue-text").textContent = (h.queued + h.running) + " in flight";
+  }).catch(function () {
+    $("gpu").dataset.s = "idle";
+    $("gpu-text").textContent = "Cannot reach the service";
+  });
+}
+
+// ---- boot ----------------------------------------------------------------
 Promise.all([api("/tools"), api("/modes"), api("/models")])
   .then(function (r) {
     TOOLS = r[0]; MODES = r[1]; MODELS = r[2];
-    $("tools").innerHTML = TOOLS.map(function (t) {
-      return '<button class="tool" data-id="' + t.id + '"' + (t.ready ? "" : " disabled") + '>' +
-        (t.ready ? "" : '<span class="soon">soon</span>') +
-        '<b>' + t.label + '</b><span>' + t.blurb + '</span></button>';
+    $("rail").innerHTML = '<span class="mono">Tools</span>' + TOOLS.map(function (t) {
+      return '<button class="tool" data-id="' + t.id + '" aria-pressed="false"' +
+        (t.ready ? "" : " disabled") + '>' + svg(t.id) + '<b>' + t.label + '</b>' +
+        (t.ready ? "" : '<small>soon</small>') + '</button>';
     }).join("");
-    $("tools").addEventListener("click", function (e) {
-      var b = e.target.closest(".tool"); if (!b || b.disabled) return;
-      state = {tool: b.dataset.id};
-      next();
+    $("rail").addEventListener("click", function (e) {
+      var b = e.target.closest(".tool");
+      if (b && !b.disabled) selectTool(b.dataset.id);
     });
-    refresh();
+    drawModes();
+    selectTool((TOOLS.find(function (t) { return t.ready; }) || TOOLS[0]).id);
+    refresh(); heartbeat();
+    setInterval(heartbeat, 5000);
   })
-  .catch(fail);
+  .catch(function (e) { toast(e.message, true); });
 })();
 </script>
 </body>

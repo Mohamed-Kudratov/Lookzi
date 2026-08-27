@@ -317,6 +317,33 @@ def cancel(conn, job_id, user_id=None):
         return "cancelled"
 
 
+def heartbeat(conn, name, tools, done=0, failed=0):
+    """Say this worker is alive, and what it handles.
+
+    Liveness used to be inferred from recently claimed jobs, which made an
+    idle worker indistinguishable from no worker -- the studio told customers
+    nothing was running while one sat there waiting. Saying so directly also
+    answers the question scaling asks first: what is already up.
+    """
+    conn.execute(
+        """INSERT INTO workers (name, tools, last_seen, jobs_done, jobs_failed)
+           VALUES (%s, %s, now(), %s, %s)
+           ON CONFLICT (name) DO UPDATE SET
+             tools = EXCLUDED.tools, last_seen = now(),
+             jobs_done = EXCLUDED.jobs_done, jobs_failed = EXCLUDED.jobs_failed""",
+        (name, tools, done, failed))
+
+
+def alive(conn, within="60 seconds"):
+    """Workers that have checked in recently, newest first."""
+    return conn.execute(
+        f"""SELECT name, tools, jobs_done, jobs_failed,
+                   extract(epoch FROM now() - last_seen)::int AS seconds_ago
+              FROM workers
+             WHERE last_seen > now() - INTERVAL '{within}'
+             ORDER BY last_seen DESC""").fetchall()
+
+
 def release_stale(conn):
     """Return jobs held by workers that are no longer alive.
 

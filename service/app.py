@@ -81,12 +81,12 @@ def health(conn=Depends(db)):
     "nothing is running", and so is whoever is on call.
     """
     d = q.depth(conn)
-    workers = conn.execute(
-        """SELECT count(DISTINCT claimed_by) AS n FROM jobs
-            WHERE status = 'running' AND claimed_at > now() - INTERVAL '2 minutes'"""
-    ).fetchone()["n"]
+    workers = q.alive(conn)
     return {"ok": True, "queued": d["queued"], "running": d["running"],
-            "workers_seen": workers}
+            "workers": len(workers),
+            "worker_names": [w["name"] for w in workers],
+            # Kept for older clients; the count is what mattered to them.
+            "workers_seen": len(workers)}
 
 
 @app.get("/tools")

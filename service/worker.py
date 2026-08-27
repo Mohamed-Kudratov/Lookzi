@@ -78,11 +78,15 @@ class Worker:
         self.install_signals()
         print(f"[{self.name}] polling for {self.tools or 'any tool'}", flush=True)
         conn = q.connect()
+        # Announce immediately rather than after the first sweep interval, so a
+        # worker that has just started does not read as absent for a minute.
+        q.heartbeat(conn, self.name, self.tools)
         last_sweep = 0.0
         try:
             while not self.stopping:
                 now = time.time()
                 if now - last_sweep > SWEEP_EVERY:
+                    q.heartbeat(conn, self.name, self.tools, self.done, self.failed)
                     released = q.release_stale(conn)
                     if released:
                         print(f"[{self.name}] released {len(released)} stale job(s)",
