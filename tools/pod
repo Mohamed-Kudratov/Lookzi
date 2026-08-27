@@ -25,9 +25,12 @@ TIMEOUT="${POD_TIMEOUT:-600}"
 b64=$(base64 -w0)
 {
   printf 'stty -echo 2>/dev/null; export PS1= PS2=; unset PROMPT_COMMAND\n'
-  printf 'echo __B__\n'
+  # Split so the sentinel is in the output but not in the shell's echo of
+  # the line producing it -- otherwise the echoed command matches first and
+  # every base64 blob is replayed back as though it were output.
+  printf 'echo "__""B__"\n'
   printf 'echo %s | base64 -d > /tmp/_pod.sh && bash /tmp/_pod.sh; __rc=$?\n' "$b64"
-  printf 'echo __E__$__rc\nexit\n'
+  printf 'echo "__""E__"$__rc\nexit\n'
 } | timeout "$TIMEOUT" ssh -tt -q \
       -o StrictHostKeyChecking=no -o ConnectTimeout=25 \
       -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
