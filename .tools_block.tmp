@@ -1,0 +1,27 @@
+TOOLS = {
+    "product-to-model": dict(
+        label="Product → Model",
+        blurb="A flat photo of the garment, worn by one of our models.",
+        needs=["garment", "model", "mode"], cost=1, ready=True),
+    "virtual-try-on": dict(
+        label="Try it on me",
+        blurb="Your own photo, wearing the garment you send.",
+        needs=["person", "garment", "mode"], cost=1, ready=True),
+    "model-swap": dict(
+        label="Change the model",
+        blurb="Your photo, same clothes and pose, a different person wearing them.",
+        needs=["person", "model"], cost=1, ready=True),
+    "packshot": dict(
+        label="Packshot",
+        blurb="A clean catalogue cut-out of the garment on its own.",
+        needs=["garment"], cost=1, ready=False),
+    "model-creation": dict(
+        label="Make a new model",
+        blurb="A model that belongs to you alone.",
+        needs=[], cost=4, ready=False),
+    "short-video": dict(
+        label="Short video",
+        blurb="Five or ten seconds of motion from a finished image.",
+        needs=[], cost=3, ready=False),
+}
+

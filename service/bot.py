@@ -26,8 +26,10 @@ import traceback
 
 import httpx
 
+from . import accounts
 from . import queue as q
 from . import storage
+from .tools import ASK, MODES, TOOLS
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 API = f"https://api.telegram.org/bot{TOKEN}"
@@ -35,7 +37,6 @@ FILE_API = f"https://api.telegram.org/file/bot{TOKEN}"
 
 POLL_TIMEOUT = 25          # long poll: one request parked, not a hot loop
 DELIVER_EVERY = 2.0        # seconds between sweeps for finished work
-MODES = [("upper", "Upper body"), ("lower", "Lower body"), ("overall", "Full outfit")]
 
 # Bump when the roster sheet's drawing changes. The cache key is built from the
 # roster, so a change to the layout alone produced no new key and the old
@@ -87,31 +88,8 @@ def download(file_id):
 # state
 
 def identify(conn, tg_user):
-    """Find or create the account behind a Telegram id.
-
-    Sign-up is implicit. Telegram has already established who this is, so
-    asking them to register would be asking them to do it twice.
-    """
-    row = conn.execute(
-        """SELECT u.* FROM users u JOIN identities i ON i.user_id = u.id
-            WHERE i.kind = 'telegram' AND i.value = %s""",
-        (str(tg_user["id"]),)).fetchone()
-    if row:
-        return row
-    with conn.transaction():
-        user = conn.execute(
-            "INSERT INTO users (credits) VALUES (0) RETURNING *").fetchone()
-        conn.execute(
-            """INSERT INTO identities (user_id, kind, value, verified_at)
-               VALUES (%s, 'telegram', %s, now())""",
-            (user["id"], str(tg_user["id"])))
-        grant = int(os.environ.get("TRIAL_CREDITS", "20"))
-        conn.execute(
-            "INSERT INTO credit_entries (user_id, delta, reason) VALUES (%s, %s, 'grant')",
-            (user["id"], grant))
-        conn.execute("UPDATE users SET credits = %s WHERE id = %s", (grant, user["id"]))
-        user["credits"] = grant
-    return user
+    """The account behind a Telegram id."""
+    return accounts.identify(conn, "telegram", str(tg_user["id"]))
 
 
 def get_state(conn, chat_id):
@@ -230,38 +208,10 @@ def model_buttons(models):
 # a garment photo before knowing the job meant every conversation started the
 # same way and only one of the tools could ever be reached.
 
-TOOLS = {
-    "product-to-model": dict(
-        label="Product → Model",
-        blurb="A flat photo of the garment, worn by one of our models.",
-        needs=["garment", "model", "mode"], cost=1, ready=True),
-    "virtual-try-on": dict(
-        label="Try it on me",
-        blurb="Your own photo, wearing the garment you send.",
-        needs=["person", "garment", "mode"], cost=1, ready=True),
-    "model-swap": dict(
-        label="Change the model",
-        blurb="Your photo, same clothes and pose, a different person wearing them.",
-        needs=["person", "model"], cost=1, ready=True),
-    "packshot": dict(
-        label="Packshot",
-        blurb="A clean catalogue cut-out of the garment on its own.",
-        needs=["garment"], cost=1, ready=False),
-    "model-creation": dict(
-        label="Make a new model",
-        blurb="A model that belongs to you alone.",
-        needs=[], cost=4, ready=False),
-    "short-video": dict(
-        label="Short video",
-        blurb="Five or ten seconds of motion from a finished image.",
-        needs=[], cost=3, ready=False),
-}
-
-# What to ask for, in the order it is asked.
-ASK = {
-    "garment": "Send a photo of the <b>garment</b>, laid flat.",
-    "person":  "Send a photo of the <b>person</b> — full body, facing the camera.",
-}
+# Phrased for a chat: the shared list stores the noun, the bot wraps it in an
+# instruction. The web app wraps the same noun in a drop zone label.
+def ask_for(need):
+    return "Send " + ASK[need] + "."
 
 
 def tool_keyboard():
@@ -306,7 +256,7 @@ def next_step(conn, chat_id, user, data):
     for need in tool["needs"]:
         if need in ("garment", "person") and not data.get(f"{need}_key"):
             set_state(conn, chat_id, user["id"], f"await_{need}", data)
-            send(chat_id, ASK[need], [CANCEL])
+            send(chat_id, ask_for(need), [CANCEL])
             return
         if need == "model" and not data.get("model_id"):
             sheet, models = model_sheet(conn)

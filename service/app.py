@@ -23,8 +23,10 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
+from . import accounts
 from . import queue as q
 from . import storage
+from . import tools as tool_registry
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,43 +49,25 @@ def db():
 # into an identity lookup; email and password arrive later as a second row in
 # the same table rather than a change to any of this. See docs/AUTH.md.
 
-def current_user(conn=Depends(db), x_telegram_id: str = Header(default=None)):
-    if not x_telegram_id:
+def current_user(conn=Depends(db),
+                 x_telegram_id: str = Header(default=None),
+                 x_client_id: str = Header(default=None)):
+    """Whoever is asking, by whichever identity they have.
+
+    The bot passes a Telegram id. A browser has none, so the web app mints one
+    and keeps it in local storage -- which is not authentication and is not
+    pretending to be: there is nothing to protect until there is something to
+    pay for, and inventing a login before then would be four decisions asked
+    of someone who has not seen the product work yet. See docs/AUTH.md.
+    """
+    kind, value = (("telegram", x_telegram_id) if x_telegram_id
+                   else ("web", x_client_id))
+    if not value:
         raise HTTPException(401, "no identity")
-    row = conn.execute(
-        """SELECT u.* FROM users u
-             JOIN identities i ON i.user_id = u.id
-            WHERE i.kind = 'telegram' AND i.value = %s""",
-        (x_telegram_id,)).fetchone()
-    if row is None:
-        row = _create_user(conn, "telegram", x_telegram_id)
+    row = accounts.identify(conn, kind, value)
     if row["blocked_at"]:
         raise HTTPException(403, "account blocked")
     return row
-
-
-def _create_user(conn, kind, value):
-    """Sign-up is implicit: the first message creates the account.
-
-    Asking a Telegram user to register would be asking them to do something
-    Telegram has already done. The trial credits are granted through the
-    ledger, not by writing a number into users, so the balance and its history
-    agree from the first row.
-    """
-    with conn.transaction():
-        user = conn.execute(
-            "INSERT INTO users (credits) VALUES (0) RETURNING *").fetchone()
-        conn.execute(
-            """INSERT INTO identities (user_id, kind, value, verified_at)
-               VALUES (%s, %s, %s, now())""", (user["id"], kind, value))
-        grant = int(os.environ.get("TRIAL_CREDITS", "20"))
-        conn.execute(
-            """INSERT INTO credit_entries (user_id, delta, reason)
-               VALUES (%s, %s, 'grant')""", (user["id"], grant))
-        conn.execute("UPDATE users SET credits = %s WHERE id = %s",
-                     (grant, user["id"]))
-        user["credits"] = grant
-    return user
 
 
 # ---------------------------------------------------------------------------
@@ -105,10 +89,26 @@ def health(conn=Depends(db)):
             "workers_seen": workers}
 
 
+@app.get("/tools")
+def tools():
+    """What the product can do, as the client should render it.
+
+    Served rather than hardcoded in the page, so switching a tool on is one
+    edit in service/tools.py and not three in three places that then disagree.
+    """
+    return tool_registry.public()
+
+
+@app.get("/modes")
+def modes():
+    return [{"id": m, "label": label} for m, label in tool_registry.MODES]
+
+
 @app.get("/models")
 def models(conn=Depends(db)):
     rows = conn.execute(
-        """SELECT id, display_name, age, gender, ethnicity, build, modest, hero_key
+        """SELECT id, display_name, age, gender, ethnicity, build, modest,
+                  hero_key, hero_is_placeholder
              FROM models
             WHERE duplicate_of IS NULL
             ORDER BY gender, age""").fetchall()
@@ -152,6 +152,8 @@ class JobRequest(BaseModel):
 
 @app.post("/jobs", status_code=201)
 def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
+    if not tool_registry.ready(req.tool):
+        raise HTTPException(400, f"{req.tool} is not available yet")
     if not req.person_key and not req.model_id:
         raise HTTPException(400, "send either person_key or model_id")
 
@@ -178,7 +180,8 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
     try:
         job, charged = q.submit(
             conn, user["id"], req.tool, params, model_id=req.model_id,
-            cost=1, priority=_priority(user), idem_key=req.idem_key)
+            cost=tool_registry.TOOLS[req.tool]["cost"],
+            priority=_priority(user), idem_key=req.idem_key)
     except q.InsufficientCredit as exc:
         raise HTTPException(402, f"{exc.have} credits left, this costs {exc.need}")
 
@@ -219,6 +222,20 @@ def list_jobs(conn=Depends(db), user=Depends(current_user), limit: int = 50):
         k = r.pop("object_key", None)
         r["result_url"] = storage.presigned_get(k) if k else None
     return rows
+
+
+@app.post("/jobs/{job_id}/cancel")
+def cancel_job(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
+    outcome = q.cancel(conn, job_id, user_id=user["id"])
+    if outcome is None:
+        raise HTTPException(404, "unknown job")
+    if outcome == "too late":
+        # 409, not an error page: the request was well formed and the answer is
+        # simply that the GPU time is already being spent.
+        raise HTTPException(409, "already running")
+    fresh = conn.execute("SELECT credits FROM users WHERE id = %s",
+                         (user["id"],)).fetchone()
+    return {"status": "cancelled", "credits": fresh["credits"]}
 
 
 @app.get("/me")
