@@ -17,6 +17,7 @@ The token is read from the environment and never logged. Anyone holding it can
 impersonate the bot; if it is ever pasted anywhere it should be revoked with
 /revoke in BotFather and replaced.
 """
+import hashlib
 import io
 import json
 import os
@@ -35,6 +36,11 @@ FILE_API = f"https://api.telegram.org/file/bot{TOKEN}"
 POLL_TIMEOUT = 25          # long poll: one request parked, not a hot loop
 DELIVER_EVERY = 2.0        # seconds between sweeps for finished work
 MODES = [("upper", "Upper body"), ("lower", "Lower body"), ("overall", "Full outfit")]
+
+# Bump when the roster sheet's drawing changes. The cache key is built from the
+# roster, so a change to the layout alone produced no new key and the old
+# picture kept coming back -- which looked like the edit had not taken.
+SHEET_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -125,81 +131,254 @@ def set_state(conn, chat_id, user_id, step, data):
             (chat_id, user_id, step, json.dumps(data)))
 
 
-def model_keyboard(conn):
-    """Models by name, two to a row. Never an internal id.
+def model_sheet(conn):
+    """One picture of the whole roster, numbered, cached in object storage.
 
-    Choosing who models your product is casting, not querying a table.
+    Names and ages alone are not a choice -- somebody picking who models their
+    product is casting, and casting is done by looking. Thirteen separate photo
+    messages would bury the chat, and Telegram albums cannot carry a button per
+    item, so the roster goes out as a single numbered grid and the buttons
+    refer to the numbers on it.
+
+    Cached under a key derived from the roster itself, so it is drawn once and
+    redrawn the moment a model is added, removed or re-photographed.
     """
-    rows = conn.execute(
-        """SELECT id, display_name, age, gender FROM models
+    from PIL import Image, ImageDraw
+
+    models = selectable(conn)
+    if not models:
+        return None, []
+
+    stamp = hashlib.sha1(
+        (f"v{SHEET_VERSION}|" + "|".join(
+            f"{m['id']}:{m['hero_key']}:{m['hero_is_placeholder']}"
+            for m in models)).encode()
+    ).hexdigest()[:16]
+    key = f"sheets/roster-{stamp}.jpg"
+    try:
+        return storage.get_bytes(key), models
+    except Exception:
+        pass  # not drawn yet, or the cache was cleared
+
+    cols = 4
+    rows = (len(models) + cols - 1) // cols
+    W, H, BAR = 200, 266, 30
+    sheet = Image.new("RGB", (cols * W, rows * (H + BAR)), "#16181C")
+    draw = ImageDraw.Draw(sheet)
+
+    for i, m in enumerate(models):
+        x, y = (i % cols) * W, (i // cols) * (H + BAR)
+        try:
+            photo = Image.open(io.BytesIO(storage.get_bytes(m["hero_key"])))
+            photo = photo.convert("RGB").resize((W, H))
+            sheet.paste(photo, (x, y))
+        except Exception:
+            draw.rectangle([x, y, x + W, y + H], fill="#22262E")
+        # The number is what the button says, so it has to be readable against
+        # any photograph -- hence the solid chip rather than bare text.
+        draw.rectangle([x + 6, y + 6, x + 34, y + 30], fill="#16181CDD")
+        draw.text((x + 15, y + 12), str(i + 1), fill="#F2F1ED")
+        draw.text((x + 8, y + H + 8),
+                  f"{m['display_name']} · {m['age']}", fill="#B4B9C0")
+        if m["hero_is_placeholder"]:
+            # Said on the picture, not in a note underneath it. A stand-in
+            # photograph that looks like the roster is worse than no picture:
+            # it puts a man's name over a woman's face and reads as carelessness.
+            draw.rectangle([x, y + H - 26, x + W, y + H], fill="#B4573DEE")
+            # Plain ASCII: the default bitmap font has no em-dash and draws
+            # a hollow box instead, which reads as a rendering fault
+            # rather than a warning.
+            draw.text((x + 8, y + H - 19), "SAMPLE - not this model",
+                      fill="#F7F6F3")
+
+    buf = io.BytesIO()
+    sheet.save(buf, "JPEG", quality=82, optimize=True)
+    data = buf.getvalue()
+    storage.put_bytes(key, data, content_type="image/jpeg")
+    return data, models
+
+
+def selectable(conn):
+    return conn.execute(
+        """SELECT id, display_name, age, gender, hero_key, hero_is_placeholder
+             FROM models
             WHERE duplicate_of IS NULL AND hero_key IS NOT NULL
             ORDER BY gender, age""").fetchall()
-    if not rows:
-        return None
-    buttons, row = [], []
-    for m in rows:
-        row.append({"text": f"{m['display_name']} · {m['age']}",
+
+
+def model_buttons(models):
+    """Numbered to match the grid, four to a row.
+
+    The number carries the meaning and the name confirms it, so a mistap is
+    visible before it costs a credit.
+    """
+    out, row = [], []
+    for i, m in enumerate(models, 1):
+        row.append({"text": f"{i} · {m['display_name']}",
                     "callback_data": f"model:{m['id']}"})
         if len(row) == 2:
-            buttons.append(row); row = []
+            out.append(row); row = []
     if row:
-        buttons.append(row)
-    return buttons
+        out.append(row)
+    return out
 
 
 # ---------------------------------------------------------------------------
-# conversation
+# what the bot can do
+#
+# The tool is chosen first, because it decides what to ask for next. Asking for
+# a garment photo before knowing the job meant every conversation started the
+# same way and only one of the tools could ever be reached.
+
+TOOLS = {
+    "product-to-model": dict(
+        label="Product → Model",
+        blurb="A flat photo of the garment, worn by one of our models.",
+        needs=["garment", "model", "mode"], cost=1, ready=True),
+    "virtual-try-on": dict(
+        label="Try it on me",
+        blurb="Your own photo, wearing the garment you send.",
+        needs=["person", "garment", "mode"], cost=1, ready=True),
+    "model-swap": dict(
+        label="Change the model",
+        blurb="Your photo, same clothes and pose, a different person wearing them.",
+        needs=["person", "model"], cost=1, ready=True),
+    "packshot": dict(
+        label="Packshot",
+        blurb="A clean catalogue cut-out of the garment on its own.",
+        needs=["garment"], cost=1, ready=False),
+    "model-creation": dict(
+        label="Make a new model",
+        blurb="A model that belongs to you alone.",
+        needs=[], cost=4, ready=False),
+    "short-video": dict(
+        label="Short video",
+        blurb="Five or ten seconds of motion from a finished image.",
+        needs=[], cost=3, ready=False),
+}
+
+# What to ask for, in the order it is asked.
+ASK = {
+    "garment": "Send a photo of the <b>garment</b>, laid flat.",
+    "person":  "Send a photo of the <b>person</b> — full body, facing the camera.",
+}
+
+
+def tool_keyboard():
+    out, row = [], []
+    for tid, t in TOOLS.items():
+        mark = "" if t["ready"] else " · soon"
+        row.append({"text": t["label"] + mark, "callback_data": f"tool:{tid}"})
+        if len(row) == 2:
+            out.append(row); row = []
+    if row:
+        out.append(row)
+    return out
+
 
 HELP = (
-    "<b>Lookzi</b> — put your product on a model.\n\n"
-    "Send a photo of the garment, laid flat. Choose who wears it and which part "
-    "of the body it covers, and the finished image comes back here.\n\n"
+    "<b>Lookzi</b> — product photography without the shoot.\n\n"
+    "Pick what you want to do and I will ask for what I need.\n\n"
+    "/start — begin again\n"
     "/credits — what you have left\n"
-    "/models — who is available\n"
-    "/help — this message"
+    "/models — see the roster"
 )
+
+
+def start(conn, chat_id, user):
+    set_state(conn, chat_id, user["id"], "await_tool", {})
+    send(chat_id, "<b>What would you like to do?</b>", tool_keyboard())
+
+
+def next_step(conn, chat_id, user, data):
+    """Ask for whatever the chosen tool still needs, or run it.
+
+    The tool's `needs` list is the script for the conversation, so adding a
+    tool is a dictionary entry rather than another branch in here.
+    """
+    tool = TOOLS[data["tool"]]
+    for need in tool["needs"]:
+        if need in ("garment", "person") and not data.get(f"{need}_key"):
+            set_state(conn, chat_id, user["id"], f"await_{need}", data)
+            send(chat_id, ASK[need])
+            return
+        if need == "model" and not data.get("model_id"):
+            sheet, models = model_sheet(conn)
+            if not models:
+                send(chat_id, "No models are available yet.")
+                return
+            set_state(conn, chat_id, user["id"], "await_model", data)
+            send_photo(chat_id, sheet,
+                       caption="<b>Who should wear it?</b>\nTap a number.",
+                       buttons=model_buttons(models))
+            return
+        if need == "mode" and not data.get("mode"):
+            set_state(conn, chat_id, user["id"], "await_mode", data)
+            send(chat_id, "Which part of the body does it cover?",
+                 [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES]])
+            return
+    submit(conn, chat_id, user, data)
+    set_state(conn, chat_id, user["id"], "idle", {})
 
 
 def on_message(conn, msg):
     chat_id = msg["chat"]["id"]
     user = identify(conn, msg["from"])
     text = (msg.get("text") or "").strip()
+    state = get_state(conn, chat_id)
+    data = dict(state["data"] or {})
 
-    if text.startswith("/start") or text.startswith("/help"):
+    if text.startswith("/start"):
         send(chat_id, HELP)
-        send(chat_id, f"You have <b>{user['credits']}</b> credits.")
+        start(conn, chat_id, user)
+        return
+    if text.startswith("/help"):
+        send(chat_id, HELP)
         return
     if text.startswith("/credits"):
         send(chat_id, f"<b>{user['credits']}</b> credits.")
         return
     if text.startswith("/models"):
-        kb = model_keyboard(conn)
-        send(chat_id, "Choose a model, then send the garment photo."
-             if kb else "No models are available yet.", kb)
+        sheet, models = model_sheet(conn)
+        if not models:
+            send(chat_id, "No models are available yet.")
+        else:
+            send_photo(chat_id, sheet,
+                       caption=f"<b>{len(models)} models.</b> "
+                               "Start with /start to use one.")
         return
 
     if msg.get("photo"):
-        if user["credits"] < 1:
+        if not data.get("tool"):
+            send(chat_id, "First, tell me what to do with it.")
+            start(conn, chat_id, user)
+            return
+        if user["credits"] < TOOLS[data["tool"]]["cost"]:
             send(chat_id, "You are out of credits.")
             return
-        # Telegram sends several sizes; the last is the largest.
-        data = download(msg["photo"][-1]["file_id"])
-        key = storage.key_for("uploads/garment", user["id"], ext="jpg")
-        storage.put_bytes(key, data, content_type="image/jpeg")
 
-        kb = model_keyboard(conn)
-        if not kb:
-            send(chat_id, "No models are available yet.")
+        # Which slot this photo fills is decided by the step we are on, not by
+        # what it looks like -- the same photograph is the garment in one tool
+        # and the person in another.
+        slot = "garment" if state["step"] == "await_garment" else (
+               "person" if state["step"] == "await_person" else None)
+        if slot is None:
+            send(chat_id, "I was not expecting a photo just now. /start to begin again.")
             return
-        set_state(conn, chat_id, user["id"], "await_model", {"garment_key": key})
-        send(chat_id, "Got it. Who should wear this?", kb)
+
+        # Telegram sends several sizes; the last is the largest.
+        raw = download(msg["photo"][-1]["file_id"])
+        key = storage.key_for(f"uploads/{slot}", user["id"], ext="jpg")
+        storage.put_bytes(key, raw, content_type="image/jpeg")
+        data[f"{slot}_key"] = key
+        next_step(conn, chat_id, user, data)
         return
 
     if msg.get("document"):
         send(chat_id, "Send it as a photo rather than a file, so I can read it.")
         return
 
-    send(chat_id, "Send a photo of the garment, or /help.")
+    send(chat_id, "Use /start to begin.")
 
 
 def on_callback(conn, cb):
@@ -212,43 +391,70 @@ def on_callback(conn, cb):
     # returns, and the work below can take a moment.
     call("answerCallbackQuery", callback_query_id=cb["id"])
 
-    if value.startswith("model:"):
-        if not data.get("garment_key"):
-            send(chat_id, "Send the garment photo first.")
+    if value.startswith("tool:"):
+        tid = value.split(":", 1)[1]
+        tool = TOOLS.get(tid)
+        if not tool:
             return
+        if not tool["ready"]:
+            send(chat_id, f"<b>{tool['label']}</b> is not switched on yet. "
+                          "Everything else in the list works.")
+            return
+        send(chat_id, f"<b>{tool['label']}</b> — {tool['blurb']}")
+        next_step(conn, chat_id, user, {"tool": tid})
+        return
+
+    if not data.get("tool"):
+        send(chat_id, "That was from an older message. /start to begin again.")
+        return
+
+    if value.startswith("model:"):
         data["model_id"] = value.split(":", 1)[1]
-        set_state(conn, chat_id, user["id"], "await_mode", data)
-        send(chat_id, "Which part of the body does it cover?",
-             [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES]])
+        next_step(conn, chat_id, user, data)
         return
 
     if value.startswith("mode:"):
-        if not (data.get("garment_key") and data.get("model_id")):
-            send(chat_id, "Start again: send the garment photo.")
-            return
         data["mode"] = value.split(":", 1)[1]
-        submit(conn, chat_id, user, data)
-        set_state(conn, chat_id, user["id"], "idle", {})
+        next_step(conn, chat_id, user, data)
         return
 
     if value == "again":
-        send(chat_id, "Send the next garment photo.")
+        start(conn, chat_id, user)
         return
 
 
 def submit(conn, chat_id, user, data):
-    row = conn.execute("SELECT hero_key FROM models WHERE id = %s",
-                       (data["model_id"],)).fetchone()
-    if not row or not row["hero_key"]:
-        send(chat_id, "That model has no reference image yet.")
+    """Turn a finished conversation into a job.
+
+    The person in the picture comes from one of two places and the rest of the
+    system does not care which: a roster model's photograph for
+    product-to-model, or the customer's own upload for try-on. That is the same
+    substitution the API makes, and the reason six products can share one
+    resident model.
+    """
+    tool_id = data["tool"]
+    tool = TOOLS[tool_id]
+
+    person_key = data.get("person_key")
+    if not person_key and data.get("model_id"):
+        row = conn.execute("SELECT hero_key FROM models WHERE id = %s",
+                           (data["model_id"],)).fetchone()
+        if not row or not row["hero_key"]:
+            send(chat_id, "That model has no photograph yet. Pick another.")
+            return
+        person_key = row["hero_key"]
+    if not person_key:
+        send(chat_id, "Something went missing. /start to begin again.")
         return
 
-    params = {"person_key": row["hero_key"], "garment_key": data["garment_key"],
-              "mode": data["mode"], "description": "the garment", "seed": 42,
+    params = {"person_key": person_key,
+              "garment_key": data.get("garment_key", person_key),
+              "mode": data.get("mode", "upper"),
+              "description": "the garment", "seed": 42,
               "width": 768, "height": 1024, "steps": 8}
     try:
-        job, _ = q.submit(conn, user["id"], "product-to-model", params,
-                          model_id=data["model_id"], cost=1,
+        job, _ = q.submit(conn, user["id"], tool_id, params,
+                          model_id=data.get("model_id"), cost=tool["cost"],
                           priority={"trial": 200, "seller": 100, "brand": 50}
                           .get(user["plan"], 200))
     except q.InsufficientCredit as exc:
@@ -256,7 +462,6 @@ def submit(conn, chat_id, user, data):
         return
 
     conn.execute("UPDATE jobs SET chat_id = %s WHERE id = %s", (chat_id, job["id"]))
-    conn.commit()
 
     d = q.depth(conn)
     ahead = max(0, d["queued"] - 1)

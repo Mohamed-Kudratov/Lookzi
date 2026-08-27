@@ -43,13 +43,15 @@ def chosen_index(face_id):
         return None
 
 
-def upload(conn, model_id, path):
+def upload(conn, model_id, path, placeholder=False):
     with open(path, "rb") as fh:
         data = fh.read()
     ext = os.path.splitext(path)[1].lstrip(".").lower() or "png"
     key = storage.key_for("heroes", 0, ext=ext)
     storage.put_bytes(key, data, content_type=f"image/{'jpeg' if ext in ('jpg','jpeg') else ext}")
-    conn.execute("UPDATE models SET hero_key = %s WHERE id = %s", (key, model_id))
+    conn.execute(
+        "UPDATE models SET hero_key = %s, hero_is_placeholder = %s WHERE id = %s",
+        (key, placeholder, model_id))
     return key, len(data)
 
 
@@ -97,7 +99,7 @@ def main():
         else:
             path = stand_ins[i % len(stand_ins)]
 
-        key, size = upload(conn, m["id"], path)
+        key, size = upload(conn, m["id"], path, placeholder=bool(args.placeholder))
         done += 1
         print(f"  {m['id']:20} {m['display_name']:10} {size/1024:6.0f} KB  {key}")
 
