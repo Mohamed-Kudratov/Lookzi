@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Run a script on the pod, reading it from standard input.
+#
+#   echo 'nvidia-smi' | tools/pod
+#   tools/pod < script.sh
+#
+# RunPod's SSH proxy forces a PTY and ignores a command argument, so the script
+# has to go in over standard input to an interactive shell. That shell echoes
+# what it reads and wraps everything in prompts and colour, so three things are
+# done here to get output worth reading back:
+#
+#   the script is base64'd onto one line, so a stray quote or newline in it
+#   cannot be re-interpreted by the shell that is receiving it
+#   the terminal's own echo is turned off first
+#   sentinels bracket the real output, and escape sequences are stripped
+#
+# POD_TIMEOUT bounds the whole call. Long jobs should be started under nohup
+# and polled, rather than held open on a connection that a proxy may drop.
+set -uo pipefail
+
+POD="${POD_HOST:?set POD_HOST, e.g. abc123-6441206f@ssh.runpod.io}"
+KEY="${POD_KEY:-$HOME/.ssh/id_ed25519_github}"
+TIMEOUT="${POD_TIMEOUT:-600}"
+
+b64=$(base64 -w0)
+{
+  printf 'stty -echo 2>/dev/null; export PS1= PS2=; unset PROMPT_COMMAND\n'
+  printf 'echo __B__\n'
+  printf 'echo %s | base64 -d > /tmp/_pod.sh && bash /tmp/_pod.sh; __rc=$?\n' "$b64"
+  printf 'echo __E__$__rc\nexit\n'
+} | timeout "$TIMEOUT" ssh -tt -q \
+      -o StrictHostKeyChecking=no -o ConnectTimeout=25 \
+      -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
+      -o IdentitiesOnly=yes -i "$KEY" "$POD" 2>&1 \
+  | tr -d '\r' \
+  | sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' -e 's/\x1b\][^\x07]*\x07//g' \
+  | awk '/__B__/{on=1;next} /__E__/{if($0 ~ /__E__[1-9]/) print "[exit " substr($0,index($0,"__E__")+5) "]"; on=0} on'
