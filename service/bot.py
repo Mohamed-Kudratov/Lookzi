@@ -328,8 +328,44 @@ def next_step(conn, chat_id, user, data):
                  [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES],
                   CANCEL])
             return
-    submit(conn, chat_id, user, data)
-    set_state(conn, chat_id, user["id"], "idle", {})
+    confirm(conn, chat_id, user, data)
+
+
+def confirm(conn, chat_id, user, data):
+    """Show what is about to be made, and wait to be told to make it.
+
+    Cancelling after the job was already queued turned out to be almost
+    useless: answering the last question queued it immediately, a warm worker
+    claimed it within a second, and the cancel button was already too late by
+    the time it appeared. The moment worth interrupting is before the credit
+    is spent, not after.
+
+    The summary also catches the ordinary mistake -- the wrong model, the wrong
+    part of the body -- while it still costs nothing to fix.
+    """
+    tool = TOOLS[data["tool"]]
+    lines = [f"<b>{tool['label']}</b>"]
+
+    if data.get("model_id"):
+        row = conn.execute("SELECT display_name, age FROM models WHERE id = %s",
+                           (data["model_id"],)).fetchone()
+        if row:
+            lines.append(f"Model — {row['display_name']}, {row['age']}")
+    if data.get("person_key"):
+        lines.append("Person — the photo you sent")
+    if data.get("garment_key"):
+        lines.append("Garment — the photo you sent")
+    if data.get("mode"):
+        lines.append("Covers — " + dict(MODES)[data["mode"]].lower())
+
+    lines.append("")
+    lines.append(f"Costs <b>{tool['cost']}</b> "
+                 f"of your <b>{user['credits']}</b> credits.")
+
+    set_state(conn, chat_id, user["id"], "await_confirm", data)
+    send(chat_id, "\n".join(lines),
+         [[{"text": f"Generate · {tool['cost']} credit", "callback_data": "go"}],
+          [{"text": "Start over", "callback_data": "cancel"}]])
 
 
 def on_message(conn, msg):
@@ -454,6 +490,17 @@ def on_callback(conn, cb):
     if value.startswith("mode:"):
         data["mode"] = value.split(":", 1)[1]
         next_step(conn, chat_id, user, data)
+        return
+
+    if value == "go":
+        if state["step"] != "await_confirm":
+            # A second tap on the same button, or a tap on an old summary. The
+            # first one already queued a job; a second must not queue another
+            # and charge for it.
+            send(chat_id, "That one is already on its way. /start for another.")
+            return
+        set_state(conn, chat_id, user["id"], "idle", {})
+        submit(conn, chat_id, user, data)
         return
 
     if value == "again":
