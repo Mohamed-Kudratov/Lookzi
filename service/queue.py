@@ -280,6 +280,43 @@ def fail(conn, job_id, error, refund=True):
         return "failed"
 
 
+def cancel(conn, job_id, user_id=None):
+    """Withdraw a job that has not started, and give the credit back.
+
+    Only while it is still queued. Once a worker has claimed it the GPU time is
+    already being spent, and stopping it mid-generation would cost the same as
+    letting it finish -- so the honest answer at that point is that it is too
+    late, not a cancellation that silently does nothing.
+
+    Returns 'cancelled', 'too late', or None when the job is not theirs. The
+    user_id check is not decoration: the job id travels in a Telegram callback,
+    and a callback can be replayed by whoever received it.
+    """
+    with conn.transaction():
+        job = conn.execute("SELECT * FROM jobs WHERE id = %s FOR UPDATE",
+                           (job_id,)).fetchone()
+        if job is None or (user_id is not None and job["user_id"] != user_id):
+            return None
+        if job["status"] != "queued":
+            return "too late"
+
+        conn.execute(
+            "UPDATE jobs SET status = 'cancelled', finished_at = now() WHERE id = %s",
+            (job_id,))
+        # Same guard as a refund after failure: the ledger decides whether the
+        # balance moves, so a cancel that arrives twice pays once.
+        written = conn.execute(
+            """INSERT INTO credit_entries (user_id, delta, reason, job_id)
+               VALUES (%s, %s, 'refund', %s)
+               ON CONFLICT DO NOTHING
+            RETURNING id""",
+            (job["user_id"], job["credits_cost"], job_id)).fetchone()
+        if written:
+            conn.execute("UPDATE users SET credits = credits + %s WHERE id = %s",
+                         (job["credits_cost"], job["user_id"]))
+        return "cancelled"
+
+
 def release_stale(conn):
     """Return jobs held by workers that are no longer alive.
 

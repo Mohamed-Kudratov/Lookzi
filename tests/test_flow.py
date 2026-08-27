@@ -182,6 +182,29 @@ def main():
     q.fail(conn, j["id"], "simulated again")
     check("a second refund changes nothing", balance(conn, u3["id"]), 3)
 
+    print("\ncancelling")
+    tool = new_tool()
+    u6 = fresh_user(conn, credits=3)
+    j6, _ = q.submit(conn, u6["id"], tool, PARAMS)
+    check("charged when queued", balance(conn, u6["id"]), 2)
+    check("a queued job cancels", q.cancel(conn, j6["id"], u6["id"]), "cancelled")
+    check("the credit comes back", balance(conn, u6["id"]), 3)
+    check("the ledger nets to zero", ledger_total(conn, u6["id"]), 0)
+    check("cancelling twice pays once", q.cancel(conn, j6["id"], u6["id"]), "too late")
+    check("balance unchanged by the second", balance(conn, u6["id"]), 3)
+
+    # A job id travels in a Telegram callback, and a callback can be replayed
+    # by whoever received it. Somebody else's id must do nothing at all.
+    j6b, _ = q.submit(conn, u6["id"], tool, PARAMS)
+    other = fresh_user(conn, credits=1)
+    check("another user cannot cancel it", q.cancel(conn, j6b["id"], other["id"]), None)
+    check("and it is still queued", q.status(conn, j6b["id"])["status"], "queued")
+
+    # Once a worker holds it the GPU time is being spent either way, so the
+    # honest answer is that it is too late rather than a silent no-op.
+    q.claim(conn, tools=[tool])
+    check("a running job is too late", q.cancel(conn, j6b["id"], u6["id"]), "too late")
+
     print("\nstale jobs")
     tool = new_tool()
     u4 = fresh_user(conn, credits=2)

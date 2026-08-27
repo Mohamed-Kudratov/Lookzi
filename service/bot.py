@@ -290,6 +290,12 @@ def start(conn, chat_id, user):
     send(chat_id, "<b>What would you like to do?</b>", tool_keyboard())
 
 
+# On every prompt, so a wrong turn is one tap from being undone rather than a
+# conversation the customer has to escape by guessing at a command. Mistakes
+# here are normal: the wrong photograph, the wrong tool, a change of mind.
+CANCEL = [{"text": "Cancel", "callback_data": "cancel"}]
+
+
 def next_step(conn, chat_id, user, data):
     """Ask for whatever the chosen tool still needs, or run it.
 
@@ -300,7 +306,7 @@ def next_step(conn, chat_id, user, data):
     for need in tool["needs"]:
         if need in ("garment", "person") and not data.get(f"{need}_key"):
             set_state(conn, chat_id, user["id"], f"await_{need}", data)
-            send(chat_id, ASK[need])
+            send(chat_id, ASK[need], [CANCEL])
             return
         if need == "model" and not data.get("model_id"):
             sheet, models = model_sheet(conn)
@@ -308,14 +314,19 @@ def next_step(conn, chat_id, user, data):
                 send(chat_id, "No models are available yet.")
                 return
             set_state(conn, chat_id, user["id"], "await_model", data)
+            fake = sum(1 for m in models if m["hero_is_placeholder"])
+            note = ("\n\n<i>The photographs are samples while the roster "
+                    "loads — the names and faces do not match yet.</i>"
+                    if fake else "")
             send_photo(chat_id, sheet,
-                       caption="<b>Who should wear it?</b>\nTap a number.",
-                       buttons=model_buttons(models))
+                       caption="<b>Who should wear it?</b>\nTap a number." + note,
+                       buttons=model_buttons(models) + [CANCEL])
             return
         if need == "mode" and not data.get("mode"):
             set_state(conn, chat_id, user["id"], "await_mode", data)
             send(chat_id, "Which part of the body does it cover?",
-                 [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES]])
+                 [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES],
+                  CANCEL])
             return
     submit(conn, chat_id, user, data)
     set_state(conn, chat_id, user["id"], "idle", {})
@@ -334,6 +345,11 @@ def on_message(conn, msg):
         return
     if text.startswith("/help"):
         send(chat_id, HELP)
+        return
+    if text.startswith("/cancel") or text.lower() in ("cancel", "stop"):
+        set_state(conn, chat_id, user["id"], "idle", {})
+        send(chat_id, "Stopped. Nothing was charged.")
+        start(conn, chat_id, user)
         return
     if text.startswith("/credits"):
         send(chat_id, f"<b>{user['credits']}</b> credits.")
@@ -404,6 +420,28 @@ def on_callback(conn, cb):
         next_step(conn, chat_id, user, {"tool": tid})
         return
 
+    # Cancelling has to work from any state, including one the bot has already
+    # forgotten -- a tap on an old message is the most likely moment somebody
+    # wants out.
+    if value == "cancel":
+        set_state(conn, chat_id, user["id"], "idle", {})
+        send(chat_id, "Stopped. Nothing was charged.")
+        start(conn, chat_id, user)
+        return
+
+    if value.startswith("drop:"):
+        outcome = q.cancel(conn, value.split(":", 1)[1], user_id=user["id"])
+        if outcome == "cancelled":
+            fresh = identify(conn, cb["from"])
+            send(chat_id, "Cancelled, and the credit is back. "
+                          f"You have <b>{fresh['credits']}</b>.")
+        elif outcome == "too late":
+            send(chat_id, "Too late — it is already being generated. "
+                          "It will arrive here shortly.")
+        else:
+            send(chat_id, "That job is not one of yours.")
+        return
+
     if not data.get("tool"):
         send(chat_id, "That was from an older message. /start to begin again.")
         return
@@ -471,9 +509,13 @@ def submit(conn, chat_id, user, data):
         when = f"{ahead} ahead of you"
     else:
         when = "starting now"
+    # The button stays useful only until a worker takes the job, which is
+    # exactly when stopping is still free. Offering it is what makes pressing
+    # Generate a low-stakes act rather than a commitment.
     send(chat_id,
          f"<b>Queued</b> — {when}.\n"
-         "You can close Telegram; the image arrives here when it is done.")
+         "You can close Telegram; the image arrives here when it is done.",
+         [[{"text": "Cancel this job", "callback_data": f"drop:{job['id']}"}]])
 
 
 # ---------------------------------------------------------------------------
