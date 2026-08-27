@@ -63,15 +63,23 @@ else
     pip install -q --no-cache-dir easy-dwpose==1.0.2 --no-deps
 
     # The fork's repository is not its package -- the package is at
-    # diffusers_src/src/diffusers. Installing normally and leaving the tree
+    # src/diffusers. Installing normally and leaving the tree
     # named anything other than "diffusers" keeps Python from finding the
     # source directory first and importing an empty namespace package.
-    if [ -d "$REPO/diffusers_src" ]; then
-        pip uninstall -q -y diffusers 2>/dev/null || true
+    #
+    # The tracked tree is the one to trust. A leftover diffusers_src on the
+    # volume is whatever survived the last pod, and on this one that was a
+    # partial copy with no setup.py -- installable-looking until pip disagrees.
+    pip uninstall -q -y diffusers 2>/dev/null || true
+    if [ -f "$REPO/diffusers/setup.py" ]; then
+        pip install -q --no-cache-dir "$REPO/diffusers"
+        rm -rf "$REPO/diffusers_src"
+        mv "$REPO/diffusers" "$REPO/diffusers_src"
+    elif [ -f "$REPO/diffusers_src/setup.py" ]; then
         pip install -q --no-cache-dir "$REPO/diffusers_src"
     else
-        echo "  !! diffusers_src missing from the volume; the fork must be" \
-             "restored before anything will run" >&2
+        echo "  !! no installable diffusers fork here." >&2
+        echo "     Expected diffusers/setup.py. Restore the tree with a checkout." >&2
         exit 1
     fi
 fi
