@@ -326,6 +326,14 @@ def main():
             try:
                 updates = call("getUpdates", offset=offset, timeout=POLL_TIMEOUT,
                                allowed_updates=["message", "callback_query"])
+            except (httpx.TimeoutException, httpx.TransportError) as exc:
+                # Long polling times out whenever nobody has written to the
+                # bot, which is most of the time. Printing a traceback for it
+                # buried ten of them in the log overnight and would have hidden
+                # a real failure among them. One line, and carry on.
+                print(f"[bot] poll {type(exc).__name__}, retrying", flush=True)
+                time.sleep(3)
+                continue
             except Exception:
                 traceback.print_exc()
                 time.sleep(3)
