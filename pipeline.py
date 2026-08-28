@@ -732,6 +732,7 @@ class LayeringVTONPipeline:
         progress_callback=None,
         raw_prompt: str = None,
         adapters: bool = True,
+        lightning: bool = True,
     ):
         """raw_prompt and adapters exist for one experiment and one tool.
 
@@ -741,18 +742,26 @@ class LayeringVTONPipeline:
         result. raw_prompt replaces the sentence outright; adapters=False takes
         the try-on training off and leaves the base image editor underneath.
 
-        Both default to the behaviour every existing caller already gets.
+        lightning=False takes the step distillation off too. It is the only way
+        to reach classifier-free guidance: Lightning is distilled for
+        true_cfg_scale=1.0, one pass with no negative branch, and with no
+        negative branch there is nothing pulling the picture toward the words.
+        An instruction sent that way is read and then ignored -- measured, and
+        the reason /enhance returned its own input.
+
+        The three default to the behaviour every existing caller already gets.
         """
         description = apply_mode(mode, description)
 
         # Lightning is distilled for a fixed step count and for CFG 1.0; running
         # it at 40 steps or with a negative branch throws away the distillation
         # and produces worse output than either path alone.
+        fast = self.lightning if lightning else 0
         if num_inference_steps is None:
-            num_inference_steps = self.lightning if self.lightning else 40
+            num_inference_steps = fast if fast else 40
         if true_cfg_scale is None:
-            true_cfg_scale = 1.0 if self.lightning else 4.0
-        if self.lightning and true_cfg_scale > 1:
+            true_cfg_scale = 1.0 if fast else 4.0
+        if fast and true_cfg_scale > 1:
             print(f"Note: Lightning expects true_cfg_scale=1.0, got {true_cfg_scale}.")
 
         generator = torch.Generator(device=self.device).manual_seed(seed)
@@ -901,10 +910,13 @@ class LayeringVTONPipeline:
         # undercooked mush, which is exactly what the first attempt returned:
         # the navy t-shirt came back washed pink.
         toggled = False
-        if not adapters and self.lightning and hasattr(self.transformer, "set_adapters"):
+        if not adapters and lightning and self.lightning and hasattr(self.transformer, "set_adapters"):
             self.transformer.set_adapters(["lightning"], [self.lightning_scale])
             toggled = "lightning-only"
-        elif not adapters and hasattr(self.transformer, "disable_adapters"):
+        elif (not adapters or not lightning) and hasattr(self.transformer, "disable_adapters"):
+            # Everything off: the base editor, undistilled, with guidance. Slow
+            # -- five times the steps and a negative branch on every one of them
+            # -- and it is the only configuration that answers an instruction.
             self.transformer.disable_adapters()
             toggled = "all"
         try:

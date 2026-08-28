@@ -307,7 +307,14 @@ ENHANCE_PROMPT = (
 def enhance(garment: UploadFile = File(...),
             instruction: str = Form(""),
             seed: int = Form(42),
-            steps: int = Form(8)):
+            steps: int = Form(0),
+            fast: str = Form("0")):
+    """fast=1 keeps Lightning: eight steps, and the instruction is ignored.
+
+    It is left reachable only because it is the honest comparison. The first
+    version of this endpoint ran that way by default and returned the picture
+    it was given, wall and coat hook included.
+    """
     if _error:
         raise HTTPException(503, f"the model did not load: {_error}")
     if _pipe is None:
@@ -320,14 +327,15 @@ def enhance(garment: UploadFile = File(...),
     # image, and the three-slot shape is the pipeline's, not the task's.
     padded = pad_to_aspect_ratio(img, target_size=(512, 896), pad_color=(255, 255, 255))
 
+    quick = str(fast).lower() in ("1", "true", "yes")
     started = time.time()
     with _gpu:
         try:
             out = _pipe(person_img=padded, garment_img=padded, pose_img=padded,
                         description="", mode=None, seed=int(seed),
-                        num_inference_steps=int(steps),
+                        num_inference_steps=int(steps) or None,
                         raw_prompt=instruction.strip() or ENHANCE_PROMPT,
-                        adapters=False)
+                        adapters=False, lightning=quick)
         except Exception as exc:                              # noqa: BLE001
             _stats["failed"] += 1
             raise HTTPException(500, f"{type(exc).__name__}: {exc}")
