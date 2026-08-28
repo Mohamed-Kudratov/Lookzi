@@ -702,19 +702,24 @@ def step_zimage(ssh, st):
         "setsid nohup bash tools/setup_pod.sh --zimage "
         "  > /workspace/zimage_setup.log 2>&1 < /dev/null &\n"
         "echo started\n", timeout=180)
+
     started = time.time()
     while not st.cancelled:
-        time.sleep(10)
-        rc, out = ssh.run(
-            "test -x /opt/zimage-venv/bin/python && echo DONE || echo BUILDING\n"
-            "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE\n",
-            timeout=180)
-        if "DONE" in out:
+        time.sleep(15)
+        # Ask whether it works, not whether the interpreter is on disk.
+        # `python -m venv` writes bin/python in about a second, so a loop
+        # waiting for that file declared victory three minutes of pip early
+        # and the verification then failed on the very next line.
+        ok, _ = usable()
+        if ok:
             break
-        if "GONE" in out:
-            rc, tail = ssh.run("tail -12 /workspace/zimage_setup.log",
-                               timeout=120)
-            raise PodError("the z-image venv did not build:\n" + tail[-600:])
+        rc, alive = ssh.run(
+            "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE",
+            timeout=180)
+        if "GONE" in alive:
+            rc, tail = ssh.run("tail -15 /workspace/zimage_setup.log",
+                               timeout=180)
+            raise PodError("the z-image venv did not build:\n" + tail[-700:])
         st.step_progress("zimage", min(0.95, (time.time() - started) / 260))
 
     # Verified by the same probe used to decide whether to build, so "already
