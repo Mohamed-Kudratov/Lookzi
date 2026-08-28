@@ -185,13 +185,46 @@ def cutter():
     return _cutter
 
 
+def _correct(img):
+    """Fix what a phone under a ceiling light gets wrong.
+
+    Not retouching -- nothing is invented here. A dim yellow room throws the
+    white balance and crushes the exposure, and both are measurable properties
+    of the pixels rather than judgements about the garment. Generative
+    retouching was tried and does not work in this configuration: the model
+    kept the bedroom and turned a navy t-shirt orange. See docs/CONTROLS.md.
+    """
+    import numpy as np
+    a = np.asarray(img).astype(np.float32)
+
+    # Grey world, damped. A garment is not a grey scene -- a genuinely red
+    # jumper should stay red -- so the correction is applied at half strength,
+    # which removes a colour cast without arguing with the product.
+    means = a.reshape(-1, 3).mean(axis=0)
+    target = means.mean()
+    if means.min() > 1:
+        gain = np.clip(target / means, 0.75, 1.35)
+        a *= 1 + (gain - 1) * 0.5
+
+    # Stretch to the 1st and 99th percentiles rather than the extremes, so one
+    # bright reflection cannot decide the exposure for the whole picture.
+    lo, hi = np.percentile(a, 1), np.percentile(a, 99)
+    if hi - lo > 8:
+        a = (a - lo) * (255.0 / (hi - lo))
+
+    return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))
+
+
 @app.post("/packshot")
 def packshot(garment: UploadFile = File(...),
              background: str = Form("#FFFFFF"),
+             correct: str = Form("1"),
              width: int = Form(0), height: int = Form(0)):
     from rembg import remove
 
     img = _read(garment, "garment")
+    if correct != "0":
+        img = _correct(img)
     size = (width or PACKSHOT_SIZE[0], height or PACKSHOT_SIZE[1])
     started = time.time()
     try:
