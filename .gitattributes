@@ -1,2 +1,13 @@
-*.sh text eol=lf
-*.py text eol=lf
+# Shell scripts and the pod's Python must keep LF endings, whatever the machine
+# that edits them.
+#
+# A CRLF shell script fails in a way that points nowhere useful: a heredoc's
+# closing delimiter becomes "PY\r", never matches "PY", and bash reports
+# "unexpected end of file" at the last line of the file rather than at the
+# heredoc. It cost a launch to find. git's own checkouts were always LF; this
+# is for the files that reach a pod by other means -- base64 over ssh, scp, a
+# copy-paste -- which bypass the conversion entirely.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.sql   text eol=lf
+tools/pod text eol=lf
