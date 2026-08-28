@@ -562,6 +562,97 @@ def step_warm(ssh, st):
         st.step_progress("warm", min(0.95, (time.time() - started) / expected))
 
 
+def step_zimage(ssh, st):
+    """The second interpreter, for the half of the product that answers text.
+
+    Z-Image needs diffusers from source, which wants huggingface_hub 1.x, while
+    the try-on stack's transformers caps it below 1.0. No single set of versions
+    satisfies both, so it lives in its own venv -- and that venv sits on the
+    container disk, which means it is gone after every migration.
+
+    Skipped when the weights are not on the volume: a four minute build for a
+    model that would then have nothing to load helps nobody.
+    """
+    rc, out = ssh.run(
+        "ls -d /workspace/models/Z-Image-Turbo-bf16 2>/dev/null "
+        "|| ls -d /workspace/.cache/huggingface/hub/models--Tongyi-MAI--Z-Image-Turbo "
+        "2>/dev/null || echo NONE", timeout=180)
+    if "NONE" in out:
+        st.warn("no Z-Image weights on the volume, so making models and scenes "
+                "will not work on this pod")
+        return
+
+    rc, out = ssh.run(
+        "test -x /opt/zimage-venv/bin/python && echo HAVE || echo BUILD",
+        timeout=120)
+    if "HAVE" in out:
+        st.log("the z-image venv is already here")
+    else:
+        st.log("building the z-image venv (about four minutes, once per pod)")
+        ssh.run(
+            f"cd {POD_REPO}\n"
+            "setsid nohup bash tools/setup_pod.sh --zimage "
+            "  > /workspace/zimage_setup.log 2>&1 < /dev/null &\n"
+            "echo started\n", timeout=180)
+        started = time.time()
+        while not st.cancelled:
+            time.sleep(10)
+            rc, out = ssh.run(
+                "test -x /opt/zimage-venv/bin/python && echo DONE || echo BUILDING\n"
+                "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE\n",
+                timeout=180)
+            if "DONE" in out:
+                break
+            if "GONE" in out:
+                rc, tail = ssh.run("tail -12 /workspace/zimage_setup.log",
+                                   timeout=120)
+                raise PodError("the z-image venv did not build:\n" + tail[-600:])
+            st.step_progress("zimage", min(0.95, (time.time() - started) / 260))
+
+    rc, out = ssh.run(
+        "/opt/zimage-venv/bin/python -c \"from diffusers import ZImagePipeline; "
+        "import fastapi; print(\'ZIMAGE_OK\')\" 2>&1 | tail -2",
+        timeout=300)
+    st.log(out)
+    if "ZIMAGE_OK" not in out:
+        raise PodError("the z-image venv is incomplete:\n" + out[-400:])
+
+
+def step_serve(ssh, st):
+    """Leave the pod actually serving, not merely proven.
+
+    The panel used to stop after generating one image, so it reported ready and
+    left nothing running. Everything after that was four commands typed by hand,
+    and forgetting the second one meant two tools silently did not work.
+    """
+    rc, out = ssh.run(
+        f"cd {POD_REPO}\n"
+        "bash tools/pod_serve.sh start 2>&1 | tail -2\n", timeout=600)
+    st.log(out)
+    if "ready" not in out and "starting" not in out:
+        raise PodError("the try-on server did not start:\n" + out[-400:])
+
+    rc, out = ssh.run(
+        "test -x /opt/zimage-venv/bin/python && echo HAVE || echo NONE",
+        timeout=120)
+    if "HAVE" in out:
+        rc, out = ssh.run(
+            f"cd {POD_REPO}\n"
+            "bash tools/pod_serve.sh start zimage 2>&1 | tail -2\n",
+            timeout=600)
+        st.log(out)
+    else:
+        st.warn("no z-image venv, so only the try-on tools will work")
+
+    # What the bridge needs, read once, so nobody has to go and find it.
+    rc, out = ssh.run(
+        "echo BRIDGE=root@$RUNPOD_PUBLIC_IP -p $RUNPOD_TCP_PORT_22", timeout=120)
+    for line in out.splitlines():
+        if line.startswith("BRIDGE="):
+            st.facts["bridge_ssh"] = line[7:].strip()
+            st.log("bridge address: " + line[7:].strip())
+
+
 STEPS = [
     Step("connect", "Connect", 5, step_connect, "ssh, and which pod this is"),
     Step("inspect", "Inspect", 8, step_inspect, "GPU, disk, CPU quota"),
@@ -576,6 +667,10 @@ STEPS = [
          "measured in bytes"),
     Step("warm", "Load and generate", 360, step_warm,
          "one real image, so ready means ready"),
+    Step("zimage", "Build the model maker", 260, step_zimage,
+         "a second interpreter; the two stacks cannot share one"),
+    Step("serve", "Start serving", 45, step_serve,
+         "both servers, and the address the bridge needs"),
 ]
 TOTAL_WEIGHT = sum(s.weight for s in STEPS)
 

@@ -310,6 +310,8 @@ function factRows(f){
   }
   add('Downloading', f.download);
   add('Model load', f.load_seconds ? `${f.load_seconds}s` : '', 'good');
+  // The address the bridge needs, read off the pod rather than hunted for.
+  add('Bridge address', f.bridge_ssh, 'good');
   add('One image', f.image_seconds ? `${f.image_seconds}s` : '', 'good');
   return rows.length ? rows.join('') : '<div class="empty">Nothing measured yet.</div>';
 }
