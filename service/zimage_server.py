@@ -146,10 +146,28 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
 # dress a figure the picture does not contain, and "no instruction can supply
 # information the reference does not carry" is written in hero.py for the same
 # reason. Appended rather than prepended, so the customer's own words lead.
-SCENE_FRAMING = ("full body from head to feet, whole figure in frame with the "
+SCENE_FRAMING = ("wearing a plain fitted sleeveless top, "
+                 "full body from head to feet, whole figure in frame with the "
                  "feet visible, the person close to the camera and filling most "
                  "of the frame, standing, facing the camera, "
                  "photorealistic, sharp focus, natural light")
+
+# Why the person starts in a sleeveless top.
+#
+# The try-on stage layers: it puts the garment on over what the person already
+# wears rather than replacing it. That is intermittent -- four attempts to
+# reproduce it deliberately all came back clean -- but when it happens it shows
+# as the old sleeves poking out below the new ones, which is what a customer
+# reported twice.
+#
+# No wording fixes it. Four phrasings, including "swap the top for" against
+# "add", produced one identical image; the model reads the garment and ignores
+# the text (docs/CONTROLS.md). Painting the torso out is worse: the model
+# treats the gap as damage and invents a shirt instead of accepting the garment.
+#
+# A sleeveless base cannot poke out from under anything. It costs nothing, and
+# the customer's own words lead the prompt, so somebody who writes "in a leather
+# jacket" still gets one.
 
 # Guidance stays at zero and is not offered. Z-Image Turbo is distilled for it;
 # measured on the pod at 1.5 the picture darkens, at 3.0 the blacks crush, and
