@@ -112,11 +112,17 @@ CREATE_FRAMING = ("full body from head to feet, standing straight, whole figure 
 # always dressed the roster from CLOTHING_NEUTRAL for exactly this reason; a
 # written description was the one path that skipped it.
 #
-# Generic on purpose. The sleeveless attempt below failed because it named a
-# garment, and a named garment spreads to the whole outfit. "Everyday clothes"
-# names nothing, and it comes last, so a customer who writes "in a red coat"
-# still gets the coat.
-CLOTHED = "wearing plain everyday clothes and shoes"
+# Both halves named, because "everyday clothes" was not enough: it produced a
+# top and no trousers, and "very slim" in the description pulls hard toward
+# showing the figure. This is the shape CLOTHING_NEUTRAL uses for the roster,
+# which has never had the problem.
+#
+# Naming garments is what the sleeveless attempt did wrong, so the difference
+# matters: "sleeveless" is an unusual attribute and it leaked into everything
+# else the person wore. A plain t-shirt and plain trousers are the default a
+# photograph would have anyway, and they come last, so "in a long red coat"
+# still comes back in a long red coat. Measured, not assumed.
+CLOTHED = "wearing a plain t-shirt and plain trousers and flat shoes"
 
 
 @app.post("/create")
