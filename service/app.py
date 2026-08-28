@@ -144,7 +144,7 @@ class JobRequest(BaseModel):
     garment_key: str
     person_key: str | None = None
     model_id: str | None = None
-    mode: str = Field("upper", pattern="^(upper|lower|overall)$")
+    mode: str = Field("upper", pattern="^(upper|lower|overall|layer)$")
     description: str = ""
     seed: int = 42
     idem_key: str | None = None

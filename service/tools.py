@@ -48,7 +48,13 @@ ASK = {
     "person": "a photo of the <b>person</b> — full body, facing the camera",
 }
 
-MODES = [("upper", "Upper body"), ("lower", "Lower body"), ("overall", "Full outfit")]
+# What the customer is telling us to do. The first three name the part of the
+# body, which is what a seller knows about their own product; the fourth is
+# there because outerwear is the case where replacing what the model wears is
+# the wrong answer, and outerwear is a large part of what gets sold here.
+# pipeline.MODE_INSTRUCTION turns each into a sentence the model was trained on.
+MODES = [("upper", "Upper body"), ("lower", "Lower body"),
+         ("overall", "Full outfit"), ("layer", "Layer on top")]
 
 
 def public():

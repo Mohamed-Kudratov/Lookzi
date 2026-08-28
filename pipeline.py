@@ -427,29 +427,60 @@ def retrieve_timesteps(
     return timesteps, num_inference_steps
 
 
-# ---------------------------------------------------------------------------
 # Mode handling
 # ---------------------------------------------------------------------------
-# The Gradio app collects a swap/add radio button but the original code never
-# passed it anywhere, so the control silently did nothing -- the mode was only
-# ever implied by how the user happened to word the description. This keeps the
-# description as the source of truth but makes the radio actually bind to it.
+# The Gradio app collected a swap/add radio and never passed it anywhere, so
+# the control silently did nothing. Fixing that exposed a second, worse version
+# of the same bug one layer up: the product asks the customer for a body region
+# -- upper, lower, full outfit -- and the model was trained on a different axis
+# entirely, "swap X for Y" against "add Y". None of the product's three words
+# matched either verb, so every one of them fell through to the same prompt and
+# the customer's only meaningful choice changed nothing at all.
+#
+# Both axes are real and a seller cares about both. Which part of the body the
+# garment belongs to is what they know about their product; whether it replaces
+# what the model is wearing or goes over it is what they want done. So the
+# region carries the verb it almost always implies -- a top replaces a top --
+# and layering is offered as its own choice, because outerwear is the case
+# where the other answer is wrong and it is a case we sell to.
+
+# What the customer picks, and the sentence the model was trained to read.
+# `{desc}` is whatever they typed about the garment, or a neutral noun.
+MODE_INSTRUCTION = {
+    "upper": "swap the top for {desc}",
+    "lower": "swap the trousers for {desc}",
+    "overall": "swap the outfit for {desc}",
+    "layer": "add {desc}",
+    # The model's own two words, for callers that already speak them.
+    "swap": "swap {desc}",
+    "add": "add {desc}",
+}
+
+DEFAULT_GARMENT_NOUN = "the garment"
+
 
 def apply_mode(mode: str, description: str) -> str:
-    desc = (description or "").strip()
+    """Turn a mode and a description into a sentence the model understands.
+
+    Returns the description unchanged when the mode is unknown, rather than
+    guessing: a wrong instruction is worse than none, and an unknown mode means
+    the caller and this table have drifted, which is worth noticing rather than
+    papering over.
+    """
+    desc = (description or "").strip() or DEFAULT_GARMENT_NOUN
     if not mode:
         return desc
     mode = mode.strip().lower()
-    if not desc:
+
+    # A description that already opens with either verb wins. Prefixing would
+    # produce "swap the top for swap the jeans for shorts", and somebody who
+    # writes the instruction themselves has said what they want.
+    if desc.lower().startswith(("add ", "swap ")):
         return desc
-    # If the description already opens with either verb, it wins -- prefixing
-    # here would produce prompts like "add swap the jeans for shorts".
-    lowered = desc.lower()
-    if lowered.startswith("add") or lowered.startswith("swap"):
-        return desc
-    if mode in ("add", "swap"):
-        return f"{mode} {desc}"
-    return desc
+
+    template = MODE_INSTRUCTION.get(mode)
+    return template.format(desc=desc) if template else desc
+
 
 
 class LayeringVTONPipeline:
