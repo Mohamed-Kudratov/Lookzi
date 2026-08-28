@@ -61,8 +61,11 @@ MODELS = {
              "models--ovedrive--Qwen-Image-Edit-2509-4bit", 15_800),
     "bf16": ("Qwen/Qwen-Image-Edit-2509",
              "models--Qwen--Qwen-Image-Edit-2509", 57_700),
+    # 1.6 GB for the two bf16 adapters together. The 1.6 GB files in that
+    # repository are the fp32 variants, which is where 3.4 came from and why a
+    # complete download was rejected as half-finished.
     "lightning": ("lightx2v/Qwen-Image-Lightning",
-                  "models--lightx2v--Qwen-Image-Lightning", 3_400),
+                  "models--lightx2v--Qwen-Image-Lightning", 1_600),
 }
 
 # The Lightning repository holds forty-five adapters -- one per base model per
@@ -630,7 +633,18 @@ def step_download(ssh, st):
             last = now
 
             if not alive:
-                if now >= size_mb * 0.95:
+                # Asked for by name where there is a name to ask for. A byte
+                # total is an estimate, and rejecting a complete download
+                # because the estimate was wrong is what happened here.
+                if repo == MODELS["lightning"][0]:
+                    rc, found = ssh.run(
+                        f"find {path}/snapshots -name "
+                        "'*Lightning-[48]steps-V1.0-bf16.safetensors' | wc -l",
+                        timeout=300)
+                    if found.strip().splitlines()[-1].strip() == "2":
+                        st.log(f"{repo}: both adapters present ({now} MB)")
+                        break
+                elif now >= size_mb * 0.95:
                     st.log(f"{repo}: done ({now} MB)")
                     break
                 rc, tail = ssh.run("tail -5 /workspace/.admin_dl.log", timeout=120)
