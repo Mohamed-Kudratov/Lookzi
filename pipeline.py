@@ -895,10 +895,18 @@ class LayeringVTONPipeline:
         # The try-on training, off on request. Underneath it is the base image
         # editor, which does follow instructions -- the adapter is what makes
         # this a garment-compositing model and deaf to everything else.
+        # Only the try-on adapter comes off. disable_adapters() takes them all,
+        # and Lightning is one of them -- the step distillation that makes eight
+        # steps produce a finished picture. Without it, eight steps produce
+        # undercooked mush, which is exactly what the first attempt returned:
+        # the navy t-shirt came back washed pink.
         toggled = False
-        if not adapters and hasattr(self.transformer, "disable_adapters"):
+        if not adapters and self.lightning and hasattr(self.transformer, "set_adapters"):
+            self.transformer.set_adapters(["lightning"], [self.lightning_scale])
+            toggled = "lightning-only"
+        elif not adapters and hasattr(self.transformer, "disable_adapters"):
             self.transformer.disable_adapters()
-            toggled = True
+            toggled = "all"
         try:
             self.noise_scheduler.set_begin_index(0)
             for i, t in enumerate(tqdm(timesteps, desc="Sampling", leave=False)):
@@ -960,7 +968,10 @@ class LayeringVTONPipeline:
                     progress_callback(i + 1, len(timesteps))
 
         finally:
-            if toggled:
+            if toggled == "lightning-only":
+                self.transformer.set_adapters(["default", "lightning"],
+                                              [1.0, self.lightning_scale])
+            elif toggled == "all":
                 self.transformer.enable_adapters()
         latents = _unpack_latents(
             latents=latents, height=img_height, width=img_width, vae_scale_factor=self.vae_scale_factor
