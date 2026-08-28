@@ -10,6 +10,7 @@ none of which raise, and all of which would be found weeks later by a customer.
 """
 import os
 import re
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -106,9 +107,25 @@ pkgs = {l.split(">")[0].split("[")[0].strip().lower()
         for l in req.splitlines() if l.strip() and not l.startswith("#")}
 truthy("no torch in the web tier", "torch" not in pkgs)
 truthy("no diffusers in the web tier", "diffusers" not in pkgs)
-for mod in ("service.app", "service.queue", "service.storage", "service.worker"):
-    truthy(f"{mod} imports without torch",
-           "torch" not in sys.modules, "-> torch was imported")
+# Each module is imported in a fresh interpreter. Checking sys.modules in this
+# one proved nothing: the loop asserted the same condition once per name without
+# importing anything, so a module that dragged in torch would still have passed,
+# and adding a name to the list would have printed a reassuring line about code
+# nobody had run.
+for mod in ("service.app", "service.queue", "service.storage", "service.worker",
+            "service.runpod_bridge", "service.tools", "service.accounts"):
+    probe = subprocess.run(
+        [sys.executable, "-c",
+         f"import importlib, sys; importlib.import_module('{mod}');"
+         " sys.exit(1 if 'torch' in sys.modules else 0)"],
+        cwd=ROOT, capture_output=True, text=True, timeout=120)
+    if probe.returncode == 0:
+        truthy(f"{mod} imports without torch", True)
+    elif probe.returncode == 1:
+        truthy(f"{mod} imports without torch", False, "-> torch was imported")
+    else:
+        truthy(f"{mod} imports at all", False,
+               f"-> {probe.stderr.strip().splitlines()[-1] if probe.stderr.strip() else probe.returncode}")
 
 print()
 if failures:

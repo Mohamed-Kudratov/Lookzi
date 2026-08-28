@@ -32,8 +32,14 @@ import urllib.request
 
 from PIL import Image
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 MODEL_PATH = os.environ.get("MODEL_PATH", "ovedrive/Qwen-Image-Edit-2509-4bit")
-LORA_DIR = os.environ.get("LORA_DIR", "weights")
+# Anchored to the repository, not to the working directory. A relative "weights"
+# resolves under the image's WORKDIR and nowhere else, and the failure is silent:
+# no adapter loads, and the endpoint returns plausible pictures of the wrong
+# thing instead of an error anybody would notice.
+LORA_DIR = os.environ.get("LORA_DIR", os.path.join(ROOT, "weights"))
 LIGHTNING = int(os.environ.get("LIGHTNING", "8"))
 FETCH_TIMEOUT = int(os.environ.get("FETCH_TIMEOUT", "60"))
 MAX_BYTES = int(os.environ.get("MAX_INPUT_BYTES", str(32 * 1024 * 1024)))

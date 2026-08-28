@@ -188,8 +188,30 @@ def preflight():
               "Jobs will queue until one starts.", flush=True)
 
 
+def _check_wait_below_lease():
+    """The wait cap must stay under the queue's lease, and be checked, not hoped.
+
+    A job held past JOB_STALE_AFTER is requeued by the stale sweep while this
+    process is still waiting on it, and then two workers generate one image
+    for one charge. That invariant was written in a comment and enforced by
+    nothing, so lowering the lease would have broken it silently.
+    """
+    import re
+    m = re.match(r"^(\d+)\s*(second|minute|hour)s?$", q.STALE_AFTER.strip().lower())
+    if not m:
+        return  # an interval we cannot parse is not one to guess at
+    unit = {"second": 1, "minute": 60, "hour": 3600}[m.group(2)]
+    lease = int(m.group(1)) * unit
+    if WAIT_LIMIT >= lease:
+        raise SystemExit(
+            f"RUNPOD_WAIT_SECONDS is {WAIT_LIMIT:.0f}s but JOB_STALE_AFTER is "
+            f"{lease}s. The wait must end first, or the stale sweep requeues a "
+            "job this process is still waiting on: two generations, one charge.")
+
+
 def main():
     preflight()
+    _check_wait_below_lease()
     name = os.environ.get("WORKER_NAME", f"runpod:{q.WORKER_ID}")
     Worker(handle, name=name).run()
 
