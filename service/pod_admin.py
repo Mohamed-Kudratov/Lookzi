@@ -86,6 +86,9 @@ CACHE = "/workspace/.cache/huggingface/hub"
 # made once, from the fp32, and is what every load actually reads: same
 # weights, half the bytes off a network filesystem, one second instead.
 ZIMAGE_BF16 = "/workspace/models/Z-Image-Turbo-bf16"
+# The conversion writes here first -- container disk, not the volume -- so
+# the source and the copy are never both on the volume at once.
+STAGE = "/opt/zimage-bf16"
 
 
 # ---------------------------------------------------------------------------
@@ -467,7 +470,11 @@ def step_zimage_weights(ssh, st):
         # error it produced blamed the weights.
         st.log("building the venv first; the conversion runs inside it")
         step_zimage(ssh, st)
-
+    # Written to the container disk, not the volume, and moved across only
+    # once the source has been deleted. Both on the volume at once is 51 GB on
+    # top of whatever is already there -- 69 GB in the case that just took the
+    # container down. Staging locally keeps the volume peak at 31 GB, and the
+    # container disk is fast besides.
     st.log("fetching Z-Image (31 GB) and writing the bf16 copy (20 GB)")
     ssh.run(
         _env_prefix() +
@@ -476,13 +483,15 @@ def step_zimage_weights(ssh, st):
         # set three files away is not a thing to rely on.
         "export HF_HUB_ENABLE_HF_TRANSFER=1\n"
         f"cd {POD_REPO}\n"
+        f"rm -rf {STAGE}\n"
         "setsid nohup /opt/zimage-venv/bin/python elements/save_bf16.py "
+        f"  --out {STAGE}"
         "  > /workspace/.zimage_convert.log 2>&1 < /dev/null &\n"
         "echo started\n", timeout=180)
 
     started = time.time()
     while not st.cancelled:
-        time.sleep(12)
+        time.sleep(15)
         # Labelled, not positional. Reading these by position was a real
         # fault: du on a directory that does not exist prints nothing, the
         # `|| echo 0` never fires because cut succeeds, and the two numbers
@@ -490,7 +499,7 @@ def step_zimage_weights(ssh, st):
         # output's completion, called the conversion finished, and deleted
         # nineteen gigabytes of source that was still arriving.
         rc, out = ssh.run(
-            f"echo MADE=$(du -sm {ZIMAGE_BF16} 2>/dev/null | cut -f1)\n"
+            f"echo MADE=$(du -sm {STAGE} 2>/dev/null | cut -f1)\n"
             f"echo PULLED=$(du -sm {CACHE}/models--Tongyi-MAI--Z-Image-Turbo 2>/dev/null | cut -f1)\n"
             "pgrep -f save_bf16.py >/dev/null && echo ALIVE || echo GONE\n",
             timeout=300)
@@ -501,22 +510,29 @@ def step_zimage_weights(ssh, st):
                 vals[k.strip()] = int(v.strip()) if v.strip().isdigit() else 0
         made, pulled = vals.get("MADE", 0), vals.get("PULLED", 0)
         st.facts["zimage"] = f"{pulled} MB fetched, {made} MB written"
-        # Two thirds of the wait is the download, a third the write.
         st.step_progress("zimage_weights",
                          min(0.97, (pulled / 31000) * 0.66 + (made / 20000) * 0.34))
-        if made >= 18000:
+        if made >= 18000 and "GONE" in out:
             break
-        if "GONE" in out:
-            rc, tail = ssh.run("tail -15 /workspace/.zimage_convert.log", timeout=180)
+        if "GONE" in out and made < 18000:
+            rc, tail = ssh.run("tail -15 /workspace/.zimage_convert.log",
+                               timeout=180)
             raise PodError("the Z-Image conversion stopped:\n" + tail[-700:])
 
-    # The fp32 goes now, not later. It is 31 GB of source for a copy that has
-    # been written, and leaving it is what makes a 60 GB volume too small.
+    # Source first, then the move. The other order is what makes a 60 GB
+    # volume too small for a step that only ever needs 38.
+    st.log("removing the fp32 source, then moving the copy onto the volume")
     rc, out = ssh.run(
         f"rm -rf {CACHE}/models--Tongyi-MAI--Z-Image-Turbo\n"
+        f"mkdir -p $(dirname {ZIMAGE_BF16}) && rm -rf {ZIMAGE_BF16}\n"
+        f"cp -r {STAGE} {ZIMAGE_BF16} && rm -rf {STAGE}\n"
+        f"echo MOVED=$(du -sm {ZIMAGE_BF16} 2>/dev/null | cut -f1)\n"
         "echo FREE=$(df -BG --output=avail /workspace | tail -1 | tr -d ' G')\n",
-        timeout=420)
-    st.log("removed the fp32 source. " + out.strip())
+        timeout=900)
+    st.log(out)
+    if "MOVED=" not in out or int((out.split("MOVED=")[1].split()[0] or 0)) < 18000:
+        raise PodError("the bf16 copy did not reach the volume:\n" + out[-400:])
+
 
 
 def step_download(ssh, st):
