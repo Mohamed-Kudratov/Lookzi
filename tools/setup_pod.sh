@@ -2,9 +2,9 @@
 # Rebuild the try-on environment on a pod whose container disk was wiped.
 #
 # Stopping a pod, or having a GPU reclaimed and migrated, destroys everything
-# outside /workspace. The volume keeps the weights, the LoRA, the bundled
-# diffusers fork and the DWPose checkpoints -- all the large, slow things --
-# so what is left to do is package installs, which is what this does.
+# outside /workspace. The volume keeps the weights, the LoRA, the DWPose
+# checkpoints and the git object store -- all the large, slow things -- so what
+# is left is package installation, which is what this does.
 #
 # docker/Dockerfile bakes the same steps into an image, and starting a pod from
 # that image is faster and more reliable than running this. Use this when the
@@ -18,9 +18,75 @@
 set -euo pipefail
 
 REPO=/workspace/lvton
+# Everything to do with the fork happens on the container disk. It is local
+# NVMe; /workspace is a network filesystem that is fast in bulk and terrible at
+# thousands of small files, which is exactly what a source tree is.
+FORK_DIR=/opt/fork
+WHEELS=/workspace/wheels
+
 cd "$REPO"
 
+install_fork() {
+    # The bundled diffusers fork, without ever writing it to the volume.
+    #
+    # Three things make this awkward, and all three are handled here.
+    #
+    # The fork's repository is not its package: the package is at src/diffusers,
+    # so a directory named "diffusers" in the working directory shadows the
+    # install and yields an empty namespace package.
+    #
+    # It is excluded from the checkout by sparse-checkout, because materialising
+    # 2247 files onto a network volume is that filesystem's worst case. Undoing
+    # the exclusion to get the source back took minutes, rewrote the index, and
+    # wedged outright when a killed git left index.lock behind. git archive
+    # streams the same tree straight out of the object store without touching
+    # the index, onto local NVMe: 0.2 seconds against several minutes.
+    #
+    # And the build itself is worth keeping. The wheel goes on the volume, so
+    # the next pod installs one file and never unpacks a source tree at all.
+    mkdir -p "$WHEELS"
+    local wheel
+    wheel=$(ls -1t "$WHEELS"/diffusers-*.whl 2>/dev/null | head -1)
+
+    pip uninstall -q -y diffusers 2>/dev/null || true
+    if [ -n "$wheel" ]; then
+        echo "  installing the cached fork wheel: $(basename "$wheel")"
+        pip install -q --no-cache-dir --no-deps "$wheel"
+        return
+    fi
+
+    rm -rf "$FORK_DIR"
+    mkdir -p "$FORK_DIR"
+    if git -C "$REPO" archive HEAD diffusers 2>/dev/null | tar -x -C "$FORK_DIR" \
+       && [ -f "$FORK_DIR/diffusers/setup.py" ]; then
+        echo "  fork extracted from the object store to $FORK_DIR"
+    elif [ -f "$REPO/diffusers_src/setup.py" ]; then
+        # A tree an older pod left behind. Not preferred: the one on this pod
+        # turned out to be a partial copy with no setup.py at all.
+        echo "  falling back to diffusers_src on the volume"
+        cp -r "$REPO/diffusers_src" "$FORK_DIR/diffusers"
+    else
+        echo "  !! cannot obtain the diffusers fork: git archive produced no" >&2
+        echo "     setup.py and no usable diffusers_src exists." >&2
+        exit 1
+    fi
+
+    echo "  building a wheel so no later pod pays for this"
+    if pip wheel -q --no-cache-dir --no-deps -w "$WHEELS" "$FORK_DIR/diffusers"; then
+        pip install -q --no-cache-dir --no-deps \
+            "$(ls -1t "$WHEELS"/diffusers-*.whl | head -1)"
+    else
+        # A wheel that will not build is not worth failing the setup over. The
+        # direct install still works; the next pod simply pays again.
+        echo "  wheel build failed; installing directly"
+        pip install -q --no-cache-dir "$FORK_DIR/diffusers"
+    fi
+}
+
 echo "=== environment ==="
+# Read before sourcing: nproc obeys OMP_NUM_THREADS, so asking afterwards
+# prints the cap back at itself and hides the discrepancy worth seeing.
+raw_cpus=$(nproc)
 cat > "$REPO/.podenv" <<'ENVFILE'
 # Source this before running anything on a pod.
 #
@@ -37,7 +103,7 @@ export NUMEXPR_NUM_THREADS=8
 export TOKENIZERS_PARALLELISM=false
 
 # The cache lives on the volume so a wiped container disk does not mean
-# re-downloading 86 GB.
+# re-downloading 90 GB.
 export HF_HOME=/workspace/.cache/huggingface
 
 # Both of RunPod's preset download accelerators break large HF downloads: xet
@@ -52,8 +118,8 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ENVFILE
 # shellcheck disable=SC1091
 . "$REPO/.podenv"
-echo "  quota: $(awk '{printf "%.1f", $1/$2}' /sys/fs/cgroup/cpu.max) cores, "\
-     "nproc says $(nproc), threads capped at $OMP_NUM_THREADS"
+echo "  quota $(awk '{printf "%.1f", $1/$2}' /sys/fs/cgroup/cpu.max) cores," \
+     "/proc advertises $raw_cpus, threads capped at $OMP_NUM_THREADS"
 
 echo "=== packages ==="
 if python -c "import diffusers, peft, cv2" 2>/dev/null; then
@@ -61,68 +127,7 @@ if python -c "import diffusers, peft, cv2" 2>/dev/null; then
 else
     pip install -q --no-cache-dir -r requirements.txt
     pip install -q --no-cache-dir easy-dwpose==1.0.2 --no-deps
-
-    # The fork's repository is not its package -- the package is at
-    # src/diffusers -- and a tree named "diffusers" in the working directory
-    # shadows the install, so it must not be left lying around.
-    #
-    # It is also excluded from the checkout by sparse-checkout, because
-    # materialising 2247 files onto a network volume takes minutes: this is the
-    # filesystem's worst case, thousands of tiny writes rather than bulk.
-    #
-    # So build a wheel the first time and keep it on the volume. Every pod after
-    # that installs one file and never materialises the tree at all, which turns
-    # minutes into seconds and is the whole difference for a pod that may be
-    # rebuilt several times a day.
-    WHEELS=/workspace/wheels
-    mkdir -p "$WHEELS"
-    wheel=$(ls -1t "$WHEELS"/diffusers-*.whl 2>/dev/null | head -1)
-
-    pip uninstall -q -y diffusers 2>/dev/null || true
-    if [ -n "$wheel" ]; then
-        echo "  installing the cached fork wheel: $(basename "$wheel")"
-        pip install -q --no-cache-dir --no-deps "$wheel"
-    else
-        resparse=0
-        if [ ! -f "$REPO/diffusers/setup.py" ]            && [ "$(git -C "$REPO" config --get core.sparseCheckout)" = "true" ]; then
-            echo "  materialising the fork (sparse-checkout hides it)"
-            git -C "$REPO" sparse-checkout disable
-            resparse=1
-        fi
-
-        if [ -f "$REPO/diffusers/setup.py" ]; then
-            src="$REPO/diffusers"
-        elif [ -f "$REPO/diffusers_src/setup.py" ]; then
-            src="$REPO/diffusers_src"
-        else
-            echo "  !! no installable diffusers fork here." >&2
-            echo "     Expected diffusers/setup.py. Restore the tree with a checkout." >&2
-            exit 1
-        fi
-
-        echo "  building a wheel so no later pod pays for this"
-        pip wheel -q --no-cache-dir --no-deps -w "$WHEELS" "$src"             && pip install -q --no-cache-dir --no-deps                  "$(ls -1t "$WHEELS"/diffusers-*.whl | head -1)"             || pip install -q --no-cache-dir "$src"
-
-        if [ "$resparse" = "1" ]; then
-            echo "  hiding the fork again"
-            git -C "$REPO" sparse-checkout set --no-cone '/*' '!/diffusers/'
-        fi
-    fi
-
-    if [ -f "$REPO/diffusers/setup.py" ]; then
-        pip install -q --no-cache-dir "$REPO/diffusers"
-    elif [ -f "$REPO/diffusers_src/setup.py" ]; then
-        pip install -q --no-cache-dir "$REPO/diffusers_src"
-    else
-        echo "  !! no installable diffusers fork here." >&2
-        echo "     Expected diffusers/setup.py. Restore the tree with a checkout." >&2
-        exit 1
-    fi
-
-    if [ "$resparse" = "1" ]; then
-        echo "  hiding the fork again"
-        git -C "$REPO" sparse-checkout set --no-cone '/*' '!/diffusers/'
-    fi
+    install_fork
 fi
 
 python - <<'PY'
@@ -130,7 +135,8 @@ import diffusers, torch, peft
 assert "packages" in diffusers.__file__, diffusers.__file__
 from diffusers import AutoencoderKLQwenImage, QwenImageTransformer2DModel  # noqa
 print(f"  torch {torch.__version__}  diffusers {diffusers.__version__}  peft {peft.__version__}")
-print(f"  cuda {torch.cuda.is_available()}  {torch.cuda.get_device_name(0) if torch.cuda.is_available() else ''}")
+print(f"  cuda {torch.cuda.is_available()}  "
+      f"{torch.cuda.get_device_name(0) if torch.cuda.is_available() else ''}")
 PY
 
 echo "=== weights on the volume ==="
