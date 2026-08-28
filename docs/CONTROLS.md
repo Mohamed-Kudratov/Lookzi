@@ -117,3 +117,30 @@ Two consequences worth acting on:
   for 8 steps; a fair test of the undistilled path needs a separate load.
 - Whether text affects anything other than the garment — pose, background,
   lighting. Every test here changed only the garment noun.
+
+## A phone photograph of a dress on a hanger — 2026-08-28
+
+Reported with pictures: a blue strappy dress, photographed on a hanger against a
+wardrobe in ordinary room light, sent through "product to model". The result put
+the dress **over** the model's white t-shirt, the sleeves and neckline of the
+tee plainly visible under the straps.
+
+That is the layering fault again, and this is the first time it has arrived with
+a reproducible input attached. Two things distinguish this case from the four
+attempts that came back clean:
+
+- **The garment has no sleeves at all.** Every clean reproduction used a polo or
+  a sweater — a garment whose own sleeves cover the base layer's. A strappy
+  dress covers nothing above the chest, so whatever the model already wore is
+  still in the picture.
+- **The photograph is poor.** Phone camera, mixed indoor light, a patterned
+  wardrobe door behind, the hanger in frame. Whether that matters is untested.
+
+Which of the two is doing the damage is exactly the question, and the answer
+decides the fix. If it is the sleeves, re-dressing the roster in fitted
+sleeveless tops closes it — the idea already written above, and the one that
+must not be attempted through the scene prompt again. If it is the photograph,
+the fix is a cut-out step before the try-on, which is work we half have in
+packshot.
+
+Not investigated yet. Deferred deliberately: the simple faults come first.

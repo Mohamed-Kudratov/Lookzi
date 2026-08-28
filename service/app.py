@@ -330,8 +330,11 @@ def review_data(request: Request, conn=Depends(db), limit: int = 60,
         raise HTTPException(404, "not found")
     rows = conn.execute(
         """SELECT j.id, j.tool, j.model_id, j.status, j.created_at,
-                  j.params, r.object_key, r.seconds, r.width, r.height
-             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+                  j.params, r.object_key, r.seconds, r.width, r.height,
+                  m.hero_key
+             FROM jobs j
+             LEFT JOIN results r ON r.job_id = j.id
+             LEFT JOIN models m ON m.id = j.model_id
             ORDER BY j.created_at DESC
             LIMIT %s""", (min(limit, 200),)).fetchall()
     out = []
@@ -340,8 +343,20 @@ def review_data(request: Request, conn=Depends(db), limit: int = 60,
         row["job_id"] = str(row.pop("id"))
         row["garment"] = (storage.presigned_get(params["garment_key"])
                           if params.get("garment_key") else None)
-        row["person"] = (storage.presigned_get(params["person_key"])
-                         if params.get("person_key") else None)
+        # "product to model" resolves the chosen roster model into person_key
+        # before it queues, so the person and the model are the same file. Shown
+        # as two frames it read as two inputs, and the card flipped between one
+        # picture and itself.
+        person_key = params.get("person_key")
+        row["person"] = (storage.presigned_get(person_key)
+                         if person_key and person_key != row.get("hero_key")
+                         else None)
+        # The roster model a job used is one of the pictures that made the
+        # result, and until now the only trace of it was a name in small blue
+        # type. "product to model" has two inputs and was showing one.
+        hero = row.pop("hero_key", None)
+        row["model"] = storage.presigned_get(hero) if hero else None
+        row["prompt"] = (params.get("prompt") or "").strip() or None
         k = row.pop("object_key", None)
         row["result"] = storage.presigned_get(k) if k else None
         out.append(row)

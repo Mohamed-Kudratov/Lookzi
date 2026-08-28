@@ -142,7 +142,7 @@ button,input,textarea{font:inherit;color:inherit}
 .card .kill svg{width:12px;height:12px}
 
 /* the result: inputs small on the left, result large, history on the right */
-.done{display:grid;grid-template-columns:118px minmax(0,1fr) 150px;gap:18px;
+.done{display:grid;grid-template-columns:118px minmax(0,1fr) 232px;gap:18px;
   align-items:start}
 .done .ins{display:grid;gap:12px}
 .done .ins figure{margin:0;display:grid;gap:5px}
@@ -150,19 +150,28 @@ button,input,textarea{font:inherit;color:inherit}
   text-transform:uppercase;color:var(--ink-3)}
 .done .ins img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:11px;
   border:1px solid var(--line);background:var(--panel-2)}
+/* The width is stated. An auto margin on a grid item switches off stretch,
+   and everything inside this box is absolutely positioned, so with the width
+   left to itself it shrank to fit nothing at all -- 1.6px, and the finished
+   picture was invisible on the screen that exists to show it. */
 .big{position:relative;border-radius:18px;border:1px solid var(--line);
   background:var(--panel);overflow:hidden;box-shadow:var(--shadow);
-  aspect-ratio:3/4;max-height:calc(100dvh - 290px);margin:0 auto}
+  aspect-ratio:3/4;max-height:calc(100dvh - 290px);
+  width:min(100%,calc((100dvh - 290px) * 0.75));margin-inline:auto}
 .big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  background:var(--panel-2)}
+  background:var(--panel-2);cursor:zoom-in}
 .big .save{position:absolute;bottom:12px;inset-inline-end:12px;z-index:3}
 .hist h3{margin:0 0 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--ink-3);font-weight:400}
-.hist .rows{display:grid;gap:8px;max-height:calc(100dvh - 320px);overflow:auto}
+.hist .rows{display:grid;gap:9px;max-height:calc(100dvh - 320px);overflow:auto;
+  padding-inline-end:4px}
 .hist button{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
-  background:var(--panel-2);cursor:pointer;aspect-ratio:3/4}
+  background:var(--panel-2);cursor:zoom-in;aspect-ratio:3/4;position:relative}
 .hist button:hover{border-color:var(--line-2)}
-.hist img{width:100%;height:100%;object-fit:cover;display:block}
+/* contain, not cover: cropped to a square these were twelve pictures of a
+   chin, and every one of them looked like the same picture. */
+.hist img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  display:block}
 .hist .none{color:var(--ink-3);font-size:12px}
 
 /* while it runs */
@@ -266,6 +275,22 @@ button,input,textarea{font:inherit;color:inherit}
   .big{max-height:none}
   .bar{position:sticky;bottom:0;z-index:20}
 }
+/* the big view: same page, opens and closes. A result is not a document and
+   a second browser tab is not a way to look at one. */
+#view{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
+#view::backdrop{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+#view .inner{position:relative;display:grid;place-items:center}
+#view img{max-width:88vw;max-height:84vh;display:block;border-radius:12px}
+#view .cap{position:fixed;bottom:20px;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+#view .cap b{color:var(--ink);font-weight:500}
+#view button{position:fixed;cursor:pointer;font:inherit;color:var(--ink);
+  border:1px solid var(--line);background:var(--panel);border-radius:10px}
+#view .x{top:16px;inset-inline-end:18px;padding:7px 14px}
+#view .go{top:50%;transform:translateY(-50%);width:44px;height:64px;font-size:20px;
+  display:grid;place-items:center}
+#view .go[disabled]{opacity:.25;cursor:default}
+#view .prev{inset-inline-start:18px} #view .next{inset-inline-end:18px}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:.01ms !important}
 }
@@ -325,6 +350,16 @@ button,input,textarea{font:inherit;color:inherit}
 
 <div class="scrim" id="scrim" hidden></div>
 <div class="pop" id="pop" hidden role="dialog" aria-modal="true"></div>
+
+<dialog id="view">
+  <div class="inner">
+    <button class="x" id="view-close">Close</button>
+    <button class="go prev" id="view-prev" aria-label="Previous">&lsaquo;</button>
+    <img id="view-img" alt="">
+    <button class="go next" id="view-next" aria-label="Next">&rsaquo;</button>
+    <div class="cap" id="view-cap"></div>
+  </div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -539,12 +574,12 @@ function drawResult() {
         }).join("") +
       '</div>' +
       '<div class="big"><img src="' + esc(result.url) + '" alt="The finished image">' +
-        '<a class="btn save" href="' + esc(result.url) + '" target="_blank" rel="noopener">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Open</a>' +
+        '<button class="btn save" id="save">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Save</button>' +
       '</div>' +
       '<div class="hist"><h3>History</h3><div class="rows">' +
-        (recent.length ? recent.map(function (r) {
-          return '<button data-open-result="' + esc(r.result_url) + '">' +
+        (recent.length ? recent.map(function (r, i) {
+          return '<button data-hist="' + i + '" title="' + esc(r.tool || "") + '">' +
             '<img src="' + esc(r.result_url) + '" alt="" loading="lazy"></button>';
         }).join("") : '<span class="none">nothing yet</span>') +
       '</div></div>' +
@@ -567,6 +602,60 @@ function drawVeil(secs, state, typical) {
         '<button class="btn" id="cancel-job" style="margin-top:6px">Cancel</button>' +
       '</div></div>' +
     '</div></div>';
+}
+
+// ---------------------------------------------------------------- big view
+//
+// One picture, filling the screen, with a close button -- and it opens here
+// rather than in a second tab. A tab is for a document you are going to keep;
+// this is a look, and a look should close where it opened.
+var view = {frames: [], at: 0};
+
+function paintView() {
+  var f = view.frames[view.at];
+  if (!f) return;
+  $("view-img").src = f.url;
+  $("view-cap").innerHTML = '<b>' + esc(f.label) + '</b> · ' +
+    (view.at + 1) + " of " + view.frames.length;
+  $("view-prev").disabled = view.frames.length < 2;
+  $("view-next").disabled = view.frames.length < 2;
+}
+function stepView(d) {
+  if (view.frames.length < 2) return;
+  view.at = (view.at + d + view.frames.length) % view.frames.length;
+  paintView();
+}
+function openView(frames, at) {
+  view.frames = frames.filter(function (f) { return f && f.url; });
+  if (!view.frames.length) return;
+  view.at = Math.min(Math.max(at || 0, 0), view.frames.length - 1);
+  paintView();
+  $("view").showModal();
+}
+
+$("view-close").addEventListener("click", function () { $("view").close(); });
+$("view-prev").addEventListener("click", function () { stepView(-1); });
+$("view-next").addEventListener("click", function () { stepView(1); });
+$("view").addEventListener("click", function (e) {
+  if (!e.target.closest("img,button")) this.close();
+});
+document.addEventListener("keydown", function (e) {
+  if (!$("view").open) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); stepView(-1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); stepView(1); }
+});
+
+// Fetched and handed over as a file. A link with `download` on a signed URL
+// from another origin is ignored and opens a tab instead, which is the thing
+// we are trying not to do.
+function save(url) {
+  fetch(url).then(function (r) { return r.blob(); }).then(function (b) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = "lookzi-" + Date.now() + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+  }).catch(function () { toast("Could not save that one.", true); });
 }
 
 // ---------------------------------------------------------------- popovers
@@ -740,8 +829,26 @@ document.addEventListener("click", function (e) {
   }
   if (e.target.closest("#back")) { result = null; drawStage(); drawBar(); return; }
 
-  var openR = e.target.closest("[data-open-result]");
-  if (openR) { window.open(openR.dataset.openResult, "_blank", "noopener"); return; }
+  var h = e.target.closest("[data-hist]");
+  if (h) {
+    // Arrows walk the strip from wherever you opened it, so looking through
+    // what you have made is one keypress rather than twelve clicks.
+    openView(recent.map(function (r) {
+      return {url: r.result_url, label: r.tool || "result"};
+    }), Number(h.dataset.hist));
+    return;
+  }
+  if (e.target.closest(".big img") && result) {
+    // Everything that made this picture, in the order it happened.
+    var f = [];
+    if (result.inputs.person) f.push({url: result.inputs.person, label: "your photo"});
+    if (result.inputs.garment) f.push({url: result.inputs.garment, label: "product"});
+    if (result.inputs.model) f.push({url: result.inputs.model, label: "model"});
+    f.push({url: result.url, label: "result"});
+    openView(f, f.length - 1);
+    return;
+  }
+  if (e.target.closest("#save") && result) { save(result.url); return; }
 
   if (e.target.closest("#cancel-job") && job && job !== "pending") {
     api("/jobs/" + job + "/cancel", {method: "POST"})
@@ -790,7 +897,11 @@ $("nav-models").addEventListener("click", function () { openPop("models"); });
 
 // ---------------------------------------------------------------- loading
 function refresh() {
-  api("/me").then(function (m) { $("credits").textContent = m.credits; })
+  api("/me").then(function (m) {
+    // An unlimited account has no ledger to read from, and "0 credits" on the
+    // account that is meant to be able to run anything reads as broken.
+    $("credits").textContent = m.plan === "unlimited" ? "∞" : m.credits;
+  })
     .catch(function () {});
   api("/jobs?limit=12").then(function (rows) {
     recent = rows.filter(function (r) { return r.result_url; });

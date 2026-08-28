@@ -33,16 +33,27 @@ header p{margin:0;color:var(--ink-3);font-size:12.5px}
   border-color:var(--ink)}
 .filters button:focus-visible{outline:2px solid var(--wait);outline-offset:2px}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
-  overflow:hidden;display:grid;grid-template-rows:auto auto}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-.cell{position:relative;aspect-ratio:3/4;background:#0B1120;display:grid;
-  place-items:center;overflow:hidden}
-.cell img{width:100%;height:100%;object-fit:contain;cursor:zoom-in}
-.cell .tag{position:absolute;top:6px;left:6px;font-family:var(--mono);font-size:10px;
-  padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:var(--ink-2)}
-.cell .none{color:var(--ink-3);font-size:11.5px}
+  overflow:hidden}
+
+/* One picture at a time, whatever the job actually had. A job with three
+   pictures cycles through all three; one with a single result never moves. */
+.frame{position:relative;aspect-ratio:3/4;background:#0B1120;display:block;
+  width:100%;padding:0;border:0;cursor:zoom-in;overflow:hidden}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  opacity:0;transition:opacity .4s ease}
+.frame img.on{opacity:1}
+.frame .tag{position:absolute;top:6px;left:6px;z-index:2;font-family:var(--mono);
+  font-size:10px;padding:2px 6px;border-radius:5px;background:rgba(2,6,23,.72);
+  color:var(--ink-2)}
+.frame .dots{position:absolute;bottom:7px;left:0;right:0;z-index:2;display:flex;
+  gap:5px;justify-content:center}
+.frame .dots i{width:5px;height:5px;border-radius:50%;background:rgba(248,250,252,.32)}
+.frame .dots i.on{background:var(--ink)}
+.frame .none{position:absolute;inset:0;display:grid;place-items:center;
+  color:var(--ink-3);font-size:11.5px}
+
 .meta{padding:9px 11px;display:grid;gap:4px}
 .meta .row{display:flex;align-items:baseline;gap:8px}
 .meta b{font-size:12.5px;font-weight:500}
@@ -55,12 +66,24 @@ header p{margin:0;color:var(--ink-3);font-size:12.5px}
 .state[data-s="queued"],.state[data-s="running"]{color:var(--wait);border-color:#1E4C63}
 .empty{padding:40px;text-align:center;color:var(--ink-3)}
 
+/* the big view: same page, opens and closes, never a second tab */
+/* Sized to the picture and centred by the browser. Given 100vw/100vh it grew
+   the page instead of covering it, and everything anchored to the viewport
+   landed off-screen. */
 dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
-dialog::backdrop{background:rgba(2,6,23,.86)}
-dialog img{max-width:96vw;max-height:92vh;display:block;border-radius:8px}
-dialog button{position:fixed;top:14px;right:16px;cursor:pointer;font:inherit;
-  padding:7px 14px;border-radius:8px;border:1px solid var(--line-2);
-  background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(2,6,23,.9)}
+.view{position:relative;display:grid;place-items:center}
+.view img{max-width:88vw;max-height:84vh;display:block;border-radius:8px}
+.view .cap{position:fixed;bottom:20px;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.view .cap b{color:var(--ink);font-weight:500}
+.view button{position:fixed;cursor:pointer;font:inherit;color:var(--ink);
+  border:1px solid var(--line-2);background:rgba(27,35,54,.9);border-radius:10px}
+.view .x{top:16px;right:18px;padding:7px 14px}
+.view .go{top:50%;transform:translateY(-50%);width:44px;height:64px;font-size:20px;
+  display:grid;place-items:center}
+.view .go[disabled]{opacity:.25;cursor:default}
+.view .prev{left:18px} .view .next{right:18px}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.001ms!important}}
 </style>
 </head>
@@ -77,8 +100,13 @@ dialog button{position:fixed;top:14px;right:16px;cursor:pointer;font:inherit;
 </div>
 
 <dialog id="viewer">
-  <button id="close">Close</button>
-  <img id="big" alt="">
+  <div class="view">
+    <button class="x" id="close">Close</button>
+    <button class="go prev" id="prev" aria-label="Previous">‹</button>
+    <img id="big" alt="">
+    <button class="go next" id="next" aria-label="Next">›</button>
+    <div class="cap" id="cap"></div>
+  </div>
 </dialog>
 
 <script>
@@ -87,34 +115,51 @@ var qs = new URLSearchParams(location.search);
 var KEY = qs.get("key") ? "?key=" + encodeURIComponent(qs.get("key")) + "&" : "?";
 
 function esc(s){ return String(s == null ? "" : s)
-  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 function when(iso){
   if (!iso) return "";
-  var d = new Date(iso), now = new Date();
-  var mins = Math.round((now - d) / 60000);
+  var d = new Date(iso), mins = Math.round((new Date() - d) / 60000);
   if (mins < 60) return mins + "m ago";
   if (mins < 60 * 24) return Math.round(mins / 60) + "h ago";
   return d.toISOString().slice(5, 16).replace("T", " ");
 }
 
-function cell(url, tag){
-  return '<div class="cell"><span class="tag">' + tag + '</span>' +
-    (url ? '<img src="' + url + '" alt="' + tag + '" loading="lazy">'
-         : '<span class="none">none</span>') + '</div>';
+// What a job is made of, in the order it happened: the person, the product,
+// the model who wore it, then what came out. Only what the job actually had --
+// "make a new model" starts from nothing but words, so it is one picture, and
+// showing it an empty box labelled "input" was saying something untrue.
+function framesOf(r){
+  var f = [];
+  if (r.person)  f.push({url: r.person,  label: "your photo"});
+  if (r.garment) f.push({url: r.garment, label: "product"});
+  if (r.model)   f.push({url: r.model,   label: r.model_id || "model"});
+  if (r.result)  f.push({url: r.result,  label: "result"});
+  return f;
 }
 
 function draw(){
   var rows = ALL.filter(function (r) { return filter === "all" || r.tool === filter; });
   document.getElementById("count").textContent =
     rows.length + " of " + ALL.length + " job" + (ALL.length === 1 ? "" : "s");
-  document.getElementById("grid").innerHTML = rows.length ? rows.map(function (r) {
-    // The input is whichever was sent: a garment for most tools, a person for
-    // "change the model", where the photograph itself carries the clothes.
-    var input = r.garment || r.person;
-    var tag = r.garment ? "garment" : (r.person ? "person" : "input");
+  document.getElementById("grid").innerHTML = rows.length ? rows.map(function (r, i) {
+    var f = framesOf(r);
+    // Staggered, so a screenful of cards does not flip in unison like a
+    // departure board. Each starts its cycle at a different point.
+    var start = f.length ? i % f.length : 0;
     return '<article class="card">' +
-      '<div class="pair">' + cell(input, tag) + cell(r.result, "result") + '</div>' +
+      '<button class="frame" data-job="' + esc(r.job_id) + '" data-i="' + start + '">' +
+        (f.length
+          ? '<span class="tag">' + esc(f[start].label) + '</span>' +
+            f.map(function (x, k) {
+              return '<img src="' + esc(x.url) + '" alt="' + esc(x.label) + '"' +
+                (k === start ? ' class="on"' : '') + ' loading="lazy">';
+            }).join("") +
+            (f.length > 1 ? '<span class="dots">' + f.map(function (_, k) {
+              return '<i' + (k === start ? ' class="on"' : '') + '></i>';
+            }).join("") + '</span>' : "")
+          : '<span class="none">nothing kept</span>') +
+      '</button>' +
       '<div class="meta">' +
         '<div class="row"><b>' + esc(r.tool) + '</b>' +
           '<span class="state" data-s="' + esc(r.status) + '">' + esc(r.status) + '</span>' +
@@ -127,6 +172,73 @@ function draw(){
   }).join("") : '<p class="empty">Nothing matches that.</p>';
 }
 
+// ------------------------------------------------------------ the cycling
+function show(frame, i){
+  var imgs = frame.querySelectorAll("img");
+  if (imgs.length < 2) return;
+  i = ((i % imgs.length) + imgs.length) % imgs.length;
+  frame.dataset.i = i;
+  for (var k = 0; k < imgs.length; k++) imgs[k].classList.toggle("on", k === i);
+  var dots = frame.querySelectorAll(".dots i");
+  for (var d = 0; d < dots.length; d++) dots[d].classList.toggle("on", d === i);
+  var tag = frame.querySelector(".tag");
+  if (tag) tag.textContent = imgs[i].alt;
+}
+
+setInterval(function () {
+  if (document.getElementById("viewer").open) return;    // not while one is open
+  var frames = document.querySelectorAll(".frame");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].matches(":hover")) continue;           // hold still to be read
+    show(frames[i], Number(frames[i].dataset.i || 0) + 1);
+  }
+}, 2400);
+
+// ------------------------------------------------------------ the big view
+var view = {frames: [], at: 0};
+
+function paint(){
+  var f = view.frames[view.at];
+  if (!f) return;
+  document.getElementById("big").src = f.url;
+  document.getElementById("cap").innerHTML =
+    '<b>' + esc(f.label) + '</b> · ' + (view.at + 1) + " of " + view.frames.length;
+  document.getElementById("prev").disabled = view.frames.length < 2;
+  document.getElementById("next").disabled = view.frames.length < 2;
+}
+function step(d){
+  if (view.frames.length < 2) return;
+  view.at = (view.at + d + view.frames.length) % view.frames.length;
+  paint();
+}
+
+document.getElementById("grid").addEventListener("click", function (e) {
+  var frame = e.target.closest(".frame"); if (!frame) return;
+  var row = ALL.filter(function (r) { return r.job_id === frame.dataset.job; })[0];
+  if (!row) return;
+  view.frames = framesOf(row);
+  if (!view.frames.length) return;
+  view.at = Number(frame.dataset.i || 0) % view.frames.length;
+  paint();
+  document.getElementById("viewer").showModal();
+});
+document.getElementById("prev").addEventListener("click", function () { step(-1); });
+document.getElementById("next").addEventListener("click", function () { step(1); });
+document.getElementById("close").addEventListener("click", function () {
+  document.getElementById("viewer").close();
+});
+document.addEventListener("keydown", function (e) {
+  if (!document.getElementById("viewer").open) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+});
+// Clicking the darkness closes it, which is what everybody tries first.
+document.getElementById("viewer").addEventListener("click", function (e) {
+  if (e.target.closest("img,button")) return;
+  this.close();
+});
+
+// ------------------------------------------------------------ the filters
 function drawFilters(){
   var tools = ["all"].concat(ALL.map(function (r) { return r.tool; })
     .filter(function (t, i, a) { return t && a.indexOf(t) === i; }).sort());
@@ -135,19 +247,9 @@ function drawFilters(){
       esc(t) + '</button>';
   }).join("");
 }
-
 document.getElementById("filters").addEventListener("click", function (e) {
   var b = e.target.closest("button"); if (!b) return;
   filter = b.dataset.t; drawFilters(); draw();
-});
-
-document.getElementById("grid").addEventListener("click", function (e) {
-  var img = e.target.closest("img"); if (!img) return;
-  document.getElementById("big").src = img.src;
-  document.getElementById("viewer").showModal();
-});
-document.getElementById("close").addEventListener("click", function () {
-  document.getElementById("viewer").close();
 });
 
 fetch("/api/review" + KEY + "limit=200")
