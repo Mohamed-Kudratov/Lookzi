@@ -16,3 +16,18 @@ elements/manifest.csv
 
 # Secrets: never committed.
 .env
+
+# Rescued from the pod before its volume was cleaned: roster candidates and
+# measurement output. Kept locally, not in git -- they are generated images.
+rescued/
+mode_check*/
+text_check/
+cfg_check/
+guid_check/
+*_e2e.png
+scene*.png
+packshot*.png
+made_*.png
+model_swap.png
+simple_flow.png
+logo_check.png

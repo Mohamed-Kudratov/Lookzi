@@ -17,7 +17,19 @@
 # Safe to run twice: every step checks before doing anything.
 set -euo pipefail
 
-REPO=/workspace/lvton
+# Where the repository is, discovered rather than assumed. It used to be pinned
+# to /workspace/lvton, which stopped being true the moment the code moved to
+# the container's local disk -- and then failed outright when that stale copy
+# was deleted, taking the admin panel's Z-Image step with it.
+REPO="${REPO:-}"
+if [ -z "$REPO" ]; then
+    # The directory this script is in, which is the checkout it belongs to.
+    REPO=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+fi
+[ -f "$REPO/requirements.txt" ] || {
+    echo "no requirements.txt under $REPO -- run this from inside a checkout" >&2
+    exit 1
+}
 # Everything to do with the fork happens on the container disk. It is local
 # NVMe; /workspace is a network filesystem that is fast in bulk and terrible at
 # thousands of small files, which is exactly what a source tree is.
