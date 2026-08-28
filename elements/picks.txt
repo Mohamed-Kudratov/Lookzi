@@ -1,23 +1,33 @@
-# Curated hero candidate per roster face: which of the six generated
-# candidates is the identity every variation of that model is built from.
+# Which frame of each face becomes the model a customer sees.
 #
-# Chosen by eye from the contact sheets -- there is no metric for "this is the
-# person we want to sell in", and the choice is permanent in a way the
-# variations are not: every image of this model inherits this face.
+# Chosen by eye from the candidate sheets, not by a score. The identity metric
+# says whether a face survives the try-on; it says nothing about whether the
+# person looks like someone a seller in Tashkent would put in front of their
+# clothes, and that is the only question here.
 #
-# Faces absent here are not yet curated and will not generate. That is the
-# point: a missing pick must stop the run, not silently fall back to 000.
+#   face_id  frame
+#
+# The _b entries are second faces that came out close enough to their twin to
+# be the same person. catalog.DUPLICATE_OF hides them from customers; they stay
+# here because the file is the record of what was picked, not of what shipped.
 
 f_cauz_20s_avg      002
 f_cauz_20s_hijab    002
 f_cauz_20s_slim     000
-m_cauz_20s_slim     000
-
-# The Slavic slots each returned two faces worth keeping. Both were promoted to
-# their own roster entry rather than one being discarded -- see catalog.py.
 f_slav_20s_slim     000
-f_slav_20s_slim_b   000
+f_slav_20s_slim_b   005
 f_slav_30s_avg      000
-f_slav_30s_avg_b    000
+f_slav_30s_avg_b    003
+m_cauz_20s_slim     000
 m_slav_30s_avg      000
-m_slav_30s_avg_b    000
+m_slav_30s_avg_b    003
+
+# Not yet chosen. Frame 000 is a placeholder for a decision, not a decision:
+# these six ship as whatever 000 happens to be until somebody looks at the
+# sheet and says otherwise.
+f_cauz_30s_avg      000
+f_cauz_40s_full     000
+f_cauz_40s_hijab    000
+f_cauz_50s_avg      000
+m_cauz_30s_avg      000
+m_cauz_40s_avg      000

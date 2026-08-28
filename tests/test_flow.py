@@ -227,6 +227,18 @@ def main():
     check("a batch is one shape only", len(widths), 1)
     truthy("and it follows the oldest job", widths == {768}, f"-> {widths}")
 
+    # Take the residue with us. Every section deliberately leaves jobs queued
+    # -- that is how it proves a claim picked the right one -- and those rows
+    # then sit in the queue forever, because their tool names belong to no
+    # worker. Harmless in themselves, but /health counts them, so a developer
+    # opening the panel is told ten jobs are waiting when nothing is.
+    swept = conn.execute(
+        """DELETE FROM jobs
+            WHERE tool LIKE 'test-%' AND status IN ('queued', 'running')
+         RETURNING id""").fetchall()
+    if swept:
+        print(f"\nswept {len(swept)} test job(s) out of the queue")
+
     conn.close()
     print()
     if failures:
