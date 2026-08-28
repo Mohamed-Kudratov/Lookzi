@@ -62,8 +62,18 @@ MODELS = {
     "bf16": ("Qwen/Qwen-Image-Edit-2509",
              "models--Qwen--Qwen-Image-Edit-2509", 57_700),
     "lightning": ("lightx2v/Qwen-Image-Lightning",
-                  "models--lightx2v--Qwen-Image-Lightning", 1_600),
+                  "models--lightx2v--Qwen-Image-Lightning", 3_400),
 }
+
+# The Lightning repository holds forty-five adapters -- one per base model per
+# step count -- including a single 20 GB file. Pulling all of it took 39 GB
+# instead of 3.4, filled the volume, and is very likely what killed the
+# container mid-setup. These are the two the pipeline can actually load; see
+# pipeline.LIGHTNING_WEIGHTS.
+LIGHTNING_FILES = [
+    "Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
+    "Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors",
+]
 
 # Below this, the volume is having a bad day and every later step will take
 # forty times longer than the numbers in TIMINGS.md. Saying so in the first
@@ -473,14 +483,23 @@ def step_zimage_weights(ssh, st):
     started = time.time()
     while not st.cancelled:
         time.sleep(12)
+        # Labelled, not positional. Reading these by position was a real
+        # fault: du on a directory that does not exist prints nothing, the
+        # `|| echo 0` never fires because cut succeeds, and the two numbers
+        # shift up. The step then read the source's download progress as the
+        # output's completion, called the conversion finished, and deleted
+        # nineteen gigabytes of source that was still arriving.
         rc, out = ssh.run(
-            f"du -sm {ZIMAGE_BF16} 2>/dev/null | cut -f1 || echo 0\n"
-            f"du -sm {CACHE}/models--Tongyi-MAI--Z-Image-Turbo 2>/dev/null | cut -f1 || echo 0\n"
+            f"echo MADE=$(du -sm {ZIMAGE_BF16} 2>/dev/null | cut -f1)\n"
+            f"echo PULLED=$(du -sm {CACHE}/models--Tongyi-MAI--Z-Image-Turbo 2>/dev/null | cut -f1)\n"
             "pgrep -f save_bf16.py >/dev/null && echo ALIVE || echo GONE\n",
             timeout=300)
-        nums = [int(x) for x in out.split() if x.isdigit()]
-        made = nums[0] if nums else 0
-        pulled = nums[1] if len(nums) > 1 else 0
+        vals = {}
+        for line in out.splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                vals[k.strip()] = int(v.strip()) if v.strip().isdigit() else 0
+        made, pulled = vals.get("MADE", 0), vals.get("PULLED", 0)
         st.facts["zimage"] = f"{pulled} MB fetched, {made} MB written"
         # Two thirds of the wait is the download, a third the write.
         st.step_progress("zimage_weights",
@@ -538,10 +557,13 @@ def step_download(ssh, st):
             "cat > /tmp/dl.py <<'PY'\n"
             "import os, sys\n"
             "repo = sys.argv[1]\n"
+            "# Anything after the repo id is an allow-list. Without one, a repository\n"
+            "# of forty-five adapters arrives whole.\n"
+            "only = sys.argv[2:] or None\n"
             "os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'\n"
             "from huggingface_hub import snapshot_download\n"
             "try:\n"
-            "    print(snapshot_download(repo, max_workers=8), flush=True)\n"
+            "    print(snapshot_download(repo, allow_patterns=only, max_workers=8), flush=True)\n"
             "except Exception as exc:\n"
             "    print(f'hf_transfer failed: {exc}', flush=True)\n"
             "    os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '0'\n"
@@ -551,10 +573,14 @@ def step_download(ssh, st):
             "    importlib.reload(fd)\n"
             "    from huggingface_hub import snapshot_download as sd\n"
             "    print('falling back to the plain path', flush=True)\n"
-            "    print(sd(repo), flush=True)\n"
+            "    print(sd(repo, allow_patterns=only), flush=True)\n"
             "PY\n"
             f"setsid nohup python /tmp/dl.py {shlex.quote(repo)} "
-            f"  > /workspace/.admin_dl.log 2>&1 < /dev/null &\n"
+            # Only Lightning needs narrowing; the checkpoints are one model
+            # each and an allow-list there would be a way to miss a shard.
+            + ("".join(shlex.quote(f) + " " for f in LIGHTNING_FILES)
+               if repo == MODELS["lightning"][0] else "")
+            + "  > /workspace/.admin_dl.log 2>&1 < /dev/null &\n"
             "echo started\n", timeout=180)
         if "ADOPTED" in out:
             st.log(f"{repo}: a download is already running; watching it")
