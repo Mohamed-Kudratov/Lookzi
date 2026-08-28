@@ -147,8 +147,16 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
 # information the reference does not carry" is written in hero.py for the same
 # reason. Appended rather than prepended, so the customer's own words lead.
 SCENE_FRAMING = ("full body from head to feet, whole figure in frame with the "
-                 "feet visible, standing, facing the camera, "
+                 "feet visible, the person close to the camera and filling most "
+                 "of the frame, standing, facing the camera, "
                  "photorealistic, sharp focus, natural light")
+
+# Guidance stays at zero and is not offered. Z-Image Turbo is distilled for it;
+# measured on the pod at 1.5 the picture darkens, at 3.0 the blacks crush, and
+# at 5.0 it burns out entirely -- and every step above zero costs 6.4s against
+# 3.8s for no gain. The prompt is followed perfectly well at zero: asked for a
+# blond man it produced one.
+SCENE_GUIDANCE = 0.0
 
 
 @app.post("/prompt")
@@ -177,7 +185,7 @@ def from_prompt(prompt: str = Form(...), seed: int = Form(0),
     with _gpu:
         try:
             img = _pipe(prompt=full, height=HEIGHT, width=WIDTH,
-                        num_inference_steps=STEPS, guidance_scale=0.0,
+                        num_inference_steps=STEPS, guidance_scale=SCENE_GUIDANCE,
                         generator=torch.Generator("cuda").manual_seed(int(seed))
                         ).images[0]
         except Exception as exc:                              # noqa: BLE001
