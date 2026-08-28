@@ -70,6 +70,13 @@ MODELS = {
 # minute is the whole point; on 2026-08-28 it was found after an hour.
 VOLUME_SLOW_MBS = 100.0
 
+# Where things live on the volume.
+CACHE = "/workspace/.cache/huggingface/hub"
+# Z-Image is published in fp32 and loads at 584 s that way. The bf16 copy is
+# made once, from the fp32, and is what every load actually reads: same
+# weights, half the bytes off a network filesystem, one second instead.
+ZIMAGE_BF16 = "/workspace/models/Z-Image-Turbo-bf16"
+
 
 # ---------------------------------------------------------------------------
 # talking to the pod
@@ -335,28 +342,51 @@ def step_verify(ssh, st):
 
 
 def step_weights(ssh, st):
+    """What the volume already holds, read before anything depends on it.
+
+    Moved to the front. It used to run eighth, so a fresh volume announced
+    itself only after seven steps of setup -- and the thing a person wants to
+    know when they press start is whether this is a five minute run or a forty
+    minute one.
+    """
     checks = "\n".join(
-        f"echo {k}=$(du -sm /workspace/.cache/huggingface/hub/{d} 2>/dev/null "
-        f"| cut -f1 || echo 0)" for k, (_, d, _) in MODELS.items())
-    rc, out = ssh.run(
-        _env_prefix() + checks + "\n"
-        f"echo LORA=$([ -f {POD_REPO}/weights/pytorch_lora_weights.safetensors ] "
-        "&& echo yes || echo no)\n"
-        f"echo DWPOSE=$([ -f {POD_REPO}/checkpoints/dw-ll_ucoco_384.onnx ] "
-        "&& echo yes || echo no)\n", timeout=300)
+        f"echo {k}=$(du -sm {H} 2>/dev/null | cut -f1 || echo 0)"
+        for k, H in (("4bit", CACHE + "/models--ovedrive--Qwen-Image-Edit-2509-4bit"),
+                     ("bf16", CACHE + "/models--Qwen--Qwen-Image-Edit-2509"),
+                     ("lightning", CACHE + "/models--lightx2v--Qwen-Image-Lightning"),
+                     ("zimage_fp32", CACHE + "/models--Tongyi-MAI--Z-Image-Turbo"),
+                     ("zimage_bf16", ZIMAGE_BF16)))
+    rc, out = ssh.run(_env_prefix() + checks + "\n"
+                      "echo FREE=$(df -BG --output=avail /workspace | tail -1 | tr -d ' G')\n",
+                      timeout=420)
     st.log(out)
     have = {}
     for line in out.splitlines():
         if "=" in line:
             k, v = line.split("=", 1)
-            have[k.strip().lower()] = v.strip()
+            k = k.strip().lower()
+            try:
+                have[k] = int(v.strip() or 0)
+            except ValueError:
+                have[k] = 0
     st.facts["weights"] = have
-    # The LoRA and the pose model are small and ship in the repository, so a
-    # missing one means the clone is wrong, not that a download is pending.
-    if have.get("lora") == "no":
-        st.warn("the try-on LoRA is missing from the clone")
-    if have.get("dwpose") == "no":
-        st.warn("the DWPose checkpoints are missing; poses cannot be extracted")
+    st.facts["volume_free_gb"] = have.pop("free", None)
+
+    want = st.options.get("model", "4bit")
+    need = []
+    if have.get(want, 0) < MODELS[want][2] * 0.97:
+        need.append(f"{MODELS[want][0]} ({MODELS[want][2] // 1000} GB)")
+    if have.get("lightning", 0) < 1500:
+        need.append("the Lightning adapter (1.6 GB)")
+    if have.get("zimage_bf16", 0) < 18000:
+        need.append("Z-Image (31 GB down, 20 GB kept)")
+
+    if need:
+        st.log("to fetch: " + ", ".join(need))
+        st.note("weights", "needs " + str(len(need)) + " download(s)")
+    else:
+        st.log("every model this pod needs is already on the volume")
+        st.note("weights", "all present")
 
 
 def _ensure_dwpose(ssh, st):
@@ -401,6 +431,69 @@ def _ensure_dwpose(ssh, st):
         raise PodError("could not obtain the DWPose checkpoints:\n" + out[-500:])
     st.facts.setdefault("weights", {})["dwpose"] = "yes"
     st.resolve("DWPose")
+
+
+def step_zimage_weights(ssh, st):
+    """Get Z-Image onto a volume that has never seen it.
+
+    The bf16 copy cannot be downloaded: it does not exist anywhere but here.
+    The published repository is fp32, and the copy is written from it once.
+    So on a fresh volume this is download 31 GB, write 20, delete the 31 --
+    and the deletion happens immediately, before anything else is fetched,
+    because 51 GB is the peak and a 60 GB volume has no room for the peak and
+    the try-on checkpoint at the same time.
+    """
+    have = st.facts.get("weights", {})
+    if have.get("zimage_bf16", 0) >= 18000:
+        st.log("the Z-Image bf16 copy is already here")
+        st.note("zimage_weights", "already here")
+        return
+
+    rc, out = ssh.run(
+        "test -x /opt/zimage-venv/bin/python && echo HAVE || echo NONE", timeout=120)
+    if "HAVE" not in out:
+        # The conversion runs in that interpreter, so the venv has to exist
+        # first. Ordering the steps the other way round was tried and the
+        # error it produced blamed the weights.
+        st.log("building the venv first; the conversion runs inside it")
+        step_zimage(ssh, st)
+
+    st.log("fetching Z-Image (31 GB) and writing the bf16 copy (20 GB)")
+    ssh.run(
+        _env_prefix() +
+        f"cd {POD_REPO}\n"
+        "setsid nohup /opt/zimage-venv/bin/python elements/save_bf16.py "
+        "  > /workspace/.zimage_convert.log 2>&1 < /dev/null &\n"
+        "echo started\n", timeout=180)
+
+    started = time.time()
+    while not st.cancelled:
+        time.sleep(12)
+        rc, out = ssh.run(
+            f"du -sm {ZIMAGE_BF16} 2>/dev/null | cut -f1 || echo 0\n"
+            f"du -sm {CACHE}/models--Tongyi-MAI--Z-Image-Turbo 2>/dev/null | cut -f1 || echo 0\n"
+            "pgrep -f save_bf16.py >/dev/null && echo ALIVE || echo GONE\n",
+            timeout=300)
+        nums = [int(x) for x in out.split() if x.isdigit()]
+        made = nums[0] if nums else 0
+        pulled = nums[1] if len(nums) > 1 else 0
+        st.facts["zimage"] = f"{pulled} MB fetched, {made} MB written"
+        # Two thirds of the wait is the download, a third the write.
+        st.step_progress("zimage_weights",
+                         min(0.97, (pulled / 31000) * 0.66 + (made / 20000) * 0.34))
+        if made >= 18000:
+            break
+        if "GONE" in out:
+            rc, tail = ssh.run("tail -15 /workspace/.zimage_convert.log", timeout=180)
+            raise PodError("the Z-Image conversion stopped:\n" + tail[-700:])
+
+    # The fp32 goes now, not later. It is 31 GB of source for a copy that has
+    # been written, and leaving it is what makes a 60 GB volume too small.
+    rc, out = ssh.run(
+        f"rm -rf {CACHE}/models--Tongyi-MAI--Z-Image-Turbo\n"
+        "echo FREE=$(df -BG --output=avail /workspace | tail -1 | tr -d ' G')\n",
+        timeout=420)
+    st.log("removed the fp32 source. " + out.strip())
 
 
 def step_download(ssh, st):
@@ -570,23 +663,15 @@ def step_zimage(ssh, st):
     satisfies both, so it lives in its own venv -- and that venv sits on the
     container disk, which means it is gone after every migration.
 
-    Skipped when the weights are not on the volume: a four minute build for a
-    model that would then have nothing to load helps nobody.
+    Built whether or not the weights are here yet: the conversion that produces
+    them runs in this interpreter.
     """
-    rc, out = ssh.run(
-        "ls -d /workspace/models/Z-Image-Turbo-bf16 2>/dev/null "
-        "|| ls -d /workspace/.cache/huggingface/hub/models--Tongyi-MAI--Z-Image-Turbo "
-        "2>/dev/null || echo NONE", timeout=180)
-    if "NONE" in out:
-        st.warn("no Z-Image weights on the volume, so making models and scenes "
-                "will not work on this pod")
-        return
-
     rc, out = ssh.run(
         "test -x /opt/zimage-venv/bin/python && echo HAVE || echo BUILD",
         timeout=120)
     if "HAVE" in out:
         st.log("the z-image venv is already here")
+        st.note("zimage", "already built")
     else:
         st.log("building the z-image venv (about four minutes, once per pod)")
         ssh.run(
@@ -658,17 +743,20 @@ STEPS = [
     Step("inspect", "Inspect", 8, step_inspect, "GPU, disk, CPU quota"),
     Step("volume", "Measure the volume", 40, step_volume,
          "read speed, before anything depends on it"),
+    Step("weights", "What the volume holds", 20, step_weights,
+         "read first, so you know if this is five minutes or forty"),
     Step("code", "Clone the code", 25, step_code, "to local disk, not the volume"),
     Step("packages", "Install packages", 90, step_packages, "pip"),
     Step("fork", "Install the fork", 60, step_fork, "from the cached wheel"),
     Step("verify", "Verify the stack", 20, step_verify, "imports and CUDA"),
-    Step("weights", "Check the weights", 15, step_weights, "what the volume holds"),
+    Step("zimage", "Build the model maker", 260, step_zimage,
+         "a second interpreter; the two stacks cannot share one"),
+    Step("zimage_weights", "Get Z-Image", 900, step_zimage_weights,
+         "31 GB down, 20 GB kept, the rest deleted at once"),
     Step("download", "Download what is missing", 420, step_download,
          "measured in bytes"),
     Step("warm", "Load and generate", 360, step_warm,
          "one real image, so ready means ready"),
-    Step("zimage", "Build the model maker", 260, step_zimage,
-         "a second interpreter; the two stacks cannot share one"),
     Step("serve", "Start serving", 45, step_serve,
          "both servers, and the address the bridge needs"),
 ]
@@ -702,7 +790,7 @@ class State:
             self.started_at, self.finished_at = time.time(), 0.0
             self.facts, self.warnings, self.lines = {}, [], []
             self.steps = {s.key: {"state": "waiting", "progress": 0.0,
-                                  "seconds": 0.0} for s in STEPS}
+                                  "seconds": 0.0, "note": ""} for s in STEPS}
 
     def log(self, text):
         with self._lock:
@@ -724,6 +812,16 @@ class State:
         """
         with self._lock:
             self.warnings = [w for w in self.warnings if fragment not in w]
+
+    def note(self, key, text):
+        """Why a step took no time, said where the step is.
+
+        A run where seven of twelve steps finish instantly looks broken unless
+        each one says it found its work already done.
+        """
+        with self._lock:
+            if key in self.steps:
+                self.steps[key]["note"] = text
 
     def step_progress(self, key, value):
         with self._lock:

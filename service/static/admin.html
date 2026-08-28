@@ -273,7 +273,8 @@ function renderSteps(list){
       <span class="mark">${ICON[s.state] || ''}</span>
       <span class="sbody">
         <span class="stitle"><b>${esc(s.title)}</b>${
-          s.seconds ? `<em>${s.seconds}s</em>` : ''}</span>
+          s.note ? `<em>${esc(s.note)}</em>`
+                 : (s.seconds ? `<em>${s.seconds}s</em>` : '')}</span>
         <span class="sdetail">${esc(s.detail || '')}</span>
         <span class="sbar"><i style="width:${Math.round((s.progress||0)*100)}%"></i></span>
       </span>
@@ -299,15 +300,22 @@ function factRows(f){
   add('CPU quota', f.cores ? `${f.cores} of ${f.proc} advertised` : '');
   add('Commit', f.commit);
   add('torch', f.torch); add('diffusers', f.diffusers); add('peft', f.peft);
+  if (f.volume_free_gb) add('Volume free', `${f.volume_free_gb} GB`);
   if (f.weights) {
     const w = f.weights;
-    const mb = k => w[k] && w[k] !== '0' ? `${w[k]} MB` : 'absent';
-    add('4-bit', mb('4bit'), w['4bit'] > 15000 ? 'good' : '');
-    add('bf16', mb('bf16'), w['bf16'] > 55000 ? 'good' : '');
-    add('Lightning', mb('lightning'), w['lightning'] > 1500 ? 'good' : '');
-    add('LoRA', w.lora, w.lora === 'yes' ? 'good' : 'bad');
-    add('DWPose', w.dwpose, w.dwpose === 'yes' ? 'good' : 'bad');
+    const gb = (k, need) => {
+      const v = Number(w[k] || 0);
+      return [v ? `${(v / 1024).toFixed(1)} GB` : 'not here',
+              v >= need ? 'good' : (v ? 'warn' : 'bad')];
+    };
+    [['4-bit try-on', '4bit', 15000],
+     ['Z-Image bf16', 'zimage_bf16', 18000],
+     ['Lightning', 'lightning', 1500]].forEach(r => {
+      const [text, cls] = gb(r[1], r[2]);
+      add(r[0], text, cls);
+    });
   }
+  add('Z-Image build', f.zimage);
   add('Downloading', f.download);
   add('Model load', f.load_seconds ? `${f.load_seconds}s` : '', 'good');
   // The address the bridge needs, read off the pod rather than hunted for.
