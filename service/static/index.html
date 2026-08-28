@@ -453,7 +453,9 @@ var INPUT = {
   person:  {label: "Your photo", hint: "full body, facing the camera", key: "person_key"},
   model:   {label: "Model", hint: "who wears it"},
   look:    {label: "The look", hint: "who this model should be"},
-  prompt:  {label: "The shot", hint: "describe the person and the scene"}
+  prompt:  {label: "The shot", hint: "describe the person and the scene"},
+  "prompt?": {label: "Or describe them yourself",
+              hint: "optional — your words replace the choices above"}
 };
 
 var PROMPT_EXAMPLES = [
@@ -507,12 +509,13 @@ function drawInputs() {
   $("inputs").innerHTML = t.needs.map(function (need, i) {
     var spec = INPUT[need];
     if (!spec) return "";
+    var optional = need.slice(-1) === "?";
     var done = need === "model" ? !!pick.model_id : !!pick[spec.key];
     var head = '<span class="step-n" aria-hidden="true">' + (i + 1) + '</span>' +
       '<span class="step-h"><b>' + spec.label + '</b><span>' + spec.hint + '</span></span>';
-    if (need === "prompt") {
-      return '<li class="step" data-need="prompt" data-done="' +
-        (!!(pick.prompt || "").trim()) + '">' + head +
+    if (need === "prompt" || need === "prompt?") {
+      return '<li class="step" data-need="' + need + '" data-done="' +
+        (optional ? true : !!(pick.prompt || "").trim()) + '">' + head +
         '<textarea id="prompt" rows="4" placeholder="' +
         esc(PROMPT_EXAMPLES[0]) + '">' + esc(pick.prompt || "") + '</textarea>' +
         '<div class="examples">' + PROMPT_EXAMPLES.map(function (e, i) {
@@ -566,6 +569,7 @@ function refit() {
   if (!t) return;
   var missing = [];
   t.needs.forEach(function (n) {
+    if (n.slice(-1) === "?") return;   // offered, not required
     if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
     if (n === "person" && !pick.person_key) missing.push("your photo");
     if (n === "model" && !pick.model_id) missing.push("a model");

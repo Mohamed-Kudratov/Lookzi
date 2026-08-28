@@ -194,7 +194,10 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
             # it is never missing -- it is listed so the studio knows to draw
             # the chooser.
             "look": True, "prompt": (req.prompt or "").strip()}
-    missing = [n for n in needs if not sent.get(n)]
+    # A trailing "?" marks an input the tool will take but does not require --
+    # making a model accepts your own words instead of the choices, and a
+    # customer who does not want to write should not be blocked by an empty box.
+    missing = [n for n in needs if not n.endswith("?") and not sent.get(n)]
     if missing:
         raise HTTPException(400, f"{req.tool} needs {' and '.join(missing)}")
 

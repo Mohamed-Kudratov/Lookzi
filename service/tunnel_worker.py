@@ -274,8 +274,17 @@ def handle(job):
             raise RunPodInput(f"{job['tool']} needs a {name} and none was sent")
         files[name] = (f"{name}.png", storage.get_bytes(key))
 
+    # Making a model takes the choices, unless the customer wrote their own
+    # description -- in which case their words win and the choices are ignored.
+    # The settings are there for somebody who does not want to write; they
+    # should not stand in the way of somebody who does.
+    if job["tool"] == "model-creation" and (p.get("prompt") or "").strip():
+        path = ZBASE + "/prompt"
+
     fields = {}
-    if path.endswith("/create"):
+    if path.endswith("/prompt"):
+        fields = {"prompt": p["prompt"].strip(), "seed": int(p.get("seed", 0))}
+    elif path.endswith("/create"):
         # The choices a seller has an opinion about. Everything else varies by
         # seed, so asking twice gives two people.
         fields = {k: p.get(k) for k in ("gender", "age", "build", "look", "modest")

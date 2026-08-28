@@ -40,7 +40,7 @@ TOOLS = {
     "model-creation": dict(
         label="Make a new model",
         blurb="A model that belongs to you alone.",
-        needs=["look"], cost=4, ready=True),
+        needs=["look", "prompt?"], cost=4, ready=True),
     "short-video": dict(
         label="Short video",
         blurb="Five or ten seconds of motion from a finished image.",
