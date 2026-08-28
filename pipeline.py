@@ -730,7 +730,19 @@ class LayeringVTONPipeline:
         guidance_scale: float = None,
         seed: int = 42,
         progress_callback=None,
+        raw_prompt: str = None,
+        adapters: bool = True,
     ):
+        """raw_prompt and adapters exist for one experiment and one tool.
+
+        The description a caller passes is embedded in a fixed sentence about a
+        person, a garment and a pose, and the try-on adapter was trained on
+        exactly that shape -- which is why arbitrary wording does nothing to the
+        result. raw_prompt replaces the sentence outright; adapters=False takes
+        the try-on training off and leaves the base image editor underneath.
+
+        Both default to the behaviour every existing caller already gets.
+        """
         description = apply_mode(mode, description)
 
         # Lightning is distilled for a fixed step count and for CFG 1.0; running
@@ -764,7 +776,7 @@ class LayeringVTONPipeline:
             ]
         ]
 
-        full_description = f"Edit the person in the first image based on the garment in the second image: {description.lower()} And change the pose of the person in the first image to the pose in the third image"
+        full_description = raw_prompt or f"Edit the person in the first image based on the garment in the second image: {description.lower()} And change the pose of the person in the first image to the pose in the third image"
 
         # --- stage 1: VAE encoding (VAE is small enough to stay resident) ---
         pose_image_latents = compute_image_tokens_by_vae(
@@ -880,65 +892,76 @@ class LayeringVTONPipeline:
         else:
             guidance = None
 
-        self.noise_scheduler.set_begin_index(0)
-        for i, t in enumerate(tqdm(timesteps, desc="Sampling", leave=False)):
-            timestep = t.expand(latents.shape[0]).to(latents.dtype)
+        # The try-on training, off on request. Underneath it is the base image
+        # editor, which does follow instructions -- the adapter is what makes
+        # this a garment-compositing model and deaf to everything else.
+        toggled = False
+        if not adapters and hasattr(self.transformer, "disable_adapters"):
+            self.transformer.disable_adapters()
+            toggled = True
+        try:
+            self.noise_scheduler.set_begin_index(0)
+            for i, t in enumerate(tqdm(timesteps, desc="Sampling", leave=False)):
+                timestep = t.expand(latents.shape[0]).to(latents.dtype)
 
-            all_packed_latents = torch.cat(
-                [
-                    latents,
-                    packed_person_image_latents,
-                    packed_garment_image_latents,
-                    packed_pose_image_latents,
-                ],
-                dim=1
-            )
+                all_packed_latents = torch.cat(
+                    [
+                        latents,
+                        packed_person_image_latents,
+                        packed_garment_image_latents,
+                        packed_pose_image_latents,
+                    ],
+                    dim=1
+                )
 
-            with self.transformer.cache_context("cond"):
-                noise_pred = self.transformer(
-                    hidden_states=all_packed_latents,
-                    timestep=timestep / 1000,
-                    guidance=guidance,
-                    encoder_hidden_states=prompt_embeds,
-                    encoder_hidden_states_mask=prompt_embeds_mask,
-                    img_shapes=img_shapes * batch_size,
-                    txt_seq_lens=prompt_embeds_mask.sum(dim=1).tolist(),
-                    attention_kwargs=None,
-                    return_dict=False,
-                )[0]
-                noise_pred = noise_pred[:, : latents.size(1)]
-                noise_pred = noise_pred.to(latents.dtype)
-
-            if do_true_cfg:
-                with self.transformer.cache_context("uncond"):
-                    neg_noise_pred = self.transformer(
+                with self.transformer.cache_context("cond"):
+                    noise_pred = self.transformer(
                         hidden_states=all_packed_latents,
                         timestep=timestep / 1000,
                         guidance=guidance,
-                        encoder_hidden_states_mask=negative_prompt_embeds_mask,
-                        encoder_hidden_states=negative_prompt_embeds,
+                        encoder_hidden_states=prompt_embeds,
+                        encoder_hidden_states_mask=prompt_embeds_mask,
                         img_shapes=img_shapes * batch_size,
-                        txt_seq_lens=negative_prompt_embeds_mask.sum(dim=1).tolist(),
+                        txt_seq_lens=prompt_embeds_mask.sum(dim=1).tolist(),
                         attention_kwargs=None,
                         return_dict=False,
                     )[0]
-                    neg_noise_pred = neg_noise_pred[:, : latents.size(1)]
-                    neg_noise_pred = neg_noise_pred.to(latents.dtype)
+                    noise_pred = noise_pred[:, : latents.size(1)]
+                    noise_pred = noise_pred.to(latents.dtype)
 
-                # Done in fp32: torch.norm over a 3072-wide fp16 vector can
-                # overflow to inf on Turing, which turns the whole latent NaN.
-                cond32 = noise_pred.float()
-                neg32 = neg_noise_pred.float()
-                comb_pred = neg32 + true_cfg_scale * (cond32 - neg32)
-                cond_norm = torch.norm(cond32, dim=-1, keepdim=True)
-                noise_norm = torch.norm(comb_pred, dim=-1, keepdim=True)
-                noise_pred = (comb_pred * (cond_norm / noise_norm)).to(latents.dtype)
+                if do_true_cfg:
+                    with self.transformer.cache_context("uncond"):
+                        neg_noise_pred = self.transformer(
+                            hidden_states=all_packed_latents,
+                            timestep=timestep / 1000,
+                            guidance=guidance,
+                            encoder_hidden_states_mask=negative_prompt_embeds_mask,
+                            encoder_hidden_states=negative_prompt_embeds,
+                            img_shapes=img_shapes * batch_size,
+                            txt_seq_lens=negative_prompt_embeds_mask.sum(dim=1).tolist(),
+                            attention_kwargs=None,
+                            return_dict=False,
+                        )[0]
+                        neg_noise_pred = neg_noise_pred[:, : latents.size(1)]
+                        neg_noise_pred = neg_noise_pred.to(latents.dtype)
 
-            latents = self.noise_scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+                    # Done in fp32: torch.norm over a 3072-wide fp16 vector can
+                    # overflow to inf on Turing, which turns the whole latent NaN.
+                    cond32 = noise_pred.float()
+                    neg32 = neg_noise_pred.float()
+                    comb_pred = neg32 + true_cfg_scale * (cond32 - neg32)
+                    cond_norm = torch.norm(cond32, dim=-1, keepdim=True)
+                    noise_norm = torch.norm(comb_pred, dim=-1, keepdim=True)
+                    noise_pred = (comb_pred * (cond_norm / noise_norm)).to(latents.dtype)
 
-            if progress_callback is not None:
-                progress_callback(i + 1, len(timesteps))
+                latents = self.noise_scheduler.step(noise_pred, t, latents, return_dict=False)[0]
 
+                if progress_callback is not None:
+                    progress_callback(i + 1, len(timesteps))
+
+        finally:
+            if toggled:
+                self.transformer.enable_adapters()
         latents = _unpack_latents(
             latents=latents, height=img_height, width=img_width, vae_scale_factor=self.vae_scale_factor
         )

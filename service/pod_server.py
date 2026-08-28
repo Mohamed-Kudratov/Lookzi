@@ -228,6 +228,67 @@ def packshot(garment: UploadFile = File(...),
                              "X-Width": str(size[0]), "X-Height": str(size[1])})
 
 
+# ---------------------------------------------------------------------------
+# enhance
+#
+# A packshot is not only a cut-out. A seller photographs a jumper on a bed
+# under a ceiling light and wants back something that belongs in a catalogue:
+# creases gone, colour honest, lighting even. Segmentation cannot do that.
+#
+# The base model can. Underneath the try-on adapter is Qwen-Image-Edit, an
+# instruction-following editor -- the adapter is what makes it a garment
+# compositor and deaf to everything else. So this turns the adapter off, sends
+# the garment in all three image slots, and gives the model a plain instruction
+# instead of the try-on template.
+
+ENHANCE_PROMPT = (
+    "Retouch this garment into a clean catalogue product photograph. Remove "
+    "creases and wrinkles, even out the lighting, keep the colour, the fabric "
+    "texture, the cut and every detail exactly as they are. Do not change the "
+    "shape of the garment and do not add or remove any part of it."
+)
+
+
+@app.post("/enhance")
+def enhance(garment: UploadFile = File(...),
+            instruction: str = Form(""),
+            seed: int = Form(42),
+            steps: int = Form(8)):
+    if _error:
+        raise HTTPException(503, f"the model did not load: {_error}")
+    if _pipe is None:
+        raise HTTPException(503, "the model is still loading")
+
+    from utils import pad_to_aspect_ratio
+
+    img = _read(garment, "garment")
+    # The same picture in every slot: the model is being asked to edit one
+    # image, and the three-slot shape is the pipeline's, not the task's.
+    padded = pad_to_aspect_ratio(img, target_size=(512, 896), pad_color=(255, 255, 255))
+
+    started = time.time()
+    with _gpu:
+        try:
+            out = _pipe(person_img=padded, garment_img=padded, pose_img=padded,
+                        description="", mode=None, seed=int(seed),
+                        num_inference_steps=int(steps),
+                        raw_prompt=instruction.strip() or ENHANCE_PROMPT,
+                        adapters=False)
+        except Exception as exc:                              # noqa: BLE001
+            _stats["failed"] += 1
+            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+    elapsed = round(time.time() - started, 2)
+    _stats["served"] += 1
+    _stats["seconds"] += elapsed
+
+    buf = io.BytesIO()
+    out.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"X-Seconds": str(elapsed),
+                             "X-Width": str(out.width), "X-Height": str(out.height)})
+
+
+
 def main():
     import uvicorn
     port = int(os.environ.get("POD_SERVER_PORT", "8000"))
