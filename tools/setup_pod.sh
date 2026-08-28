@@ -162,6 +162,9 @@ if [ "${1:-}" = "--zimage" ] && [ ! -d /opt/zimage-venv ]; then
     /opt/zimage-venv/bin/pip install -q "git+https://github.com/huggingface/diffusers"
     /opt/zimage-venv/bin/pip install -q accelerate safetensors sentencepiece protobuf pillow
     /opt/zimage-venv/bin/pip install -q --upgrade transformers huggingface_hub
+    # This venv also serves HTTP: zimage_server.py is a second process on the
+    # same card, because the two stacks cannot share an interpreter.
+    /opt/zimage-venv/bin/pip install -q fastapi "uvicorn[standard]" python-multipart
 fi
 
 echo "=== ready ==="
