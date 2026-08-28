@@ -46,7 +46,12 @@ install_fork() {
     # the next pod installs one file and never unpacks a source tree at all.
     mkdir -p "$WHEELS"
     local wheel
-    wheel=$(ls -1t "$WHEELS"/diffusers-*.whl 2>/dev/null | head -1)
+    # `|| true` is load-bearing: under `set -o pipefail` an ls that
+    # matches nothing fails the whole pipeline, the assignment inherits
+    # that status, and `set -e` kills the script. So the very first run
+    # on an empty cache -- the only run that needs this branch -- was the
+    # one that could never reach it.
+    wheel=$(ls -1t "$WHEELS"/diffusers-*.whl 2>/dev/null | head -1 || true)
 
     pip uninstall -q -y diffusers 2>/dev/null || true
     if [ -n "$wheel" ]; then
