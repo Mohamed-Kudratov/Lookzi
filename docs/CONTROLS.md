@@ -70,6 +70,46 @@ like the customers' customers. That is what a seller in Tashkent needs and it
 is what we do well. Adding an inert prompt box would not widen it; it would
 just make the narrow thing look unreliable.
 
+## The try-on layers, and words do not change that
+
+Reported twice: a polo comes back worn over the shirt the model already had on,
+the old sleeves showing below the new ones. It is intermittent -- four
+deliberate attempts to reproduce it all came back clean -- but when it happens
+it is unmistakable.
+
+Three things were tried on the pod.
+
+**Wording.** Four phrasings of the same job: nothing at all, `mode=upper` which
+becomes "swap the top for the garment", an explicit "swap the top for the
+sweater", and an explicit "add the sweater". Four identical images, all showing
+the base layer under the new garment. The model reads the garment image and
+ignores the text, which this document already measured four other ways.
+
+**Clearing the torso first.** Paint the chest a flat grey before the try-on, so
+there is nothing to layer over. Worse: the model treats the gap as damage to
+repair, invents a different shirt with pockets and rolled sleeves, and does not
+apply the garment at all. This LoRA composites onto a clothed person; it does
+not fill holes.
+
+**A minimal base layer.** A model wearing a fitted sleeveless top takes a
+garment cleanly every time, because there is nothing that can poke out from
+under it. This is what the competitor's model images do, and it is why theirs
+never show the problem.
+
+So the scene tool now builds its person in a sleeveless top. It removes the
+failure mode rather than fixing a mechanism anybody has been able to observe on
+demand, and that distinction is worth keeping in mind.
+
+Two consequences worth acting on:
+
+- The roster wears white tees with sleeves and a hem. A short-sleeved garment
+  over one of those is the exact case that fails. Re-dressing the thirteen in
+  fitted sleeveless tops -- via the try-on pipeline itself, which preserves the
+  face -- would close it for product-to-model too.
+- Layering is right for outerwear and wrong for base layers. It is a capability
+  as much as a defect, and "put this jacket over what they are wearing" is a
+  thing a seller wants.
+
 ## What was not tested
 
 - Whether a longer, more specific prompt at 40 undistilled steps behaves
