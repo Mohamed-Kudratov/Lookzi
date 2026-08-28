@@ -69,6 +69,25 @@ for virtual try-on is about $0.04.
 | `git reset --hard` restoring the diffusers tree | minutes |
 | Same, with the tree excluded by sparse-checkout | **1 s** |
 
+**These numbers are weather, not physics.** On 2026-08-28 the same volume read
+at **16 MB/s** -- forty times slower -- for a whole session. Small writes stayed
+normal, so it was reads specifically. A model load that takes four minutes at
+655 MB/s takes fifty-six at 16, and one Lightning adapter load stalled
+completely: 45 seconds with `read_bytes` unmoved, one thread parked in
+`folio_wait_bit_common`, which is the kernel waiting on an mmap page that never
+arrived.
+
+Nothing about that is fixable from inside the pod, and it makes the network
+volume a single point of failure for load time. The container's local disk
+measured 3.4 GB/s the same minute. That is the argument for keeping the
+checkpoint small enough to live on local NVMe, and it is the same architecture
+serverless needs anyway.
+
+Downloads throttle too, and separately. A fresh pull of the 4-bit checkpoint
+ran at 36 MB/s for about 75 seconds and then settled to 2 MB/s -- to the local
+disk, so not the volume's fault. Unauthenticated Hugging Face traffic is rate
+limited; a token is the lever, not more patience.
+
 The volume is fast in bulk and slow at everything else. safetensors loads
 through mmap, which becomes a long tail of small page faults over a network
 filesystem, and thousands of tiny files -- a git checkout, a pip install -- is
