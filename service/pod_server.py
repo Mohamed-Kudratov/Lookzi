@@ -185,32 +185,45 @@ def cutter():
     return _cutter
 
 
-def _correct(img):
+def _correct(img, mask=None):
     """Fix what a phone under a ceiling light gets wrong.
 
-    Not retouching -- nothing is invented here. A dim yellow room throws the
-    white balance and crushes the exposure, and both are measurable properties
-    of the pixels rather than judgements about the garment. Generative
-    retouching was tried and does not work in this configuration: the model
-    kept the bedroom and turned a navy t-shirt orange. See docs/CONTROLS.md.
+    Not retouching -- nothing is invented. A dim yellow room throws the white
+    balance and dulls the contrast, and both are measurable properties of the
+    pixels rather than judgements about the garment. Generative retouching was
+    tried and does not work in this configuration: the model kept the bedroom
+    and turned a navy t-shirt orange. See docs/CONTROLS.md.
+
+    `mask` is which pixels are the garment. It matters more than it sounds: run
+    on a cut-out without it, the transparent surround reads as black, those
+    blacks own the low end, and the stretch lifts a navy t-shirt to flat grey.
     """
     import numpy as np
     a = np.asarray(img).astype(np.float32)
+    if mask is None:
+        sel = a.reshape(-1, 3)
+    else:
+        m = np.asarray(mask) > 24
+        sel = a[m]
+        if sel.size < 300:            # too little garment to measure anything by
+            return img
 
     # Grey world, damped. A garment is not a grey scene -- a genuinely red
-    # jumper should stay red -- so the correction is applied at half strength,
-    # which removes a colour cast without arguing with the product.
-    means = a.reshape(-1, 3).mean(axis=0)
-    target = means.mean()
+    # jumper should stay red -- so it is applied at half strength, which lifts a
+    # colour cast without arguing with the product.
+    means = sel.mean(axis=0)
     if means.min() > 1:
-        gain = np.clip(target / means, 0.75, 1.35)
+        gain = np.clip(means.mean() / means, 0.8, 1.25)
         a *= 1 + (gain - 1) * 0.5
+        sel = sel * (1 + (gain - 1) * 0.5)
 
-    # Stretch to the 1st and 99th percentiles rather than the extremes, so one
-    # bright reflection cannot decide the exposure for the whole picture.
-    lo, hi = np.percentile(a, 1), np.percentile(a, 99)
-    if hi - lo > 8:
-        a = (a - lo) * (255.0 / (hi - lo))
+    # Contrast from the garment's own range, and gently: a dark jumper is
+    # supposed to be dark, and stretching it to touch white is how navy became
+    # grey the first time this ran.
+    lo, hi = np.percentile(sel, 2), np.percentile(sel, 98)
+    if hi - lo > 20:
+        stretched = (a - lo) * (255.0 / (hi - lo))
+        a = a + (stretched - a) * 0.45
 
     return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))
 
@@ -243,8 +256,9 @@ def packshot(garment: UploadFile = File(...),
     # foreground -- a bag and a phone that the cut-out had dropped came back.
     # Afterwards the correction sees the garment and nothing else.
     if correct != "0":
-        rgb = _correct(cut.convert("RGB"))
-        rgb.putalpha(cut.getchannel("A"))
+        alpha = cut.getchannel("A")
+        rgb = _correct(cut.convert("RGB"), mask=alpha)
+        rgb.putalpha(alpha)
         cut = rgb
 
     canvas = Image.new("RGB", size, background)
