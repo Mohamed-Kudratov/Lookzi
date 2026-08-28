@@ -28,6 +28,11 @@ TOOLS = {
         label="Change the model",
         blurb="Your photo, same clothes and pose, a different person wearing them.",
         needs=["person", "model"], cost=1, ready=True),
+    "product-in-scene": dict(
+        label="Put it in a scene",
+        blurb="Describe the shot you want. We make the person, then dress them "
+              "in your garment.",
+        needs=["garment", "prompt"], cost=2, ready=True),
     "packshot": dict(
         label="Packshot",
         blurb="A clean catalogue cut-out of the garment on its own.",

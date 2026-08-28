@@ -174,6 +174,10 @@ class JobRequest(BaseModel):
     build: str | None = Field(None, pattern="^(slim|average|fuller)$")
     look: str | None = Field(None, pattern="^(uzbek|kazakh|tajik|slavic)$")
     modest: bool = False
+    # What the customer wants the picture to be. Only the scene tool reads it:
+    # the try-on model ignores text entirely, so offering it elsewhere would be
+    # a control that does nothing. See docs/CONTROLS.md.
+    prompt: str | None = Field(None, max_length=800)
 
 
 @app.post("/jobs", status_code=201)
@@ -189,7 +193,7 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
             # A look is four choices, and every one has a sensible default, so
             # it is never missing -- it is listed so the studio knows to draw
             # the chooser.
-            "look": True}
+            "look": True, "prompt": (req.prompt or "").strip()}
     missing = [n for n in needs if not sent.get(n)]
     if missing:
         raise HTTPException(400, f"{req.tool} needs {' and '.join(missing)}")
@@ -221,7 +225,8 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "width": 768, "height": 1024, "steps": 8,
               "gender": req.gender or "woman", "age": req.age or "20s",
               "build": req.build or "average", "look": req.look or "uzbek",
-              "modest": "true" if req.modest else "false"}
+              "modest": "true" if req.modest else "false",
+              "prompt": (req.prompt or "").strip()}
     try:
         job, charged = q.submit(
             conn, user["id"], req.tool, params, model_id=req.model_id,

@@ -141,6 +141,60 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
                  "X-Prompt": prompt[:900].replace("\n", " ")})
 
 
+# What every scene needs whatever the customer wrote. The try-on stage that
+# follows needs a whole person, front on, with the feet in frame: it cannot
+# dress a figure the picture does not contain, and "no instruction can supply
+# information the reference does not carry" is written in hero.py for the same
+# reason. Appended rather than prepended, so the customer's own words lead.
+SCENE_FRAMING = ("full body from head to feet, whole figure in frame with the "
+                 "feet visible, standing, facing the camera, "
+                 "photorealistic, sharp focus, natural light")
+
+
+@app.post("/prompt")
+def from_prompt(prompt: str = Form(...), seed: int = Form(0),
+                framing: str = Form("1")):
+    """A person and a scene, from the customer's own words.
+
+    This is what the try-on model cannot do. It reads the garment image and
+    ignores text entirely, so a prompt box in front of it would be a control
+    that does nothing (docs/CONTROLS.md). Put the prompt in front of *this*
+    model instead, and hand what it makes to the try-on stage as the person.
+    """
+    if _error:
+        raise HTTPException(503, f"the model did not load: {_error}")
+    if _pipe is None:
+        raise HTTPException(503, "the model is still loading")
+    text = (prompt or "").strip()
+    if not text:
+        raise HTTPException(400, "write something for it to make")
+    if len(text) > 800:
+        raise HTTPException(413, "that prompt is longer than the model reads")
+
+    import torch
+    full = f"{text}, {SCENE_FRAMING}" if framing != "0" else text
+    started = time.time()
+    with _gpu:
+        try:
+            img = _pipe(prompt=full, height=HEIGHT, width=WIDTH,
+                        num_inference_steps=STEPS, guidance_scale=0.0,
+                        generator=torch.Generator("cuda").manual_seed(int(seed))
+                        ).images[0]
+        except Exception as exc:                              # noqa: BLE001
+            _stats["failed"] += 1
+            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+    elapsed = round(time.time() - started, 2)
+    _stats["served"] += 1
+    _stats["seconds"] += elapsed
+
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"X-Seconds": str(elapsed), "X-Width": str(img.width),
+                             "X-Height": str(img.height),
+                             "X-Prompt": full[:900].replace("\n", " ")})
+
+
 def main():
     import uvicorn
     port = int(os.environ.get("ZIMAGE_PORT", "8001"))

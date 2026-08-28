@@ -207,9 +207,64 @@ ROUTES = {
 DEFAULT_ROUTE = ("/generate", ("person", "garment"))
 
 
+def _post(url, fields, files, timeout=None):
+    """One request to one of the pod's servers, returning bytes and headers."""
+    body, content_type = _multipart(fields, files)
+    req = urllib.request.Request(url, data=body, method="POST",
+                                 headers={"Content-Type": content_type})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout or REQUEST_TIMEOUT) as resp:
+            return resp.read(), resp.headers
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")[:300]
+        raise PodDown(f"pod returned {exc.code}: {detail}")
+    except urllib.error.URLError as exc:
+        raise PodDown(f"the tunnel dropped mid-request: {exc.reason}")
+
+
+def handle_scene(job, p):
+    """Describe the shot, then dress the person in it.
+
+    Two models and two stages, because neither can do this alone. The try-on
+    model reads the garment image and ignores text entirely, so a prompt in
+    front of it would change nothing; Z-Image answers text and knows nothing
+    about the garment. So the prompt makes the person and the scene, and the
+    try-on stage puts the seller's garment on them -- which is exactly how the
+    roster itself was built.
+    """
+    prompt = (p.get("prompt") or "").strip()
+    if not prompt:
+        raise RunPodInput("a scene needs something written about it")
+
+    person, headers = _post(f"{ZBASE}/prompt",
+                            {"prompt": prompt, "seed": int(p.get("seed", 0))}, {})
+    scene_seconds = float(headers.get("X-Seconds") or 0)
+    print(f"[bridge] {job['id']} scene in {scene_seconds}s", flush=True)
+
+    png, headers = _post(f"{BASE}/generate",
+                         {"mode": "", "description": "the garment",
+                          "seed": int(p.get("seed", 42))},
+                         {"person": ("person.png", person),
+                          "garment": ("garment.png",
+                                      storage.get_bytes(p["garment_key"]))})
+    # Both stages, because a customer waiting nineteen seconds is owed the
+    # truth about where they went.
+    total = scene_seconds + float(headers.get("X-Seconds") or 0)
+    return png, headers, round(total, 2)
+
+
 def handle(job):
     p = job["params"] or {}
     _tunnel.up()
+
+    if job["tool"] == "product-in-scene":
+        png, headers, seconds = handle_scene(job, p)
+        key = storage.key_for("results", job["user_id"])
+        storage.put_bytes(key, png)
+        return {"object_key": key, "kind": "image",
+                "width": int(headers.get("X-Width") or 0) or None,
+                "height": int(headers.get("X-Height") or 0) or None,
+                "seconds": seconds}
 
     path, wants = ROUTES.get(job["tool"], DEFAULT_ROUTE)
     files = {}

@@ -166,7 +166,18 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
 .step-h b{font-size:13px;font-weight:500}
 .step-h > span{font-size:11.5px;color:var(--ink-3)}
 .step .chosen{grid-column:2;font-size:12px;color:var(--brand);margin-top:-4px}
-.step .drop,.step .models,.step .look{grid-column:2}
+.step .drop,.step .models,.step .look,.step textarea,.step .examples{grid-column:2}
+.step textarea{width:100%;resize:vertical;min-height:84px;padding:10px 11px;
+  border-radius:10px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--ink);font:inherit;font-size:13px;line-height:1.5}
+.step textarea:focus{outline:2px solid var(--brand);outline-offset:1px;
+  border-color:transparent}
+.step textarea::placeholder{color:var(--ink-3)}
+.examples{display:grid;gap:5px;margin-top:7px}
+.examples button{cursor:pointer;font:inherit;font-size:11.5px;text-align:start;
+  padding:6px 9px;border-radius:7px;border:1px solid var(--line);
+  background:transparent;color:var(--ink-3)}
+.examples button:hover{background:var(--panel-2);color:var(--ink-2)}
 .look{display:grid;gap:9px}
 .look-row{display:grid;gap:5px}
 .look-row > span{font-size:11.5px;color:var(--ink-3)}
@@ -365,7 +376,7 @@ var TOOLS = [], MODELS = [], job = null, poll = null, health = null;
 var pick = {tool: null, garment_key: null, garment_url: null,
             person_key: null, person_url: null, model_id: null,
             gender: "woman", age: "20s", build: "average", look: "uzbek",
-            modest: "false"};
+            modest: "false", prompt: ""};
 
 // Stroked SVG on a 24 grid, one shape per tool. Emoji are not icons: they
 // render differently on every platform and carry no meaning at 19px.
@@ -428,12 +439,28 @@ function tool() { return TOOLS.find(function (t) { return t.id === pick.tool; })
 // What each input is, so the panel can be built from the tool's own list
 // rather than from rules written per tool. Adding packshot or model creation
 // is now a line in service/tools.py and nothing here.
+// The prompt is the customer's own words going back into innerHTML. Escaped
+// on the way, because a garment description containing a quote would otherwise
+// break the panel, and one containing a tag would do worse than that.
+function esc(v) {
+  return String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 var INPUT = {
   garment: {label: "Garment", hint: "the item, laid flat", key: "garment_key"},
   person:  {label: "Your photo", hint: "full body, facing the camera", key: "person_key"},
   model:   {label: "Model", hint: "who wears it"},
-  look:    {label: "The look", hint: "who this model should be"}
+  look:    {label: "The look", hint: "who this model should be"},
+  prompt:  {label: "The shot", hint: "describe the person and the scene"}
 };
+
+var PROMPT_EXAMPLES = [
+  "a man in his 30s walking among trees in autumn, golden leaves falling around him",
+  "a young woman on a Tashkent street in the evening, warm shop lights behind her",
+  "a woman in her 40s in a bright airy room, morning light through a window"
+];
 
 // The choices a seller has an opinion about. Everything else -- skin, hair,
 // the shape of the face -- varies by seed, so asking twice gives two people
@@ -483,6 +510,16 @@ function drawInputs() {
     var done = need === "model" ? !!pick.model_id : !!pick[spec.key];
     var head = '<span class="step-n" aria-hidden="true">' + (i + 1) + '</span>' +
       '<span class="step-h"><b>' + spec.label + '</b><span>' + spec.hint + '</span></span>';
+    if (need === "prompt") {
+      return '<li class="step" data-need="prompt" data-done="' +
+        (!!(pick.prompt || "").trim()) + '">' + head +
+        '<textarea id="prompt" rows="4" placeholder="' +
+        esc(PROMPT_EXAMPLES[0]) + '">' + esc(pick.prompt || "") + '</textarea>' +
+        '<div class="examples">' + PROMPT_EXAMPLES.map(function (e, i) {
+          return '<button data-example="' + i + '">' +
+            esc(e.length > 44 ? e.slice(0, 44) + "…" : e) + '</button>';
+        }).join("") + '</div></li>';
+    }
     if (need === "look") {
       return '<li class="step" data-need="look" data-done="true">' + head +
         '<div class="look">' + LOOK.map(function (row) {
@@ -532,6 +569,7 @@ function refit() {
     if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
     if (n === "person" && !pick.person_key) missing.push("your photo");
     if (n === "model" && !pick.model_id) missing.push("a model");
+    if (n === "prompt" && !(pick.prompt || "").trim()) missing.push("a description");
   });
   $("go").disabled = missing.length > 0 || !!job;
   $("go").textContent = "Generate · " + t.cost + " credit" + (t.cost === 1 ? "" : "s");
@@ -547,6 +585,15 @@ function refit() {
 // time the tool changes and listeners bound to elements would go with them.
 function wireUploads() {
   var box = $("inputs");
+  // The prompt is read as it is typed rather than redrawn, because redrawing
+  // the panel on every keystroke would take the cursor with it.
+  box.addEventListener("input", function (e) {
+    if (e.target.id !== "prompt") return;
+    pick.prompt = e.target.value;
+    var step = e.target.closest(".step");
+    if (step) step.dataset.done = String(!!pick.prompt.trim());
+    refit();
+  });
   box.addEventListener("change", function (e) {
     var input = e.target.closest('input[type=file]');
     if (input && input.files[0]) upload(input.dataset.need, input.files[0]);
@@ -568,6 +615,13 @@ function wireUploads() {
     if (e.dataTransfer.files[0]) upload(d.dataset.need, e.dataTransfer.files[0]);
   });
   box.addEventListener("click", function (e) {
+    var ex = e.target.closest("[data-example]");
+    if (ex) {
+      pick.prompt = PROMPT_EXAMPLES[+ex.dataset.example];
+      drawInputs(); refit();
+      var box = $("prompt"); if (box) { box.focus(); }
+      return;
+    }
     var look = e.target.closest("[data-look]");
     if (look) {
       pick[look.dataset.look] = look.dataset.v;
@@ -622,6 +676,7 @@ $("go").onclick = function () {
     model_id: pick.model_id || null,
     gender: pick.gender, age: pick.age, build: pick.build, look: pick.look,
     modest: pick.modest === "true",
+    prompt: pick.prompt || null,
     // A retried request must not become a second job and a second charge.
     idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
   }}).then(function (j) { watch(j.job_id); })
