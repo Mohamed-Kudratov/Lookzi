@@ -466,7 +466,11 @@ def submit(conn, chat_id, user, data):
     tool_id = data["tool"]
     tool = TOOLS[tool_id]
 
-    person_key = data.get("person_key")
+    # When the customer picked one of our models, that model is who wears it.
+    # Taking the upload first made "change the model" -- which asks for both a
+    # photograph and a model -- put the customer inside their own photograph.
+    wants_model = "model" in tool["needs"]
+    person_key = None if wants_model else data.get("person_key")
     if not person_key and data.get("model_id"):
         row = conn.execute("SELECT hero_key FROM models WHERE id = %s",
                            (data["model_id"],)).fetchone()
@@ -478,8 +482,11 @@ def submit(conn, chat_id, user, data):
         send(chat_id, "Something went missing. /start to begin again.")
         return
 
+    # Whatever was uploaded is the garment. For "change the model" that upload
+    # is a person wearing clothes, and the clothes are the point of it.
     params = {"person_key": person_key,
-              "garment_key": data.get("garment_key", person_key),
+              "garment_key": data.get("garment_key")
+                             or data.get("person_key") or person_key,
               "description": "the garment", "seed": 42,
               "width": 768, "height": 1024, "steps": 8}
     try:

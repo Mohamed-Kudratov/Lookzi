@@ -485,8 +485,14 @@ $("go").onclick = function () {
   $("go").disabled = true;
   api("/jobs", {method: "POST", body: {
     tool: pick.tool,
+    // Whatever was uploaded is the garment. For "change the model" that upload
+    // is a photograph of a person wearing clothes, and the clothes are the
+    // point of it.
     garment_key: pick.garment_key || pick.person_key,
-    person_key: pick.person_key || null,
+    // When the customer picked one of our models, that model is who wears it.
+    // Sending the upload as the person as well made them wear their own
+    // photograph, which is what "change the model" did until now.
+    person_key: t.needs.indexOf("model") >= 0 ? null : (pick.person_key || null),
     model_id: pick.model_id || null,
     // A retried request must not become a second job and a second charge.
     idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
