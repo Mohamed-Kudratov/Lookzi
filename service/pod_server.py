@@ -223,8 +223,6 @@ def packshot(garment: UploadFile = File(...),
     from rembg import remove
 
     img = _read(garment, "garment")
-    if correct != "0":
-        img = _correct(img)
     size = (width or PACKSHOT_SIZE[0], height or PACKSHOT_SIZE[1])
     started = time.time()
     try:
@@ -239,6 +237,15 @@ def packshot(garment: UploadFile = File(...),
     box = cut.getbbox()
     if box:
         cut = cut.crop(box)
+
+    # Corrected after the cut, not before. Correcting first brightens the room
+    # along with the garment, which makes the clutter beside it look more like
+    # foreground -- a bag and a phone that the cut-out had dropped came back.
+    # Afterwards the correction sees the garment and nothing else.
+    if correct != "0":
+        rgb = _correct(cut.convert("RGB"))
+        rgb.putalpha(cut.getchannel("A"))
+        cut = rgb
 
     canvas = Image.new("RGB", size, background)
     margin = 1 - 2 * PACKSHOT_MARGIN
