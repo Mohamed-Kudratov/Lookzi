@@ -13,6 +13,13 @@ measurements to `/workspace/timings.csv`, which survives the container.
 | Stock RunPod image, full setup | **601 s** |
 | Same, after the fork became a wheel | **116 s** |
 | Same, from the Lookzi Docker image | not yet measured |
+| **Whole pod to working, via the admin panel** | **258 s** |
+
+The 258 s is a pod taken from a stock template to a state where it has loaded
+the model and produced a real image, unattended, with every step measured:
+connect 2.5, inspect 2.4, volume 5.5, clone 6.6, packages 6.8, fork 5.6 (from
+the cached wheel), verify 11.9, weights 2.5, download skipped, load and
+generate 168 + 18. Everything before the model load costs under a minute.
 | Recovering the fork: `sparse-checkout disable` | minutes, and it wedged |
 | Recovering the fork: `git archive` to local disk | **0.223 s** |
 
@@ -56,6 +63,15 @@ wire were discarded on arrival. The bf16 copy pays that once.
 | Try-on, 24 steps CFG 1.0 | 30.0 s |
 | Try-on, Lightning 8-step | **14.3 s** |
 | Try-on, Lightning 4-step | 8.3 s |
+| Try-on, Lightning 8-step, **4-bit** | **17.8 s** |
+| Model load, bf16 (transformer + text encoder) | ~290 s |
+| Model load, **4-bit** | **167.7 s** |
+
+The first real numbers on the quantisation question, though not yet the answer:
+4-bit is about 24% slower per image and loads in a little over half the time.
+Speed was never the argument for it -- fitting a 48 GB card at a quarter the
+price, and a container disk rather than a network volume, is. Whether the
+pictures hold up is what eval/quantisation.py is for.
 
 Cost per image fell from $0.066 to $0.0061 across that row. The market price
 for virtual try-on is about $0.04.
@@ -65,6 +81,11 @@ for virtual try-on is about $0.04.
 | | |
 |---|---|
 | Sequential read, `dd` with `iflag=direct` | **655 MB/s** |
+| Same volume, a bad morning | **16 MB/s** |
+| Same volume, that afternoon | **930 MB/s** |
+| HF download, plain `huggingface_hub` | 1.7 MB/s |
+| HF download, same file with `curl -L` | 47 MB/s |
+| HF download, `hf_transfer` on | **43 MB/s** |
 | Write | 1.1 GB/s |
 | `git reset --hard` restoring the diffusers tree | minutes |
 | Same, with the tree excluded by sparse-checkout | **1 s** |
