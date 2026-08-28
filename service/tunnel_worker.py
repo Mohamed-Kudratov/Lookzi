@@ -49,6 +49,10 @@ REMOTE_PORT = int(os.environ.get("POD_SERVER_PORT", "8000"))
 # Generous, because it covers the model still loading on a pod that has just
 # started. The queue's own lease is fifteen minutes and this must end first.
 REQUEST_TIMEOUT = int(os.environ.get("POD_REQUEST_TIMEOUT", "600"))
+# The link to the pod drops occasionally and heals in seconds. Worth
+# waiting out rather than throwing away work somebody is waiting for.
+TUNNEL_ATTEMPTS = int(os.environ.get("POD_TUNNEL_ATTEMPTS", "4"))
+TUNNEL_BACKOFF = float(os.environ.get("POD_TUNNEL_BACKOFF", "4"))
 
 BASE = f"http://127.0.0.1:{LOCAL_PORT}"
 
@@ -90,20 +94,46 @@ class Tunnel:
         self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.PIPE)
 
-    def up(self):
-        """True once the tunnel carries traffic, opening it if it does not."""
+    def up(self, attempts=None):
+        """True once the tunnel carries traffic, opening it if it does not.
+
+        Retried, because the link to the pod drops. It happened twice in one
+        afternoon -- 'Network is unreachable' for a few seconds, over a path
+        with 220 ms of latency -- and each time a customer's job failed. The
+        credit came back, which is right, but the image did not, and a job
+        thrown away over a blip that heals in ten seconds is a bad trade.
+        """
+        attempts = attempts or TUNNEL_ATTEMPTS
         if self.proc is not None and self.proc.poll() is None and self._reaches():
             return True
-        self.close()
+
+        last = None
+        for attempt in range(1, attempts + 1):
+            self.close()
+            try:
+                self._open_once()
+                if attempt > 1:
+                    print(f"[tunnel] reopened on attempt {attempt}", flush=True)
+                return True
+            except PodDown as exc:
+                last = exc
+                if attempt < attempts:
+                    pause = TUNNEL_BACKOFF * attempt
+                    print(f"[tunnel] {exc}; retrying in {pause:.0f}s "
+                          f"({attempt}/{attempts})", flush=True)
+                    time.sleep(pause)
+        raise last
+
+    def _open_once(self):
         self._spawn()
         for _ in range(20):
             time.sleep(0.5)
             if self.proc.poll() is not None:
                 err = (self.proc.stderr.read() or b"").decode(errors="replace")
-                raise PodDown(f"ssh exited: {err.strip()[:300]}")
+                raise PodDown(f"ssh exited: {err.strip()[:200]}")
             if self._reaches():
                 print(f"[tunnel] {self.local} -> pod {self.remote}", flush=True)
-                return True
+                return
         raise PodDown(f"the tunnel opened but nothing answers on {BASE}")
 
     def _reaches(self):
