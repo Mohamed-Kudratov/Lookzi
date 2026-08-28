@@ -91,7 +91,9 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
 .canvas-head h1{font-family:Archivo;font-variation-settings:"wdth" 112,"wght" 700;
   font-size:17px;letter-spacing:-.02em;margin:0}
 .canvas-head p{margin:0;color:var(--ink-3);font-size:13px}
-.slots{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;min-height:0}
+/* One thing now: the result. The inputs moved to the panel, where the tool
+   says what they are. */
+.slots{display:grid;grid-template-columns:1fr;gap:14px;padding:18px;min-height:0}
 .slot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;
   background:var(--panel);display:grid;place-items:center;min-height:0}
 .slot.drop{border-style:dashed;cursor:pointer}
@@ -133,6 +135,37 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
 .panel{border-inline-start:1px solid var(--line);background:var(--panel);
   display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
 .panel-scroll{overflow-y:auto;padding:16px;display:grid;gap:18px;align-content:start}
+/* ---------- the input steps ---------- */
+/* Numbered, because a customer arriving at a tool should be able to see how
+   many things it wants before starting, not discover the second one after
+   finishing the first. */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.step{display:grid;grid-template-columns:22px 1fr;gap:9px 10px;align-items:start}
+.step-n{grid-row:1;width:22px;height:22px;border-radius:50%;display:grid;
+  place-items:center;font:500 11px/1 var(--mono);color:var(--ink-3);
+  border:1px solid var(--line);background:var(--panel-2)}
+.step[data-done="true"] .step-n{border-color:var(--brand);color:var(--brand)}
+.step-h{grid-row:1;display:grid;gap:1px}
+.step-h b{font-size:13px;font-weight:500}
+.step-h > span{font-size:11.5px;color:var(--ink-3)}
+.step .chosen{grid-column:2;font-size:12px;color:var(--brand);margin-top:-4px}
+.step .drop,.step .models{grid-column:2}
+.step .nothing{grid-column:1/-1;margin:0;font-size:12.5px;color:var(--ink-3)}
+
+.step .drop{position:relative;display:grid;place-items:center;cursor:pointer;
+  aspect-ratio:4/3;border:1px dashed var(--line-2);border-radius:10px;
+  background:var(--panel-2);overflow:hidden;transition:border-color .15s ease}
+.step .drop:hover{border-color:var(--brand)}
+.step .drop:focus-within{outline:2px solid var(--brand);outline-offset:2px}
+.step .drop.over{border-color:var(--brand);border-style:solid}
+.step .drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.step .drop img{width:100%;height:100%;object-fit:contain;background:var(--bg)}
+.step .drop .empty{display:grid;gap:2px;justify-items:center;text-align:center;padding:14px}
+.step .drop .empty b{font-size:13px;font-weight:500}
+.step .drop .empty span{font-size:11.5px;color:var(--ink-3)}
+.step .drop .swap{position:absolute;right:8px;bottom:8px;padding:5px 10px;
+  border-radius:7px;font-size:11.5px;background:rgba(0,0,0,.66);color:#fff;
+  pointer-events:none}
 .group{display:grid;gap:9px}
 .group > .mono{display:flex;align-items:center;gap:8px}
 .group > .mono b{color:var(--brand);font-weight:500}
@@ -240,17 +273,6 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
       </div>
 
       <div class="slots">
-        <div class="slot drop" id="slot-a">
-          <span class="tag mono" id="tag-a">Garment</span>
-          <input type="file" accept="image/*" id="file-a">
-          <div class="empty" id="empty-a">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-            <b>Drop a photo</b><span>or click to choose</span>
-          </div>
-          <img id="img-a" alt="" hidden>
-          <button class="swap" id="swap-a" hidden>Replace</button>
-        </div>
-
         <div class="slot" id="slot-b">
           <span class="tag mono">Result</span>
           <div class="empty" id="empty-b">
@@ -277,23 +299,12 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
 
     <aside class="panel">
       <div class="panel-scroll">
-        <div class="group" id="g-person" hidden>
-          <span class="mono">Your photo</span>
-          <div class="slot drop" style="aspect-ratio:4/3;min-height:0" id="slot-p">
-            <input type="file" accept="image/*" id="file-p">
-            <div class="empty" id="empty-p" style="padding:14px">
-              <b>Drop a photo</b><span>full body, facing the camera</span>
-            </div>
-            <img id="img-p" alt="" hidden>
-            <button class="swap" id="swap-p" hidden>Replace</button>
-          </div>
-        </div>
-
-        <div class="group" id="g-model">
-          <span class="mono">Model <b id="model-name"></b></span>
-          <div class="models" id="models"></div>
-        </div>
-
+        <!-- Rendered from the tool's own list of inputs. Placing them by hand
+             meant the garment lived in the canvas, the photo and the model in
+             the panel, and which appeared was decided by three separate rules
+             that disagreed: "change the model" hid the canvas entirely and
+             looked like the previous tool with its middle missing. -->
+        <ol class="steps" id="inputs"></ol>
       </div>
 
       <div class="foot">
@@ -320,7 +331,8 @@ if (!CLIENT) {
 
 var $ = function (id) { return document.getElementById(id); };
 var TOOLS = [], MODELS = [], job = null, poll = null, health = null;
-var pick = {tool: null, garment_key: null, person_key: null, model_id: null};
+var pick = {tool: null, garment_key: null, garment_url: null,
+            person_key: null, person_url: null, model_id: null};
 
 // Stroked SVG on a 24 grid, one shape per tool. Emoji are not icons: they
 // render differently on every platform and carry no meaning at 19px.
@@ -380,36 +392,80 @@ $("theme").onclick = function () {
 // between a studio and a form.
 function tool() { return TOOLS.find(function (t) { return t.id === pick.tool; }); }
 
+// What each input is, so the panel can be built from the tool's own list
+// rather than from rules written per tool. Adding packshot or model creation
+// is now a line in service/tools.py and nothing here.
+var INPUT = {
+  garment: {label: "Garment", hint: "the item, laid flat", key: "garment_key"},
+  person:  {label: "Your photo", hint: "full body, facing the camera", key: "person_key"},
+  model:   {label: "Model", hint: "who wears it"}
+};
+
 function selectTool(id) {
+  var previous = pick.tool;
   pick.tool = id;
-  pick.model_id = null;
   var t = tool();
+
+  // Keep an upload only if the new tool still wants that kind of thing. A
+  // garment is a garment whichever tool asks for it, and re-uploading it to
+  // switch tools is a chore; a photo the new tool has no use for is state that
+  // silently changes what gets generated.
+  if (previous !== id) {
+    t.needs.indexOf("garment") < 0 && (pick.garment_key = null, pick.garment_url = null);
+    t.needs.indexOf("person") < 0 && (pick.person_key = null, pick.person_url = null);
+    t.needs.indexOf("model") < 0 && (pick.model_id = null);
+  }
+
   $("tool-name").textContent = t.label;
   $("tool-blurb").textContent = t.blurb;
   [].forEach.call($("rail").querySelectorAll(".tool"), function (b) {
     b.setAttribute("aria-pressed", String(b.dataset.id === id));
   });
-
-  var needs = t.needs;
-  $("g-person").hidden = needs.indexOf("person") < 0;
-  $("g-model").hidden = needs.indexOf("model") < 0;
-  $("slot-a").hidden = needs.indexOf("garment") < 0;
-  $("tag-a").textContent = "Garment";
-
-  drawModels();
+  drawInputs();
   refit();
 }
 
+function drawInputs() {
+  var t = tool();
+  if (!t.needs.length) {
+    $("inputs").innerHTML = '<li class="step"><p class="nothing">' +
+      'Nothing to upload — press Generate.</p></li>';
+    return;
+  }
+  $("inputs").innerHTML = t.needs.map(function (need, i) {
+    var spec = INPUT[need];
+    if (!spec) return "";
+    var done = need === "model" ? !!pick.model_id : !!pick[spec.key];
+    var head = '<span class="step-n" aria-hidden="true">' + (i + 1) + '</span>' +
+      '<span class="step-h"><b>' + spec.label + '</b><span>' + spec.hint + '</span></span>';
+    if (need === "model") {
+      var chosen = MODELS.find(function (m) { return m.id === pick.model_id; });
+      return '<li class="step" data-need="model" data-done="' + done + '">' + head +
+        (chosen ? '<span class="chosen">' + chosen.display_name + '</span>' : "") +
+        '<div class="models" id="models"></div></li>';
+    }
+    var url = pick[need + "_url"];
+    return '<li class="step" data-need="' + need + '" data-done="' + done + '">' + head +
+      '<label class="drop' + (url ? " has" : "") + '" data-need="' + need + '">' +
+        '<input type="file" accept="image/*" data-need="' + need + '">' +
+        (url ? '<img src="' + url + '" alt="">' +
+               '<span class="swap">Replace</span>'
+             : '<span class="empty"><b>Drop a photo</b><span>or click to choose</span></span>') +
+      '</label></li>';
+  }).join("");
+  if (t.needs.indexOf("model") >= 0) drawModels();
+}
+
 function drawModels() {
-  $("models").innerHTML = MODELS.map(function (m) {
+  var box = $("models");
+  if (!box) return;
+  box.innerHTML = MODELS.map(function (m) {
     return '<button class="model" aria-pressed="' + (m.id === pick.model_id) + '" data-id="' + m.id + '" ' +
       'title="' + m.display_name + ', ' + m.age + '">' +
       '<span class="ph">' + (m.preview ? '<img src="' + m.preview + '" alt="' + m.display_name + '">' : '') +
       (m.hero_is_placeholder ? '<span class="sample">sample</span>' : '') + '</span>' +
       '<span class="meta"><b>' + m.display_name + '</b><span>' + m.age + '</span></span></button>';
   }).join("");
-  var chosen = MODELS.find(function (m) { return m.id === pick.model_id; });
-  $("model-name").textContent = chosen ? "· " + chosen.display_name : "";
 }
 
 // The button says what is still missing rather than sitting dead and silent.
@@ -432,53 +488,62 @@ function refit() {
 // ---- uploads -------------------------------------------------------------
 // Straight to object storage with a signed link, so a 20 MB photo never
 // passes through the web tier.
-function wire(slotId, fileId, imgId, emptyId, swapId, kind) {
-  var slot = $(slotId), input = $(fileId);
-  slot.addEventListener("click", function (e) {
-    if (e.target.closest("button") && e.target.id !== swapId) return;
-    input.click();
+// One set of handlers on the container, because the inputs are redrawn every
+// time the tool changes and listeners bound to elements would go with them.
+function wireUploads() {
+  var box = $("inputs");
+  box.addEventListener("change", function (e) {
+    var input = e.target.closest('input[type=file]');
+    if (input && input.files[0]) upload(input.dataset.need, input.files[0]);
   });
-  input.addEventListener("change", function () { if (this.files[0]) send(this.files[0]); });
   ["dragenter", "dragover"].forEach(function (ev) {
-    slot.addEventListener(ev, function (e) { e.preventDefault(); slot.classList.add("over"); });
+    box.addEventListener(ev, function (e) {
+      var d = e.target.closest(".drop"); if (!d) return;
+      e.preventDefault(); d.classList.add("over");
+    });
   });
   ["dragleave", "drop"].forEach(function (ev) {
-    slot.addEventListener(ev, function (e) { e.preventDefault(); slot.classList.remove("over"); });
+    box.addEventListener(ev, function (e) {
+      var d = e.target.closest(".drop"); if (!d) return;
+      e.preventDefault(); d.classList.remove("over");
+    });
   });
-  slot.addEventListener("drop", function (e) {
-    if (e.dataTransfer.files[0]) send(e.dataTransfer.files[0]);
+  box.addEventListener("drop", function (e) {
+    var d = e.target.closest(".drop"); if (!d) return;
+    if (e.dataTransfer.files[0]) upload(d.dataset.need, e.dataTransfer.files[0]);
   });
-
-  function send(file) {
-    var local = URL.createObjectURL(file);
-    $(imgId).src = local; $(imgId).hidden = false;
-    $(emptyId).hidden = true; $(swapId).hidden = false;
-    api("/uploads", {method: "POST", body: {kind: kind, content_type: file.type || "image/jpeg"}})
-      .then(function (u) {
-        return fetch(u.url, {method: "PUT", body: file,
-                             headers: {"Content-Type": file.type || "image/jpeg"}})
-          .then(function (r) {
-            if (!r.ok) throw new Error("upload failed (" + r.status + ")");
-            pick[kind + "_key"] = u.key;
-            refit();
-          });
-      })
-      .catch(function (e) {
-        toast(e.message, true);
-        $(imgId).hidden = true; $(emptyId).hidden = false; $(swapId).hidden = true;
-        pick[kind + "_key"] = null; refit();
-      });
-  }
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest(".model"); if (!b) return;
+    pick.model_id = b.dataset.id;
+    drawInputs(); refit();
+  });
 }
-wire("slot-a", "file-a", "img-a", "empty-a", "swap-a", "garment");
-wire("slot-p", "file-p", "img-p", "empty-p", "swap-p", "person");
+
+function upload(need, file) {
+  var type = file.type || "image/jpeg";
+  // Shown from the local file straight away. Waiting for the round trip to
+  // object storage before anything appears makes a good connection feel slow
+  // and a poor one feel broken.
+  pick[need + "_url"] = URL.createObjectURL(file);
+  drawInputs();
+  api("/uploads", {method: "POST", body: {kind: need, content_type: type}})
+    .then(function (u) {
+      return fetch(u.url, {method: "PUT", body: file, headers: {"Content-Type": type}})
+        .then(function (r) {
+          if (!r.ok) throw new Error("upload failed (" + r.status + ")");
+          pick[need + "_key"] = u.key;
+          drawInputs(); refit();
+        });
+    })
+    .catch(function (e) {
+      toast(e.message, true);
+      pick[need + "_key"] = null; pick[need + "_url"] = null;
+      drawInputs(); refit();
+    });
+}
+wireUploads();
 
 // ---- picking -------------------------------------------------------------
-$("models").addEventListener("click", function (e) {
-  var b = e.target.closest(".model"); if (!b) return;
-  pick.model_id = b.dataset.id; drawModels(); refit();
-});
-
 // ---- running -------------------------------------------------------------
 $("go").onclick = function () {
   var t = tool();
