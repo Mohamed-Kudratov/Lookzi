@@ -167,9 +167,9 @@ def _env_prefix():
         "export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 "
         "NUMEXPR_NUM_THREADS=8 TOKENIZERS_PARALLELISM=false\n"
         "export HF_HOME=/workspace/.cache/huggingface\n"
-        # Both of RunPod's preset download accelerators break large HF pulls:
-        # xet stalls past ~10 GB, hf_transfer raises mid-download.
-        "export HF_HUB_DISABLE_XET=1 HF_HUB_ENABLE_HF_TRANSFER=0\n"
+        # xet stalls past ~10 GB so it stays off. hf_transfer is decided
+        # per download rather than here -- see step_download.
+        "export HF_HUB_DISABLE_XET=1\n"
         "export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True\n")
 
 
@@ -430,10 +430,31 @@ def step_download(ssh, st):
             _env_prefix() +
             f"cd {POD_REPO}\n"
             "if pgrep -f '/tmp/dl.py' >/dev/null; then echo ADOPTED; exit 0; fi\n"
+            # hf_transfer fetches one file in parallel chunks. It was
+            # switched off across this project after raising part-way
+            # through a 57.7 GB pull, and that decision quietly cost hours:
+            # measured on the pod, the plain path managed 1.7 MB/s against
+            # curl's 47 on the same file, while hf_transfer finished the
+            # remaining 4.4 GB in 35 seconds at 43 MB/s. Try it first and
+            # fall back if it breaks -- partial blobs are kept either way,
+            # so a failure costs seconds rather than the download.
             "cat > /tmp/dl.py <<'PY'\n"
-            "import sys\n"
+            "import os, sys\n"
+            "repo = sys.argv[1]\n"
+            "os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'\n"
             "from huggingface_hub import snapshot_download\n"
-            "print(snapshot_download(sys.argv[1]), flush=True)\n"
+            "try:\n"
+            "    print(snapshot_download(repo, max_workers=8), flush=True)\n"
+            "except Exception as exc:\n"
+            "    print(f'hf_transfer failed: {exc}', flush=True)\n"
+            "    os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '0'\n"
+            "    import importlib, huggingface_hub.constants as c\n"
+            "    importlib.reload(c)\n"
+            "    import huggingface_hub.file_download as fd\n"
+            "    importlib.reload(fd)\n"
+            "    from huggingface_hub import snapshot_download as sd\n"
+            "    print('falling back to the plain path', flush=True)\n"
+            "    print(sd(repo), flush=True)\n"
             "PY\n"
             f"setsid nohup python /tmp/dl.py {shlex.quote(repo)} "
             f"  > /workspace/.admin_dl.log 2>&1 < /dev/null &\n"
