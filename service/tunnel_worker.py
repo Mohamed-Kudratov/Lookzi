@@ -221,8 +221,32 @@ def handle(job):
             "width": width, "height": height, "seconds": seconds}
 
 
+def _refuse_a_second_bridge():
+    """One bridge per local port, checked before anything else starts.
+
+    Two of these ran at once for a while, because the first survived a restart
+    that was meant to replace it. They both claimed jobs and both wanted the
+    same forwarded port, so one had a working tunnel and the other failed every
+    job it won -- intermittently, depending on which claimed first. The health
+    endpoint reported two workers ready, which was true and useless.
+    """
+    import socket
+    probe = socket.socket()
+    try:
+        probe.bind(("127.0.0.1", LOCAL_PORT))
+    except OSError:
+        raise SystemExit(
+            f"port {LOCAL_PORT} is already taken, which almost certainly"
+            " means another bridge is running. Two of them claim the same"
+            " jobs and fight over the same tunnel.\n"
+            "Stop the other one, or set POD_LOCAL_PORT for a second pod.")
+    finally:
+        probe.close()
+
+
 def main():
     global _tunnel
+    _refuse_a_second_bridge()
     storage.ensure_bucket()
     _tunnel = Tunnel(POD_SSH)
 

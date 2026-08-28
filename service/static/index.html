@@ -182,13 +182,34 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
   .tool{justify-content:center} .rail > .mono{display:none} }
 @media (max-width:820px){
   body{overflow:auto}
-  .app{grid-template-rows:56px auto}
+  /* height:100dvh on the shell is right on desktop, where the three panes
+     divide one screen and each scrolls itself. On a phone the panes stack and
+     the page must be allowed to grow, or the last one in the column -- the
+     panel holding the models and the Generate button -- is squeezed to a
+     single pixel while its contents spill out of it invisibly. */
+  .app{grid-template-rows:56px auto;height:auto;min-height:100dvh}
   .body{grid-template-columns:1fr}
   .rail{flex-direction:row;overflow-x:auto;border-inline-end:0;border-bottom:1px solid var(--line)}
   .tool{width:auto;justify-content:flex-start} .tool b{display:block}
-  .panel{border-inline-start:0;border-top:1px solid var(--line)}
+  /* The panel is a fixed-height scroll container on desktop: one flexible row
+     for the controls, one for the footer. On a phone the body has no height of
+     its own to divide, so that 1fr resolved against zero -- the panel came out
+     0.8 px tall and the thirteen models lived in a 32 px window nobody could
+     see. Here it simply flows with the page. */
+  .panel{border-inline-start:0;border-top:1px solid var(--line);
+    grid-template-rows:auto auto}
+  .panel-scroll{overflow:visible}
+  /* Generate follows the page down, because otherwise it sits below thirteen
+     model photographs and the customer has to scroll past all of them to
+     press the only button that matters. */
+  .foot{position:sticky;bottom:0;background:var(--panel);
+    box-shadow:0 -8px 24px rgba(0,0,0,.35)}
+  .canvas{grid-template-rows:auto auto auto}
   .slots{grid-template-columns:1fr}
   .slot{min-height:300px}
+  /* Two across rather than three: a third of a 375 px screen is a thumbnail
+     nobody can judge a face from. */
+  .models{grid-template-columns:repeat(2,1fr)}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
