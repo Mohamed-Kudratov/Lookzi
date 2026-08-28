@@ -19,7 +19,7 @@ import os
 import uuid
 
 import psycopg
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
@@ -234,6 +234,65 @@ def cancel_job(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
     fresh = conn.execute("SELECT credits FROM users WHERE id = %s",
                          (user["id"],)).fetchone()
     return {"status": "cancelled", "credits": fresh["credits"]}
+
+
+# ---------------------------------------------------------------------------
+# review
+#
+# Every garment anybody has tried is already kept -- nothing deletes uploads,
+# and each job records the key it used -- but kept is not the same as visible.
+# This is the page that makes the archive worth having: what went in, what came
+# out, and how long it took, for every job, ours and customers' alike.
+#
+# It reads across all accounts, so it is not a customer feature and must not
+# become reachable by accident. Set REVIEW_KEY and pass it, or leave it unset
+# and the route only answers from a private address.
+
+REVIEW_KEY = os.environ.get("REVIEW_KEY", "")
+
+
+def _may_review(request, key):
+    if REVIEW_KEY:
+        return key == REVIEW_KEY
+    host = (request.client.host if request.client else "") or ""
+    return (host.startswith(("127.", "10.", "192.168.", "172.")) or host == "::1"
+            or host == "localhost")
+
+
+@app.get("/api/review")
+def review_data(request: Request, conn=Depends(db), limit: int = 60,
+                key: str = ""):
+    if not _may_review(request, key):
+        raise HTTPException(404, "not found")
+    rows = conn.execute(
+        """SELECT j.id, j.tool, j.model_id, j.status, j.created_at,
+                  j.params, r.object_key, r.seconds, r.width, r.height
+             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+            ORDER BY j.created_at DESC
+            LIMIT %s""", (min(limit, 200),)).fetchall()
+    out = []
+    for row in rows:
+        params = row.pop("params") or {}
+        row["job_id"] = str(row.pop("id"))
+        row["garment"] = (storage.presigned_get(params["garment_key"])
+                          if params.get("garment_key") else None)
+        row["person"] = (storage.presigned_get(params["person_key"])
+                         if params.get("person_key") else None)
+        k = row.pop("object_key", None)
+        row["result"] = storage.presigned_get(k) if k else None
+        out.append(row)
+    return out
+
+
+@app.get("/review", response_class=HTMLResponse)
+def review_page(request: Request, key: str = ""):
+    if not _may_review(request, key):
+        raise HTTPException(404, "not found")
+    path = os.path.join(HERE, "static", "review.html")
+    if not os.path.exists(path):
+        raise HTTPException(500, "review.html is missing")
+    with open(path, encoding="utf-8") as fh:
+        return HTMLResponse(fh.read())
 
 
 @app.get("/me")

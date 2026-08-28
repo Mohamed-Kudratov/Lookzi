@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lookzi · every garment tried</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F172A; --card:#1B2336; --line:#232B3E; --line-2:#334155;
+  --ink:#F8FAFC; --ink-2:#94A3B8; --ink-3:#64748B;
+  --ok:#22C55E; --bad:#EF4444; --wait:#38BDF8;
+  --sans:"Fira Sans",system-ui,sans-serif; --mono:"Fira Code",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:14px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1500px;margin:0 auto;padding:20px}
+header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em}
+header p{margin:0;color:var(--ink-3);font-size:12.5px}
+.count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.filters button{cursor:pointer;font:inherit;font-size:12.5px;padding:6px 12px;
+  border-radius:99px;border:1px solid var(--line-2);background:var(--card);
+  color:var(--ink-2);transition:background .15s ease,color .15s ease}
+.filters button:hover{background:#252E44;color:var(--ink)}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);
+  border-color:var(--ink)}
+.filters button:focus-visible{outline:2px solid var(--wait);outline-offset:2px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;display:grid;grid-template-rows:auto auto}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.cell{position:relative;aspect-ratio:3/4;background:#0B1120;display:grid;
+  place-items:center;overflow:hidden}
+.cell img{width:100%;height:100%;object-fit:contain;cursor:zoom-in}
+.cell .tag{position:absolute;top:6px;left:6px;font-family:var(--mono);font-size:10px;
+  padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:var(--ink-2)}
+.cell .none{color:var(--ink-3);font-size:11.5px}
+.meta{padding:9px 11px;display:grid;gap:4px}
+.meta .row{display:flex;align-items:baseline;gap:8px}
+.meta b{font-size:12.5px;font-weight:500}
+.meta .who{color:var(--wait);font-size:11.5px;font-family:var(--mono)}
+.meta .when{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.state{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:5px;
+  border:1px solid var(--line-2);color:var(--ink-2)}
+.state[data-s="done"]{color:var(--ok);border-color:#1B5233}
+.state[data-s="failed"]{color:var(--bad);border-color:#5C2020}
+.state[data-s="queued"],.state[data-s="running"]{color:var(--wait);border-color:#1E4C63}
+.empty{padding:40px;text-align:center;color:var(--ink-3)}
+
+dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
+dialog::backdrop{background:rgba(2,6,23,.86)}
+dialog img{max-width:96vw;max-height:92vh;display:block;border-radius:8px}
+dialog button{position:fixed;top:14px;right:16px;cursor:pointer;font:inherit;
+  padding:7px 14px;border-radius:8px;border:1px solid var(--line-2);
+  background:var(--card);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Every garment tried</h1>
+    <p>What went in, what came out. Nothing here is ever deleted.</p>
+    <span class="count" id="count"></span>
+  </header>
+
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid"><p class="empty">Loading…</p></div>
+</div>
+
+<dialog id="viewer">
+  <button id="close">Close</button>
+  <img id="big" alt="">
+</dialog>
+
+<script>
+var ALL = [], filter = "all";
+var qs = new URLSearchParams(location.search);
+var KEY = qs.get("key") ? "?key=" + encodeURIComponent(qs.get("key")) + "&" : "?";
+
+function esc(s){ return String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function when(iso){
+  if (!iso) return "";
+  var d = new Date(iso), now = new Date();
+  var mins = Math.round((now - d) / 60000);
+  if (mins < 60) return mins + "m ago";
+  if (mins < 60 * 24) return Math.round(mins / 60) + "h ago";
+  return d.toISOString().slice(5, 16).replace("T", " ");
+}
+
+function cell(url, tag){
+  return '<div class="cell"><span class="tag">' + tag + '</span>' +
+    (url ? '<img src="' + url + '" alt="' + tag + '" loading="lazy">'
+         : '<span class="none">none</span>') + '</div>';
+}
+
+function draw(){
+  var rows = ALL.filter(function (r) { return filter === "all" || r.tool === filter; });
+  document.getElementById("count").textContent =
+    rows.length + " of " + ALL.length + " job" + (ALL.length === 1 ? "" : "s");
+  document.getElementById("grid").innerHTML = rows.length ? rows.map(function (r) {
+    // The input is whichever was sent: a garment for most tools, a person for
+    // "change the model", where the photograph itself carries the clothes.
+    var input = r.garment || r.person;
+    var tag = r.garment ? "garment" : (r.person ? "person" : "input");
+    return '<article class="card">' +
+      '<div class="pair">' + cell(input, tag) + cell(r.result, "result") + '</div>' +
+      '<div class="meta">' +
+        '<div class="row"><b>' + esc(r.tool) + '</b>' +
+          '<span class="state" data-s="' + esc(r.status) + '">' + esc(r.status) + '</span>' +
+          '<span class="when">' + when(r.created_at) + '</span></div>' +
+        '<div class="row">' +
+          (r.model_id ? '<span class="who">' + esc(r.model_id) + '</span>' : "") +
+          (r.seconds ? '<span class="when">' + r.seconds + 's</span>' : "") +
+        '</div>' +
+      '</div></article>';
+  }).join("") : '<p class="empty">Nothing matches that.</p>';
+}
+
+function drawFilters(){
+  var tools = ["all"].concat(ALL.map(function (r) { return r.tool; })
+    .filter(function (t, i, a) { return t && a.indexOf(t) === i; }).sort());
+  document.getElementById("filters").innerHTML = tools.map(function (t) {
+    return '<button data-t="' + esc(t) + '" aria-pressed="' + (t === filter) + '">' +
+      esc(t) + '</button>';
+  }).join("");
+}
+
+document.getElementById("filters").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.t; drawFilters(); draw();
+});
+
+document.getElementById("grid").addEventListener("click", function (e) {
+  var img = e.target.closest("img"); if (!img) return;
+  document.getElementById("big").src = img.src;
+  document.getElementById("viewer").showModal();
+});
+document.getElementById("close").addEventListener("click", function () {
+  document.getElementById("viewer").close();
+});
+
+fetch("/api/review" + KEY + "limit=200")
+  .then(function (r) { if (!r.ok) throw new Error("not available (" + r.status + ")"); return r.json(); })
+  .then(function (rows) { ALL = rows; drawFilters(); draw(); })
+  .catch(function (e) {
+    document.getElementById("grid").innerHTML =
+      '<p class="empty">' + esc(e.message) + '</p>';
+  });
+</script>
+</body>
+</html>
