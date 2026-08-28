@@ -29,7 +29,7 @@ import httpx
 from . import accounts
 from . import queue as q
 from . import storage
-from .tools import ASK, MODES, TOOLS
+from .tools import ASK, TOOLS
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 API = f"https://api.telegram.org/bot{TOKEN}"
@@ -272,12 +272,6 @@ def next_step(conn, chat_id, user, data):
                        caption="<b>Who should wear it?</b>\nTap a number." + note,
                        buttons=model_buttons(models) + [CANCEL])
             return
-        if need == "mode" and not data.get("mode"):
-            set_state(conn, chat_id, user["id"], "await_mode", data)
-            send(chat_id, "Which part of the body does it cover?",
-                 [[{"text": label, "callback_data": f"mode:{m}"} for m, label in MODES],
-                  CANCEL])
-            return
     confirm(conn, chat_id, user, data)
 
 
@@ -305,9 +299,6 @@ def confirm(conn, chat_id, user, data):
         lines.append("Person — the photo you sent")
     if data.get("garment_key"):
         lines.append("Garment — the photo you sent")
-    if data.get("mode"):
-        lines.append("Covers — " + dict(MODES)[data["mode"]].lower())
-
     lines.append("")
     lines.append(f"Costs <b>{tool['cost']}</b> "
                  f"of your <b>{user['credits']}</b> credits.")
@@ -447,11 +438,6 @@ def on_callback(conn, cb):
         next_step(conn, chat_id, user, data)
         return
 
-    if value.startswith("mode:"):
-        data["mode"] = value.split(":", 1)[1]
-        next_step(conn, chat_id, user, data)
-        return
-
     if value == "go":
         if state["step"] != "await_confirm":
             # A second tap on the same button, or a tap on an old summary. The
@@ -494,7 +480,6 @@ def submit(conn, chat_id, user, data):
 
     params = {"person_key": person_key,
               "garment_key": data.get("garment_key", person_key),
-              "mode": data.get("mode", "upper"),
               "description": "the garment", "seed": 42,
               "width": 768, "height": 1024, "steps": 8}
     try:

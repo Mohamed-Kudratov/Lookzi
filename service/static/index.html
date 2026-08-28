@@ -273,10 +273,6 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
           <div class="models" id="models"></div>
         </div>
 
-        <div class="group" id="g-mode">
-          <span class="mono">Covers</span>
-          <div class="seg" id="modes"></div>
-        </div>
       </div>
 
       <div class="foot">
@@ -302,8 +298,8 @@ if (!CLIENT) {
 }
 
 var $ = function (id) { return document.getElementById(id); };
-var TOOLS = [], MODES = [], MODELS = [], job = null, poll = null, health = null;
-var pick = {tool: null, garment_key: null, person_key: null, model_id: null, mode: null};
+var TOOLS = [], MODELS = [], job = null, poll = null, health = null;
+var pick = {tool: null, garment_key: null, person_key: null, model_id: null};
 
 // Stroked SVG on a 24 grid, one shape per tool. Emoji are not icons: they
 // render differently on every platform and carry no meaning at 19px.
@@ -365,7 +361,7 @@ function tool() { return TOOLS.find(function (t) { return t.id === pick.tool; })
 
 function selectTool(id) {
   pick.tool = id;
-  pick.model_id = null; pick.mode = null;
+  pick.model_id = null;
   var t = tool();
   $("tool-name").textContent = t.label;
   $("tool-blurb").textContent = t.blurb;
@@ -376,11 +372,9 @@ function selectTool(id) {
   var needs = t.needs;
   $("g-person").hidden = needs.indexOf("person") < 0;
   $("g-model").hidden = needs.indexOf("model") < 0;
-  $("g-mode").hidden = needs.indexOf("mode") < 0;
   $("slot-a").hidden = needs.indexOf("garment") < 0;
   $("tag-a").textContent = "Garment";
 
-  if (needs.indexOf("mode") >= 0 && !pick.mode) { pick.mode = MODES[0].id; drawModes(); }
   drawModels();
   refit();
 }
@@ -397,13 +391,6 @@ function drawModels() {
   $("model-name").textContent = chosen ? "· " + chosen.display_name : "";
 }
 
-function drawModes() {
-  $("modes").innerHTML = MODES.map(function (m) {
-    return '<button aria-pressed="' + (m.id === pick.mode) + '" data-id="' + m.id + '">' +
-      m.label.replace(" body", "").replace("Full outfit", "Full") + '</button>';
-  }).join("");
-}
-
 // The button says what is still missing rather than sitting dead and silent.
 function refit() {
   var t = tool();
@@ -413,7 +400,6 @@ function refit() {
     if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
     if (n === "person" && !pick.person_key) missing.push("your photo");
     if (n === "model" && !pick.model_id) missing.push("a model");
-    if (n === "mode" && !pick.mode) missing.push("which part of the body");
   });
   $("go").disabled = missing.length > 0 || !!job;
   $("go").textContent = "Generate · " + t.cost + " credit" + (t.cost === 1 ? "" : "s");
@@ -471,10 +457,6 @@ $("models").addEventListener("click", function (e) {
   var b = e.target.closest(".model"); if (!b) return;
   pick.model_id = b.dataset.id; drawModels(); refit();
 });
-$("modes").addEventListener("click", function (e) {
-  var b = e.target.closest("button"); if (!b) return;
-  pick.mode = b.dataset.id; drawModes(); refit();
-});
 
 // ---- running -------------------------------------------------------------
 $("go").onclick = function () {
@@ -485,7 +467,6 @@ $("go").onclick = function () {
     garment_key: pick.garment_key || pick.person_key,
     person_key: pick.person_key || null,
     model_id: pick.model_id || null,
-    mode: pick.mode || "upper",
     // A retried request must not become a second job and a second charge.
     idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
   }}).then(function (j) { watch(j.job_id); })
@@ -575,9 +556,9 @@ function heartbeat() {
 }
 
 // ---- boot ----------------------------------------------------------------
-Promise.all([api("/tools"), api("/modes"), api("/models")])
+Promise.all([api("/tools"), api("/models")])
   .then(function (r) {
-    TOOLS = r[0]; MODES = r[1]; MODELS = r[2];
+    TOOLS = r[0]; MODELS = r[1];
     $("rail").innerHTML = '<span class="mono">Tools</span>' + TOOLS.map(function (t) {
       return '<button class="tool" data-id="' + t.id + '" aria-pressed="false"' +
         (t.ready ? "" : " disabled") + '>' + svg(t.id) + '<b>' + t.label + '</b>' +
@@ -587,7 +568,6 @@ Promise.all([api("/tools"), api("/modes"), api("/models")])
       var b = e.target.closest(".tool");
       if (b && !b.disabled) selectTool(b.dataset.id);
     });
-    drawModes();
     selectTool((TOOLS.find(function (t) { return t.ready; }) || TOOLS[0]).id);
     refresh(); heartbeat();
     setInterval(heartbeat, 5000);

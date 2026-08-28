@@ -19,11 +19,11 @@ TOOLS = {
     "product-to-model": dict(
         label="Product → Model",
         blurb="A flat photo of the garment, worn by one of our models.",
-        needs=["garment", "model", "mode"], cost=1, ready=True),
+        needs=["garment", "model"], cost=1, ready=True),
     "virtual-try-on": dict(
         label="Try it on me",
         blurb="Your own photo, wearing the garment you send.",
-        needs=["person", "garment", "mode"], cost=1, ready=True),
+        needs=["person", "garment"], cost=1, ready=True),
     "model-swap": dict(
         label="Change the model",
         blurb="Your photo, same clothes and pose, a different person wearing them.",
@@ -48,13 +48,15 @@ ASK = {
     "person": "a photo of the <b>person</b> — full body, facing the camera",
 }
 
-# What the customer is telling us to do. The first three name the part of the
-# body, which is what a seller knows about their own product; the fourth is
-# there because outerwear is the case where replacing what the model wears is
-# the wrong answer, and outerwear is a large part of what gets sold here.
-# pipeline.MODE_INSTRUCTION turns each into a sentence the model was trained on.
-MODES = [("upper", "Upper body"), ("lower", "Lower body"),
-         ("overall", "Full outfit"), ("layer", "Layer on top")]
+# The mode selector is gone. It asked the customer which part of the body the
+# garment covers, and the answer changed nothing: the try-on model reads the
+# garment image and ignores the text entirely -- measured against an accurate
+# description, a deliberately wrong one, and none at all, at both guidance
+# settings. See docs/CONTROLS.md.
+#
+# pipeline.MODE_INSTRUCTION still understands the vocabulary, so a caller that
+# knows what it wants can still pass one. The product does not ask, because a
+# control that does nothing is a promise the interface cannot keep.
 
 
 def public():

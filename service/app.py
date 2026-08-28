@@ -99,11 +99,6 @@ def tools():
     return tool_registry.public()
 
 
-@app.get("/modes")
-def modes():
-    return [{"id": m, "label": label} for m, label in tool_registry.MODES]
-
-
 @app.get("/models")
 def models(conn=Depends(db)):
     rows = conn.execute(
@@ -144,7 +139,10 @@ class JobRequest(BaseModel):
     garment_key: str
     person_key: str | None = None
     model_id: str | None = None
-    mode: str = Field("upper", pattern="^(upper|lower|overall|layer)$")
+    # Defaults to nothing rather than "upper", which is an active mistake for a
+    # pair of trousers -- "swap the top for the trousers". The model ignores
+    # the text either way, so neutral is the safer of two irrelevancies.
+    mode: str | None = Field(None, pattern="^(upper|lower|overall|layer)$")
     description: str = ""
     seed: int = 42
     idem_key: str | None = None
