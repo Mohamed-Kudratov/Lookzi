@@ -11,9 +11,20 @@ measurements to `/workspace/timings.csv`, which survives the container.
 | | |
 |---|---|
 | Stock RunPod image, full setup | **601 s** |
+| Same, after the fork became a wheel | **116 s** |
 | Same, from the Lookzi Docker image | not yet measured |
+| Recovering the fork: `sparse-checkout disable` | minutes, and it wedged |
+| Recovering the fork: `git archive` to local disk | **0.223 s** |
 
-The 601 s is entirely package installation — torch, the diffusers fork, the
+The drop from 601 s to 116 s is two changes. The diffusers fork is no longer
+recovered by undoing sparse-checkout, which materialised 2247 files onto the
+network volume, rewrote the index, and on one pod wedged completely when a
+killed git left index.lock behind; `git archive` streams the same tree out of
+the object store without touching the index, onto the container's local NVMe.
+And the built wheel is kept on the volume, so a later pod installs one file
+instead of unpacking a source tree at all.
+
+The 601 s was entirely package installation — torch, the diffusers fork, the
 isolated Z-Image venv. No weights were downloaded: they were already on the
 volume and reported `present`. This is the cost the Docker image removes, and
 it is paid on every restart and every forced migration, because stopping a pod
