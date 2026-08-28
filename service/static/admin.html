@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lookzi · pod admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F172A; --card:#1B2336; --muted:#272F42; --border:#334155;
+  --border-soft:#232B3E; --fg:#F8FAFC; --dim:#94A3B8; --faint:#64748B;
+  --accent:#22C55E; --accent-dim:#16A34A; --warn:#F59E0B; --bad:#EF4444;
+  --blue:#38BDF8;
+  --sans:"Fira Sans",system-ui,-apple-system,sans-serif;
+  --mono:"Fira Code",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:6px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--blue)}
+
+/* ---------------------------------------------------------------- shell */
+.wrap{max-width:1400px;margin:0 auto;padding:20px 20px 40px}
+
+header{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding-bottom:14px;margin-bottom:18px;
+  border-bottom:1px solid var(--border-soft);
+}
+.brand{display:flex;align-items:baseline;gap:9px}
+.brand b{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.brand span{color:var(--faint);font-size:12px;font-family:var(--mono)}
+.spacer{flex:1}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:99px;font-size:12px;font-weight:500;
+  border:1px solid var(--border);background:var(--muted);color:var(--dim);
+}
+.pill .dot{width:6px;height:6px;border-radius:99px;background:currentColor}
+.pill[data-s="running"]{color:var(--blue);border-color:#1E4C63;background:#0E2634}
+.pill[data-s="running"] .dot{animation:pulse 1.4s ease-in-out infinite}
+.pill[data-s="ready"]{color:var(--accent);border-color:#1B5233;background:#0D2A1B}
+.pill[data-s="failed"]{color:var(--bad);border-color:#5C2020;background:#2A1214}
+.pill[data-s="cancelled"]{color:var(--warn);border-color:#5A431A;background:#2A2010}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ------------------------------------------------------------ start bar */
+.start{
+  background:var(--card);border:1px solid var(--border-soft);
+  border-radius:var(--r);padding:14px;margin-bottom:16px;
+}
+.start .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:280px}
+label{font-size:12px;color:var(--dim);font-weight:500}
+input[type=text],select{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
+  padding:9px 11px;font-family:var(--mono);font-size:13px;width:100%;
+  transition:border-color .15s ease;
+}
+input[type=text]:hover,select:hover{border-color:var(--faint)}
+input[type=text]:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:transparent}
+select{font-family:var(--sans);cursor:pointer;min-width:170px}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.hint code{font-family:var(--mono);color:var(--dim)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  border:1px solid var(--border);background:var(--muted);color:var(--fg);
+  padding:9px 16px;border-radius:var(--r);font-weight:500;font-size:13px;
+  min-height:38px;transition:background .15s ease,border-color .15s ease;
+}
+.btn:hover{background:#313A50;border-color:var(--faint)}
+.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#0F172A;font-weight:600}
+.btn.go:hover{background:#2ee06a}
+.btn.stop{color:var(--bad);border-color:#5C2020}
+.btn.stop:hover{background:#2A1214}
+.btn svg{width:15px;height:15px;flex:none}
+
+/* ------------------------------------------------------------- progress */
+.progress{
+  background:var(--card);border:1px solid var(--border-soft);
+  border-radius:var(--r);padding:16px;margin-bottom:16px;
+}
+.progress .top{display:flex;align-items:baseline;gap:12px;margin-bottom:11px;flex-wrap:wrap}
+.pct{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1;letter-spacing:-.02em}
+.stepof{color:var(--dim);font-size:13px}
+.now{color:var(--fg);font-weight:500}
+.elapsed{margin-left:auto;color:var(--faint);font-family:var(--mono);font-size:12px}
+.bar{height:8px;background:var(--muted);border-radius:99px;overflow:hidden}
+.bar>i{
+  display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent-dim),var(--accent));
+  transition:width .4s cubic-bezier(.4,0,.2,1);
+}
+.bar.is-failed>i{background:var(--bad)}
+
+/* ----------------------------------------------------------------- grid */
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:960px){.grid{grid-template-columns:1fr}}
+
+.panel{background:var(--card);border:1px solid var(--border-soft);border-radius:var(--r);overflow:hidden}
+.panel > h2{
+  margin:0;padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;gap:8px;
+}
+.panel > h2 .live{margin-left:auto;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-family:var(--mono)}
+.panel > h2 .live[data-stale="1"]{color:var(--warn)}
+
+/* ---------------------------------------------------------------- steps */
+ol.steps{list-style:none;margin:0;padding:4px 0}
+ol.steps li{display:flex;gap:11px;padding:8px 14px;align-items:flex-start}
+ol.steps li + li{border-top:1px solid var(--border-soft)}
+ol.steps li[data-s="running"]{background:#131C2E}
+.mark{width:18px;height:18px;flex:none;margin-top:1px;border-radius:99px;
+  border:1.5px solid var(--border);display:grid;place-items:center}
+.mark svg{width:11px;height:11px}
+li[data-s="done"] .mark{border-color:var(--accent-dim);background:#0D2A1B;color:var(--accent)}
+li[data-s="running"] .mark{border-color:var(--blue);color:var(--blue);animation:spin 1.5s linear infinite}
+li[data-s="failed"] .mark{border-color:var(--bad);background:#2A1214;color:var(--bad)}
+li[data-s="waiting"] .mark{color:transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sbody{flex:1;min-width:0}
+.stitle{display:flex;gap:8px;align-items:baseline}
+.stitle b{font-weight:500;font-size:13.5px}
+li[data-s="waiting"] .stitle b{color:var(--faint);font-weight:400}
+.stitle em{font-style:normal;color:var(--faint);font-size:11.5px;font-family:var(--mono);margin-left:auto;flex:none}
+.sdetail{color:var(--faint);font-size:11.5px;margin-top:1px}
+.sbar{height:3px;background:var(--muted);border-radius:99px;margin-top:6px;overflow:hidden;display:none}
+li[data-s="running"] .sbar{display:block}
+.sbar>i{display:block;height:100%;background:var(--blue);width:0;transition:width .4s ease}
+
+/* ---------------------------------------------------------------- facts */
+dl.facts{margin:0;padding:4px 0}
+dl.facts .f{display:flex;gap:12px;padding:6px 14px;align-items:baseline}
+dl.facts .f + .f{border-top:1px solid var(--border-soft)}
+dl.facts dt{color:var(--faint);font-size:12px;flex:none;width:120px}
+dl.facts dd{margin:0;font-family:var(--mono);font-size:12.5px;word-break:break-word;flex:1}
+dd.good{color:var(--accent)} dd.bad{color:var(--bad)} dd.warn{color:var(--warn)}
+.empty{padding:14px;color:var(--faint);font-size:12.5px}
+
+/* ------------------------------------------------------------- warnings */
+.warns{margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
+.warn-box,.err-box{
+  border-radius:var(--r);padding:11px 13px;font-size:13px;
+  display:flex;gap:10px;align-items:flex-start;line-height:1.45;
+}
+.warn-box{background:#2A2010;border:1px solid #5A431A;color:#FCD34D}
+.err-box{background:#2A1214;border:1px solid #5C2020;color:#FCA5A5}
+.warn-box svg,.err-box svg{width:16px;height:16px;flex:none;margin-top:2px}
+.err-box pre{margin:5px 0 0;font-family:var(--mono);font-size:11.5px;white-space:pre-wrap;color:#F8B4B4;max-height:180px;overflow:auto}
+
+/* ------------------------------------------------------------------ log */
+.log{
+  font-family:var(--mono);font-size:11.5px;line-height:1.65;
+  padding:10px 14px;height:320px;overflow-y:auto;white-space:pre-wrap;
+  word-break:break-word;color:var(--dim);
+}
+.log b{color:var(--fg);font-weight:500}
+.log .t{color:var(--faint)}
+.log .w{color:var(--warn)}
+.log::-webkit-scrollbar{width:9px}
+.log::-webkit-scrollbar-thumb{background:var(--muted);border-radius:9px}
+.log::-webkit-scrollbar-track{background:transparent}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand"><b>Lookzi</b><span>pod admin</span></div>
+    <span class="pill" id="status" data-s="idle"><i class="dot"></i><span id="statusText">idle</span></span>
+    <div class="spacer"></div>
+    <span id="hostLabel" style="font-family:var(--mono);font-size:12px;color:var(--faint)"></span>
+  </header>
+
+  <section class="start">
+    <div class="row">
+      <div class="field">
+        <label for="ssh">SSH line from RunPod</label>
+        <input type="text" id="ssh" spellcheck="false" autocomplete="off"
+               placeholder="ssh abc123-64412093@ssh.runpod.io -i ~/.ssh/id_ed25519">
+      </div>
+      <div class="field" style="flex:0 0 auto;min-width:0">
+        <label for="model">Checkpoint</label>
+        <select id="model">
+          <option value="4bit">4-bit · 15.8 GB</option>
+          <option value="bf16">bf16 · 57.7 GB</option>
+        </select>
+      </div>
+      <button class="btn go" id="go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Set up the pod
+      </button>
+      <button class="btn stop" id="cancel" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        Stop
+      </button>
+    </div>
+    <p class="hint">Paste the whole line RunPod gives you — <code>ssh …</code> and the key flag are ignored. The volume is measured before anything depends on it.</p>
+  </section>
+
+  <div class="warns" id="warns"></div>
+
+  <section class="progress">
+    <div class="top">
+      <span class="pct" id="pct">0%</span>
+      <span class="stepof">Step <span id="stepNo">0</span> of <span id="stepTotal">10</span> · <span class="now" id="nowStep">not started</span></span>
+      <span class="elapsed" id="elapsed"></span>
+    </div>
+    <div class="bar" id="bar"><i></i></div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Steps</h2>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <section class="panel">
+        <h2>What the pod says <span class="live" id="live"></span></h2>
+        <dl class="facts" id="facts"><div class="empty">Nothing measured yet.</div></dl>
+      </section>
+      <section class="panel">
+        <h2>Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const ICON = {
+  done: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  running: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>',
+  failed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  waiting: '',
+};
+const WARN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+// The address is remembered so a page reload during a twenty-minute setup does
+// not mean typing it again. Wrapped because storage throws outright in some
+// contexts, and a panel that will not render is worse than one that forgets.
+try { $('#ssh').value = localStorage.getItem('lookzi.ssh') || ''; } catch (e) {}
+
+let steps = [];
+fetch('/api/steps').then(r => r.json()).then(list => {
+  steps = list;
+  $('#stepTotal').textContent = list.length;
+  renderSteps(list.map(s => ({...s, state: 'waiting', progress: 0})));
+});
+
+function renderSteps(list){
+  $('#steps').innerHTML = list.map(s => `
+    <li data-s="${s.state}">
+      <span class="mark">${ICON[s.state] || ''}</span>
+      <span class="sbody">
+        <span class="stitle"><b>${esc(s.title)}</b>${
+          s.seconds ? `<em>${s.seconds}s</em>` : ''}</span>
+        <span class="sdetail">${esc(s.detail || '')}</span>
+        <span class="sbar"><i style="width:${Math.round((s.progress||0)*100)}%"></i></span>
+      </span>
+    </li>`).join('');
+}
+
+function esc(s){ return String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function factRows(f){
+  const rows = [];
+  const add = (k, v, cls) => { if (v !== undefined && v !== null && v !== '')
+    rows.push(`<div class="f"><dt>${k}</dt><dd class="${cls||''}">${esc(v)}</dd></div>`); };
+  add('GPU', f.gpu ? `${f.gpu}${f.vram_gb ? ` · ${f.vram_gb} GB` : ''}` : '');
+  add('Pod', f.pod_id);
+  if (f.volume_mbs !== undefined) {
+    const slow = f.volume_mbs < 100;
+    add('Volume read', `${f.volume_mbs} MB/s${slow ? '  — normally 655' : ''}`,
+        slow ? 'bad' : 'good');
+  }
+  add('Local disk', f.disk ? `${f.disk} GB free` : '');
+  add('Volume free', f.volume ? `${f.volume} GB` : '');
+  add('CPU quota', f.cores ? `${f.cores} of ${f.proc} advertised` : '');
+  add('Commit', f.commit);
+  add('torch', f.torch); add('diffusers', f.diffusers); add('peft', f.peft);
+  if (f.weights) {
+    const w = f.weights;
+    const mb = k => w[k] && w[k] !== '0' ? `${w[k]} MB` : 'absent';
+    add('4-bit', mb('4bit'), w['4bit'] > 15000 ? 'good' : '');
+    add('bf16', mb('bf16'), w['bf16'] > 55000 ? 'good' : '');
+    add('Lightning', mb('lightning'), w['lightning'] > 1500 ? 'good' : '');
+    add('LoRA', w.lora, w.lora === 'yes' ? 'good' : 'bad');
+    add('DWPose', w.dwpose, w.dwpose === 'yes' ? 'good' : 'bad');
+  }
+  add('Downloading', f.download);
+  add('Model load', f.load_seconds ? `${f.load_seconds}s` : '', 'good');
+  add('One image', f.image_seconds ? `${f.image_seconds}s` : '', 'good');
+  return rows.length ? rows.join('') : '<div class="empty">Nothing measured yet.</div>';
+}
+
+let lastOk = 0;
+async function poll(){
+  let s;
+  try {
+    s = await (await fetch('/api/status')).json();
+    lastOk = Date.now();
+  } catch (e) {
+    markStale();
+    return;
+  }
+  const running = s.status === 'running';
+
+  $('#status').dataset.s = s.status;
+  $('#statusText').textContent = s.status;
+  $('#hostLabel').textContent = s.host || '';
+  $('#go').disabled = running;
+  $('#cancel').disabled = !running;
+
+  $('#pct').textContent = s.percent + '%';
+  $('#bar').firstElementChild.style.width = s.percent + '%';
+  $('#bar').classList.toggle('is-failed', s.status === 'failed');
+  const done = s.steps.filter(x => x.state === 'done').length;
+  $('#stepNo').textContent = running ? Math.min(done + 1, s.steps.length) : done;
+  const cur = s.steps.find(x => x.key === s.current);
+  $('#nowStep').textContent = cur ? cur.title
+    : (s.status === 'ready' ? 'the pod is ready'
+      : s.status === 'failed' ? 'stopped' : 'not started');
+  $('#elapsed').textContent = s.elapsed ? fmt(s.elapsed) : '';
+
+  renderSteps(s.steps);
+  $('#facts').innerHTML = factRows(s.facts || {});
+
+  const boxes = (s.warnings || []).map(w =>
+    `<div class="warn-box">${WARN_ICON}<span>${esc(w)}</span></div>`);
+  if (s.error) boxes.push(
+    `<div class="err-box">${WARN_ICON}<span><b>It stopped here.</b><pre>${esc(s.error)}</pre></span></div>`);
+  $('#warns').innerHTML = boxes.join('');
+
+  const log = $('#log');
+  const stuck = log.scrollTop + log.clientHeight >= log.scrollHeight - 24;
+  log.innerHTML = (s.log || []).map(line => {
+    const m = line.match(/^(\d\d:\d\d:\d\d)\s\s(.*)$/s);
+    const body = m ? m[2] : line;
+    const cls = body.startsWith('!') ? 'w' : (body.startsWith('—') ? 'b' : '');
+    const text = cls === 'b' ? `<b>${esc(body)}</b>` : `<span class="${cls}">${esc(body)}</span>`;
+    return m ? `<span class="t">${m[1]}</span>  ${text}` : text;
+  }).join('\n');
+  if (stuck) log.scrollTop = log.scrollHeight;
+
+  markFresh();
+}
+
+function fmt(sec){
+  const m = Math.floor(sec / 60), r = sec % 60;
+  return m ? `${m}m ${String(r).padStart(2,'0')}s` : `${r}s`;
+}
+// Telemetry is only labelled live while it is actually arriving. A frozen
+// panel that still says "live" is worse than one that admits it lost contact.
+function markFresh(){
+  const el = $('#live');
+  el.dataset.stale = '0';
+  el.textContent = 'updated just now';
+}
+function markStale(){
+  const el = $('#live');
+  el.dataset.stale = '1';
+  const ago = lastOk ? Math.round((Date.now() - lastOk) / 1000) : 0;
+  el.textContent = lastOk ? `no answer for ${ago}s` : 'not connected';
+}
+
+$('#go').addEventListener('click', async () => {
+  const ssh = $('#ssh').value.trim();
+  if (!ssh) { $('#ssh').focus(); return; }
+  try { localStorage.setItem('lookzi.ssh', ssh); } catch (e) {}
+  $('#go').disabled = true;
+  const r = await fetch('/api/start', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ ssh, model: $('#model').value }) });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({detail: 'could not start'}));
+    $('#warns').innerHTML = `<div class="err-box">${WARN_ICON}<span>${esc(d.detail)}</span></div>`;
+    $('#go').disabled = false;
+    return;
+  }
+  poll();
+});
+
+$('#cancel').addEventListener('click', () => fetch('/api/cancel', {method:'POST'}));
+
+poll();
+setInterval(poll, 1200);
+</script>
+</body>
+</html>
