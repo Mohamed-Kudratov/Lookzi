@@ -88,11 +88,21 @@ def submit(conn, user_id, tool, params, model_id=None, cost=1,
         # same person, so two requests cannot both read a balance of 1 and both
         # decide they can afford it.
         row = conn.execute(
-            "SELECT credits FROM users WHERE id = %s FOR UPDATE",
+            "SELECT credits, plan FROM users WHERE id = %s FOR UPDATE",
             (user_id,)).fetchone()
         if row is None:
             raise LookupError(f"no such user: {user_id}")
-        if row["credits"] < cost:
+
+        # An account on the unlimited plan is never charged and never blocked.
+        # It exists for whoever is testing the product: being stopped by your
+        # own credit ledger halfway through checking whether a tool works is a
+        # waste of a person and of a rented card.
+        #
+        # The job still records what it would have cost, so the review page and
+        # any pricing question can still be answered from the history. Nothing
+        # is written to the ledger, because nothing moved.
+        free = row["plan"] == "unlimited"
+        if not free and row["credits"] < cost:
             raise InsufficientCredit(row["credits"], cost)
 
         job = conn.execute(
@@ -101,6 +111,9 @@ def submit(conn, user_id, tool, params, model_id=None, cost=1,
                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
             (user_id, tool, model_id, json.dumps(params), cost, priority,
              idem_key)).fetchone()
+
+        if free:
+            return job, False
 
         conn.execute("UPDATE users SET credits = credits - %s WHERE id = %s",
                      (cost, user_id))
@@ -268,6 +281,16 @@ def fail(conn, job_id, error, refund=True):
             # balance. The two then disagreed permanently, and the balance is
             # the number the customer spends. RETURNING makes the insert say
             # whether it happened, and the balance follows it.
+            # Refunded only if it was charged. An unlimited account pays
+            # nothing and writes no ledger entry, so refunding one would mint
+            # credits out of a failure -- the more jobs it failed, the richer
+            # it would get. The ledger is the record of what happened, so the
+            # ledger is what decides.
+            paid = conn.execute(
+                "SELECT 1 FROM credit_entries WHERE job_id = %s AND reason = 'job'",
+                (job_id,)).fetchone()
+            if not paid:
+                return "given up"
             written = conn.execute(
                 """INSERT INTO credit_entries (user_id, delta, reason, job_id)
                    VALUES (%s, %s, 'refund', %s)
@@ -305,6 +328,13 @@ def cancel(conn, job_id, user_id=None):
             (job_id,))
         # Same guard as a refund after failure: the ledger decides whether the
         # balance moves, so a cancel that arrives twice pays once.
+        # Refunded only if it was charged; see fail().
+        paid = conn.execute(
+            "SELECT 1 FROM credit_entries WHERE job_id = %s AND reason = 'job'",
+            (job_id,)).fetchone()
+        if not paid:
+            return "cancelled"
+
         written = conn.execute(
             """INSERT INTO credit_entries (user_id, delta, reason, job_id)
                VALUES (%s, %s, 'refund', %s)
