@@ -136,7 +136,11 @@ def create_upload(req: UploadRequest, user=Depends(current_user)):
 
 class JobRequest(BaseModel):
     tool: str = "product-to-model"
-    garment_key: str
+    # Optional here and checked against the tool's own list of inputs below.
+    # It used to be required, which quietly meant every tool was a try-on: a
+    # packshot needs no model and no person, and was rejected by a rule written
+    # for a different tool.
+    garment_key: str | None = None
     person_key: str | None = None
     model_id: str | None = None
     # Defaults to nothing rather than "upper", which is an active mistake for a
@@ -146,17 +150,37 @@ class JobRequest(BaseModel):
     description: str = ""
     seed: int = 42
     idem_key: str | None = None
+    # Making a model asks for a handful of choices instead of a photograph. The
+    # rest of the face varies by seed, so asking twice gives two people.
+    gender: str | None = Field(None, pattern="^(woman|man)$")
+    age: str | None = Field(None, pattern="^(20s|30s|40s|50s)$")
+    build: str | None = Field(None, pattern="^(slim|average|fuller)$")
+    look: str | None = Field(None, pattern="^(uzbek|kazakh|tajik|slavic)$")
+    modest: bool = False
 
 
 @app.post("/jobs", status_code=201)
 def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
     if not tool_registry.ready(req.tool):
         raise HTTPException(400, f"{req.tool} is not available yet")
-    if not req.person_key and not req.model_id:
-        raise HTTPException(400, "send either person_key or model_id")
 
-    person_key = req.person_key
-    if not person_key:
+    # What is required comes from the tool, not from here. Three tools shared
+    # one hardcoded rule and the fourth could not be submitted at all.
+    needs = tool_registry.TOOLS[req.tool]["needs"]
+    sent = {"garment": req.garment_key, "person": req.person_key,
+            "model": req.model_id,
+            # A look is four choices, and every one has a sensible default, so
+            # it is never missing -- it is listed so the studio knows to draw
+            # the chooser.
+            "look": True}
+    missing = [n for n in needs if not sent.get(n)]
+    if missing:
+        raise HTTPException(400, f"{req.tool} needs {' and '.join(missing)}")
+
+    # When a model was chosen, the model is who wears it. Preferring an
+    # uploaded photo here put the customer inside their own photograph.
+    person_key = None if "model" in needs else req.person_key
+    if not person_key and req.model_id:
         row = conn.execute(
             "SELECT hero_key FROM models WHERE id = %s AND duplicate_of IS NULL",
             (req.model_id,)).fetchone()
@@ -172,9 +196,15 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
                      "run service.seed_heroes")
         person_key = row["hero_key"]
 
-    params = {"person_key": person_key, "garment_key": req.garment_key,
+    # Whatever was uploaded is the garment. For "change the model" that upload
+    # is a person wearing clothes, and the clothes are the point of it.
+    params = {"person_key": person_key,
+              "garment_key": req.garment_key or req.person_key,
               "mode": req.mode, "description": req.description, "seed": req.seed,
-              "width": 768, "height": 1024, "steps": 8}
+              "width": 768, "height": 1024, "steps": 8,
+              "gender": req.gender or "woman", "age": req.age or "20s",
+              "build": req.build or "average", "look": req.look or "uzbek",
+              "modest": "true" if req.modest else "false"}
     try:
         job, charged = q.submit(
             conn, user["id"], req.tool, params, model_id=req.model_id,

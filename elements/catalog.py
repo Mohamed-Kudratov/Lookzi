@@ -411,6 +411,79 @@ def feature_clause(face):
     return f"{face['features']}, " if face["features"] else ""
 
 
+# --------------------------------------------------------------------------
+# A model made to order
+# --------------------------------------------------------------------------
+# The roster is thirteen people chosen once and shared by everybody. This is
+# the other thing a seller may want: a face that is theirs alone.
+#
+# Deliberately a few choices rather than a text box. The customer knows who
+# they sell to -- a woman in her forties, fuller build, modest dress -- and
+# does not know, and should not have to learn, which words this model responds
+# to. Everything they do not choose is varied by seed, so asking twice gives
+# two different people rather than the same one twice.
+
+MADE_SKIN = {
+    "central_asian": ["light warm ivory skin", "medium olive skin",
+                      "tan golden skin", "warm honey skin", "deep olive skin"],
+    "slavic": ["fair skin with cool undertones", "light neutral skin",
+               "pale skin with a faint flush", "light beige skin"],
+}
+MADE_HAIR = {
+    "woman": ["long straight black hair", "shoulder-length dark brown hair",
+              "dark chestnut hair in a low bun", "long wavy dark hair",
+              "black hair pulled back into a ponytail", "short dark bob"],
+    "man": ["short black hair", "dark brown hair, neatly cut",
+            "short cropped black hair", "dark hair with a side parting",
+            "black hair, slightly tousled"],
+}
+MADE_DETAIL = [
+    "high cheekbones and a narrow face", "a round face and full lips",
+    "a strong jaw and arched brows", "wide-set eyes and a soft jaw",
+    "a straight nose and even features", "a broad forehead and calm eyes",
+]
+MADE_AGES = {
+    "20s": ["early 20s", "mid 20s", "late 20s"],
+    "30s": ["early 30s", "mid 30s", "late 30s"],
+    "40s": ["early 40s", "mid 40s"],
+    "50s": ["early 50s", "mid 50s"],
+}
+MADE_BUILDS = ["slim", "average", "fuller"]
+MADE_LOOKS = ["uzbek", "kazakh", "tajik", "slavic"]
+
+
+def new_face(gender="woman", age="20s", build="average", look="uzbek",
+             modest=False, seed=0):
+    """A face dict shaped exactly like a roster entry, made from a few choices.
+
+    Same shape on purpose: hero_prompt, article and feature_clause all read a
+    roster entry, and a second nearly-identical shape is how two descriptions
+    of the same thing drift apart.
+    """
+    import random
+    # Seeded from a string, not the integer. Mersenne Twister started on 1 and
+    # on 2 produces near-identical first draws, so consecutive seeds gave the
+    # same person -- which is exactly what "generate another" would ask for.
+    rng = random.Random(f"{seed}:{look}:{gender}:{age}")
+    look = look if look in ETHNICITY else "uzbek"
+    family = "slavic" if look == "slavic" else "central_asian"
+    gender = "man" if gender == "man" else "woman"
+    face = dict(
+        id=f"made_{look}_{gender}_{seed}",
+        gender=gender,
+        ethnicity=look,
+        appearance=ETHNICITY[look]["label"],
+        features=ETHNICITY[look]["features"],
+        age=rng.choice(MADE_AGES.get(age, MADE_AGES["20s"])),
+        build=build if build in MADE_BUILDS else "average",
+        modest=bool(modest),
+        skin=rng.choice(MADE_SKIN[family]),
+        hair=rng.choice(MADE_HAIR[gender]),
+        detail=rng.choice(MADE_DETAIL),
+    )
+    return face
+
+
 def _clothing_for(modest):
     return CLOTHING_MODEST if modest else CLOTHING_NEUTRAL
 

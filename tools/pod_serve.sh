@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Start, stop or check the model server on a pod.
 #
-#     bash tools/pod_serve.sh start     # or restart; loads the model
+#     bash tools/pod_serve.sh start            # the try-on model
+#     bash tools/pod_serve.sh start zimage     # the model maker
+#     bash tools/pod_serve.sh status zimage
 #     bash tools/pod_serve.sh stop
-#     bash tools/pod_serve.sh status
 #
 # This exists because `pkill -f pod_server` kills the shell that runs it. The
 # pattern matches the ssh command line carrying the pkill, so the whole session
@@ -15,9 +16,24 @@
 set -uo pipefail
 
 REPO="${REPO:-/opt/lookzi}"
-PORT="${POD_SERVER_PORT:-8000}"
-LOG="${POD_SERVER_LOG:-/workspace/pod_server.log}"
-MODEL="${MODEL_PATH:-ovedrive/Qwen-Image-Edit-2509-4bit}"
+
+# Two servers, because Z-Image needs diffusers from source and the try-on stack
+# cannot have it -- their huggingface_hub requirements do not overlap. Same
+# machine, same card, two interpreters.
+WHICH="${2:-tryon}"
+if [ "$WHICH" = "zimage" ]; then
+    PORT="${ZIMAGE_PORT:-8001}"
+    LOG="${ZIMAGE_LOG:-/workspace/zimage_server.log}"
+    PYTHON="${ZIMAGE_PYTHON:-/opt/zimage-venv/bin/python}"
+    MODULE="service.zimage_server"
+    MODEL="Z-Image-Turbo"
+else
+    PORT="${POD_SERVER_PORT:-8000}"
+    LOG="${POD_SERVER_LOG:-/workspace/pod_server.log}"
+    PYTHON="${POD_PYTHON:-python}"
+    MODULE="service.pod_server"
+    MODEL="${MODEL_PATH:-ovedrive/Qwen-Image-Edit-2509-4bit}"
+fi
 
 pid_on_port() {
     ss -tlnp 2>/dev/null | awk -v p=":$PORT" '$4 ~ p' \
@@ -46,9 +62,13 @@ start|restart)
     export NUMEXPR_NUM_THREADS=8 TOKENIZERS_PARALLELISM=false
     export HF_HOME=/workspace/.cache/huggingface HF_HUB_DISABLE_XET=1
     export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-    export MODEL_PATH="$MODEL" POD_SERVER_PORT="$PORT"
+    export MODEL_PATH="$MODEL" POD_SERVER_PORT="$PORT" ZIMAGE_PORT="$PORT"
 
-    setsid nohup python -m service.pod_server > "$LOG" 2>&1 < /dev/null &
+    if [ ! -x "$PYTHON" ] && [ "$PYTHON" != "python" ]; then
+        echo "no interpreter at $PYTHON -- run tools/setup_pod.sh --zimage" >&2
+        exit 1
+    fi
+    setsid nohup "$PYTHON" -m "$MODULE" > "$LOG" 2>&1 < /dev/null &
     echo "starting $MODEL on :$PORT"
 
     # Wait for the port, not for the weights. The server listens while it
@@ -77,5 +97,5 @@ status)
     curl -s -m 8 "http://127.0.0.1:$PORT/health"; echo
     ;;
 *)
-    echo "usage: $0 start|stop|status" >&2; exit 2 ;;
+    echo "usage: $0 start|stop|status [tryon|zimage]" >&2; exit 2 ;;
 esac

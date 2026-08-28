@@ -46,6 +46,11 @@ SSH_KEY = os.environ.get("POD_SSH_KEY",
                          os.path.expanduser("~/.ssh/id_ed25519_github"))
 LOCAL_PORT = int(os.environ.get("POD_LOCAL_PORT", "18000"))
 REMOTE_PORT = int(os.environ.get("POD_SERVER_PORT", "8000"))
+# The model maker is a second process on the pod, because Z-Image needs
+# diffusers from source and the try-on stack cannot have it. One ssh connection
+# carries both.
+ZIMAGE_LOCAL = int(os.environ.get("ZIMAGE_LOCAL_PORT", "18001"))
+ZIMAGE_REMOTE = int(os.environ.get("ZIMAGE_PORT", "8001"))
 # Generous, because it covers the model still loading on a pod that has just
 # started. The queue's own lease is fifteen minutes and this must end first.
 REQUEST_TIMEOUT = int(os.environ.get("POD_REQUEST_TIMEOUT", "600"))
@@ -55,6 +60,7 @@ TUNNEL_ATTEMPTS = int(os.environ.get("POD_TUNNEL_ATTEMPTS", "4"))
 TUNNEL_BACKOFF = float(os.environ.get("POD_TUNNEL_BACKOFF", "4"))
 
 BASE = f"http://127.0.0.1:{LOCAL_PORT}"
+ZBASE = f"http://127.0.0.1:{ZIMAGE_LOCAL}"
 
 
 class PodDown(RuntimeError):
@@ -94,7 +100,8 @@ class Tunnel:
                # and forwards nothing, which is the worst of both.
                "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3",
                "-o", "IdentitiesOnly=yes", "-i", self.key,
-               "-L", f"{self.local}:127.0.0.1:{self.remote}"] + self.target
+               "-L", f"{self.local}:127.0.0.1:{self.remote}",
+               "-L", f"{ZIMAGE_LOCAL}:127.0.0.1:{ZIMAGE_REMOTE}"] + self.target
         self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.PIPE)
 
@@ -195,6 +202,7 @@ def _multipart(fields, files):
 # branched inside handle(), so a new tool is an entry rather than another if.
 ROUTES = {
     "packshot": ("/packshot", ("garment",)),
+    "model-creation": (ZBASE + "/create", ()),
 }
 DEFAULT_ROUTE = ("/generate", ("person", "garment"))
 
@@ -211,13 +219,22 @@ def handle(job):
             raise RunPodInput(f"{job['tool']} needs a {name} and none was sent")
         files[name] = (f"{name}.png", storage.get_bytes(key))
 
-    fields = {} if path != "/generate" else {
-        "mode": p.get("mode") or "",
-        "description": p.get("description") or "the garment",
-        "seed": int(p.get("seed", 42))}
+    fields = {}
+    if path.endswith("/create"):
+        # The choices a seller has an opinion about. Everything else varies by
+        # seed, so asking twice gives two people.
+        fields = {k: p.get(k) for k in ("gender", "age", "build", "look", "modest")
+                  if p.get(k) is not None}
+        fields["seed"] = int(p.get("seed", 0))
+    elif path == "/generate":
+        fields = {
+            "mode": p.get("mode") or "",
+            "description": p.get("description") or "the garment",
+            "seed": int(p.get("seed", 42))}
     body, content_type = _multipart(fields, files)
 
-    req = urllib.request.Request(f"{BASE}{path}", data=body, method="POST",
+    url = path if path.startswith("http") else f"{BASE}{path}"
+    req = urllib.request.Request(url, data=body, method="POST",
                                  headers={"Content-Type": content_type})
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
