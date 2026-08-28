@@ -670,41 +670,60 @@ def step_zimage(ssh, st):
     Built whether or not the weights are here yet: the conversion that produces
     them runs in this interpreter.
     """
-    rc, out = ssh.run(
-        "test -x /opt/zimage-venv/bin/python && echo HAVE || echo BUILD",
-        timeout=120)
-    if "HAVE" in out:
-        st.log("the z-image venv is already here")
-        st.note("zimage", "already built")
-    else:
-        st.log("building the z-image venv (about four minutes, once per pod)")
-        ssh.run(
-            f"cd {POD_REPO}\n"
-            "setsid nohup bash tools/setup_pod.sh --zimage "
-            "  > /workspace/zimage_setup.log 2>&1 < /dev/null &\n"
-            "echo started\n", timeout=180)
-        started = time.time()
-        while not st.cancelled:
-            time.sleep(10)
-            rc, out = ssh.run(
-                "test -x /opt/zimage-venv/bin/python && echo DONE || echo BUILDING\n"
-                "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE\n",
-                timeout=180)
-            if "DONE" in out:
-                break
-            if "GONE" in out:
-                rc, tail = ssh.run("tail -12 /workspace/zimage_setup.log",
-                                   timeout=120)
-                raise PodError("the z-image venv did not build:\n" + tail[-600:])
-            st.step_progress("zimage", min(0.95, (time.time() - started) / 260))
+    def usable():
+        """Whether the venv can actually do its job, not whether it exists.
 
-    rc, out = ssh.run(
-        "/opt/zimage-venv/bin/python -c \"from diffusers import ZImagePipeline; "
-        "import fastapi; print(\'ZIMAGE_OK\')\" 2>&1 | tail -2",
-        timeout=300)
+        Checking for the interpreter was not enough. A build interrupted
+        part-way leaves /opt/zimage-venv/bin/python in place with nothing
+        installed behind it, and the panel then skipped the build and failed
+        on the import three seconds later.
+        """
+        rc, out = ssh.run(
+            "/opt/zimage-venv/bin/python -c \"from diffusers import "
+            "ZImagePipeline; import fastapi, hf_transfer; print(\'ZIMAGE_OK\')\""
+            " 2>&1 | tail -2", timeout=300)
+        return "ZIMAGE_OK" in out, out
+
+    ok, out = usable()
+    if ok:
+        st.log("the z-image venv is already here and complete")
+        st.note("zimage", "already built")
+        return
+
+    rc, out = ssh.run("test -d /opt/zimage-venv && echo PARTIAL || echo NONE",
+                      timeout=120)
+    if "PARTIAL" in out:
+        st.log("an incomplete venv is there; removing it and building again")
+        ssh.run("rm -rf /opt/zimage-venv", timeout=300)
+
+    st.log("building the z-image venv (about four minutes, once per pod)")
+    ssh.run(
+        f"cd {POD_REPO}\n"
+        "setsid nohup bash tools/setup_pod.sh --zimage "
+        "  > /workspace/zimage_setup.log 2>&1 < /dev/null &\n"
+        "echo started\n", timeout=180)
+    started = time.time()
+    while not st.cancelled:
+        time.sleep(10)
+        rc, out = ssh.run(
+            "test -x /opt/zimage-venv/bin/python && echo DONE || echo BUILDING\n"
+            "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE\n",
+            timeout=180)
+        if "DONE" in out:
+            break
+        if "GONE" in out:
+            rc, tail = ssh.run("tail -12 /workspace/zimage_setup.log",
+                               timeout=120)
+            raise PodError("the z-image venv did not build:\n" + tail[-600:])
+        st.step_progress("zimage", min(0.95, (time.time() - started) / 260))
+
+    # Verified by the same probe used to decide whether to build, so "already
+    # here" and "just built" are held to one standard.
+    ok, out = usable()
     st.log(out)
-    if "ZIMAGE_OK" not in out:
-        raise PodError("the z-image venv is incomplete:\n" + out[-400:])
+    if not ok:
+        raise PodError("the z-image venv is incomplete after building:\n"
+                       + out[-400:])
 
 
 def step_serve(ssh, st):
