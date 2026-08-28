@@ -64,6 +64,28 @@ wire were discarded on arrival. The bf16 copy pays that once.
 | Try-on, Lightning 8-step | **14.3 s** |
 | Try-on, Lightning 4-step | 8.3 s |
 | Try-on, Lightning 8-step, **4-bit** | **17.8 s** |
+
+## A40 against A100
+
+The card was changed on purpose: A100 PCIe reads "out of capacity" and A100 SXM
+offers one at a time, and a pod on the scarcest card in the fleet stopped by
+itself three times in a day. A40 shows six free.
+
+| | A100 SXM, $1.59/hr | A40, $0.44/hr |
+|---|---|---|
+| Model load, cold | 167.7 s | **171.1 s** |
+| Model load, warm page cache | 15.9 s | 16.4 s |
+| One image, 4-bit, 8 steps | 16.4 s | **31.1 s** |
+| **Cost per image** | $0.0072 | **$0.0038** |
+
+Loading is the same because it is bound by the volume, not the card. Generating
+is 1.9x slower, which is what a third of the memory bandwidth buys. The card is
+3.6x cheaper by the hour, so an image costs about half as much even though the
+customer waits twice as long -- and the market price for a try-on is $0.04, so
+both are far inside it.
+
+The trade is deliberate: twenty seconds of a customer's patience against a card
+that does not get taken away mid-job.
 | Model load, bf16 (transformer + text encoder) | ~290 s |
 | Model load, **4-bit** | **167.7 s** |
 
