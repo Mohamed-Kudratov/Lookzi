@@ -106,6 +106,18 @@ CREATE_FRAMING = ("full body from head to feet, standing straight, whole figure 
                   "soft diffused daylight, plain light grey studio backdrop, "
                   "neutral expression, photorealistic, sharp focus")
 
+# Asked for a person and told nothing about clothes, the model picks the least
+# it can get away with: "white skin, uzbek girl, very slim" came back in a
+# leotard, barefoot. Nobody wrote that and nobody wants it. hero_prompt has
+# always dressed the roster from CLOTHING_NEUTRAL for exactly this reason; a
+# written description was the one path that skipped it.
+#
+# Generic on purpose. The sleeveless attempt below failed because it named a
+# garment, and a named garment spreads to the whole outfit. "Everyday clothes"
+# names nothing, and it comes last, so a customer who writes "in a red coat"
+# still gets the coat.
+CLOTHED = "wearing plain everyday clothes and shoes"
+
 
 @app.post("/create")
 def create(gender: str = Form("woman"), age: str = Form("20s"),
@@ -138,7 +150,8 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
     written = (prompt or "").strip()
     if len(written) > 600:
         raise HTTPException(413, "that description is longer than the model reads")
-    full = f"{written}, {CREATE_FRAMING}" if written else hero_prompt(face)
+    full = (f"{written}, {CLOTHED}, {CREATE_FRAMING}" if written
+            else hero_prompt(face))
 
     started = time.time()
     with _gpu:
@@ -175,6 +188,12 @@ SCENE_FRAMING = ("full body from head to feet, whole figure in frame with the "
                  "feet visible, the person close to the camera and filling most "
                  "of the frame, standing, facing the camera, "
                  "photorealistic, sharp focus, natural light")
+
+# Same reason as CLOTHED above, and it matters more here: whatever this
+# person is wearing, the try-on stage puts the garment on over it, so a
+# figure that arrives in cycling shorts stays in cycling shorts below the
+# waist. Plain clothes are the ones a garment sits on without argument.
+# SCENE_FRAMING + CLOTHED, in that order, so the customer's words lead.
 
 # There was a "wearing a plain fitted sleeveless top" here and it is gone.
 #
@@ -216,7 +235,7 @@ def from_prompt(prompt: str = Form(...), seed: int = Form(0),
         raise HTTPException(413, "that prompt is longer than the model reads")
 
     import torch
-    full = f"{text}, {SCENE_FRAMING}" if framing != "0" else text
+    full = f"{text}, {CLOTHED}, {SCENE_FRAMING}" if framing != "0" else text
     started = time.time()
     with _gpu:
         try:
