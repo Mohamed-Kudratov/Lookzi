@@ -63,29 +63,50 @@ else
     pip install -q --no-cache-dir easy-dwpose==1.0.2 --no-deps
 
     # The fork's repository is not its package -- the package is at
-    # src/diffusers. Installing normally and leaving the tree
-    # named anything other than "diffusers" keeps Python from finding the
-    # source directory first and importing an empty namespace package.
+    # src/diffusers -- and a tree named "diffusers" in the working directory
+    # shadows the install, so it must not be left lying around.
     #
-    # The tracked tree is the one to trust. A leftover diffusers_src on the
-    # volume is whatever survived the last pod, and on this one that was a
-    # partial copy with no setup.py -- installable-looking until pip disagrees.
-    pip uninstall -q -y diffusers 2>/dev/null || true
+    # It is also excluded from the checkout by sparse-checkout, because
+    # materialising 2247 files onto a network volume takes minutes: this is the
+    # filesystem's worst case, thousands of tiny writes rather than bulk.
+    #
+    # So build a wheel the first time and keep it on the volume. Every pod after
+    # that installs one file and never materialises the tree at all, which turns
+    # minutes into seconds and is the whole difference for a pod that may be
+    # rebuilt several times a day.
+    WHEELS=/workspace/wheels
+    mkdir -p "$WHEELS"
+    wheel=$(ls -1t "$WHEELS"/diffusers-*.whl 2>/dev/null | head -1)
 
-    # The fork is excluded from the working tree by sparse-checkout: writing
-    # 2187 files onto a network volume is slow, and once the package is
-    # installed the source is dead weight -- and worse than dead weight, since
-    # a directory named "diffusers" in the working directory shadows the
-    # install. Excluding it does the same job as the Dockerfile's mv, without
-    # leaving a second copy behind.
-    #
-    # A wiped container disk takes the installed package with it, so the source
-    # has to come back for as long as pip needs it, then go again.
-    resparse=0
-    if [ ! -f "$REPO/diffusers/setup.py" ]        && [ "$(git -C "$REPO" config --get core.sparseCheckout)" = "true" ]; then
-        echo "  materialising the fork (sparse-checkout hides it)"
-        git -C "$REPO" sparse-checkout disable
-        resparse=1
+    pip uninstall -q -y diffusers 2>/dev/null || true
+    if [ -n "$wheel" ]; then
+        echo "  installing the cached fork wheel: $(basename "$wheel")"
+        pip install -q --no-cache-dir --no-deps "$wheel"
+    else
+        resparse=0
+        if [ ! -f "$REPO/diffusers/setup.py" ]            && [ "$(git -C "$REPO" config --get core.sparseCheckout)" = "true" ]; then
+            echo "  materialising the fork (sparse-checkout hides it)"
+            git -C "$REPO" sparse-checkout disable
+            resparse=1
+        fi
+
+        if [ -f "$REPO/diffusers/setup.py" ]; then
+            src="$REPO/diffusers"
+        elif [ -f "$REPO/diffusers_src/setup.py" ]; then
+            src="$REPO/diffusers_src"
+        else
+            echo "  !! no installable diffusers fork here." >&2
+            echo "     Expected diffusers/setup.py. Restore the tree with a checkout." >&2
+            exit 1
+        fi
+
+        echo "  building a wheel so no later pod pays for this"
+        pip wheel -q --no-cache-dir --no-deps -w "$WHEELS" "$src"             && pip install -q --no-cache-dir --no-deps                  "$(ls -1t "$WHEELS"/diffusers-*.whl | head -1)"             || pip install -q --no-cache-dir "$src"
+
+        if [ "$resparse" = "1" ]; then
+            echo "  hiding the fork again"
+            git -C "$REPO" sparse-checkout set --no-cone '/*' '!/diffusers/'
+        fi
     fi
 
     if [ -f "$REPO/diffusers/setup.py" ]; then
