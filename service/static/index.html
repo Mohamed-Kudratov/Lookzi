@@ -1,368 +1,342 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lookzi Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Dark first. Every tool a photographer already uses is dark, because a bright
-   interface changes how you judge the picture sitting next to it -- and the
-   picture is the only thing on this screen that should carry colour. Light is
-   supported for anyone who wants it. */
+/* ---------------------------------------------------------------------------
+   The shape is the competitor's, deliberately.
+
+   One stage that changes, and one bar underneath that does not: the tools are a
+   row you switch, not pages you navigate between, and the prompt and Run button
+   stay where your hand left them. Our previous layout put the tools down the
+   left and the inputs down the right, so changing tool felt like arriving
+   somewhere else with half the screen missing -- which is exactly how it was
+   reported.
+
+   What is not copied is their row of Ratio / Resolution / Mode controls. We do
+   not have those, and a control that does nothing is the precise mistake we
+   just spent a day removing.
+--------------------------------------------------------------------------- */
 :root{
   --bg:#0B0C0E; --panel:#131519; --panel-2:#1A1D22; --raised:#22262D;
   --line:#23272E; --line-2:#333943;
   --ink:#F1F0EC; --ink-2:#A2A8B0; --ink-3:#6C737C;
   --brand:#7B8AF0; --brand-soft:#1D2340; --on-brand:#0B0C0E;
-  --wait:#D9B65E; --wait-soft:#2A2415;
-  --run:#5BB8C9;  --run-soft:#132A2F;
-  --done:#63BE87; --done-soft:#14271C;
-  --bad:#D4785D;
+  --wait:#D9B65E; --run:#5BB8C9; --done:#63BE87; --bad:#D4785D;
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 18px 44px -24px rgba(0,0,0,.9);
   --ease:cubic-bezier(.2,.7,.3,1);
-  --rail:216px; --panel-w:320px;
+  --rail:92px;
+  --sans:"Inter",system-ui,-apple-system,sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 :root[data-theme="light"]{
   --bg:#F5F5F2; --panel:#FFFFFF; --panel-2:#EFEEE9; --raised:#E6E5DF;
   --line:#E2E0D9; --line-2:#CDCAC1;
   --ink:#14161A; --ink-2:#575D65; --ink-3:#878D95;
   --brand:#3B4BA0; --brand-soft:#E6E9F8; --on-brand:#FFFFFF;
-  --wait:#8A6A1C; --wait-soft:#F6EED6;
-  --run:#1F6B7A;  --run-soft:#DCEDF1;
-  --done:#2F6B45; --done-soft:#DDEEE3;
-  --bad:#A9472F;
-  --shadow:0 1px 2px rgba(20,22,26,.06), 0 16px 38px -24px rgba(20,22,26,.4);
+  --wait:#8A6A1C; --run:#1F6B7A; --done:#2F6B45; --bad:#A9472F;
+  --shadow:0 1px 2px rgba(20,22,26,.06), 0 18px 40px -26px rgba(20,22,26,.30);
 }
 *{box-sizing:border-box}
 /* The hidden attribute is only display:none at the browser's own specificity,
-   so any rule that sets display -- .slot .empty{display:grid} did -- wins and
-   the element stays on screen. That put "Nothing yet" above every finished
-   image. Worth enforcing once here rather than per element, because the same
-   trap is waiting behind every display rule on the page. */
+   so any rule that sets display outranks it and the element stays on screen. */
 [hidden]{display:none !important}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
-  font:400 15px/1.5 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased}
-img{display:block;max-width:100%}
-button,input,select{font:inherit;color:inherit}
-button{cursor:pointer;border:0;background:none}
-:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
-svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.mono{font:500 10px/1.4 "Martian Mono",ui-monospace,monospace;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:10px}
+::-webkit-scrollbar-track{background:transparent}
 
-/* ---------- shell ---------- */
-.app{display:grid;grid-template-rows:56px 1fr;height:100dvh}
-.bar{display:flex;align-items:center;gap:14px;padding:0 16px;
-  border-bottom:1px solid var(--line);background:var(--panel)}
-.logo{font-family:Archivo;font-variation-settings:"wdth" 122,"wght" 800;
-  font-size:20px;letter-spacing:-.05em}
-.bar .spacer{margin-inline-start:auto}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
-  border:1px solid var(--line-2);font:500 11px/1 "Martian Mono",monospace;color:var(--ink-2)}
-.chip i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.chip[data-s="running"]{color:var(--run);border-color:color-mix(in srgb,var(--run) 40%,transparent)}
-.chip[data-s="queued"]{color:var(--wait);border-color:color-mix(in srgb,var(--wait) 40%,transparent)}
-.iconbtn{width:38px;height:38px;border:1px solid var(--line);border-radius:9px;
-  display:grid;place-items:center;background:var(--panel-2);transition:150ms var(--ease)}
-.iconbtn:hover{border-color:var(--line-2);color:var(--ink)}
-.iconbtn svg{width:17px;height:17px}
-
-.body{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--panel-w);min-height:0}
+.app{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);height:100dvh}
 
 /* ---------- rail ---------- */
 .rail{border-inline-end:1px solid var(--line);background:var(--panel);
-  padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
-.rail .mono{padding:6px 8px 8px}
-.tool{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;
-  border-radius:9px;text-align:start;color:var(--ink-2);transition:150ms var(--ease);
-  min-height:44px}
-.tool:hover:not(:disabled){background:var(--panel-2);color:var(--ink)}
-.tool[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);
-  box-shadow:inset 2px 0 0 var(--brand)}
-.tool:disabled{opacity:.42;cursor:not-allowed}
-.tool svg{width:19px;height:19px;flex:none}
-.tool b{font-size:13.5px;font-weight:500}
-.tool small{margin-inline-start:auto;font:500 8.5px/1 "Martian Mono",monospace;
-  letter-spacing:.1em;color:var(--wait)}
+  display:grid;grid-template-rows:auto 1fr auto;padding:12px 8px;gap:10px}
+.mark{width:38px;height:38px;border-radius:11px;background:var(--ink);
+  color:var(--bg);display:grid;place-items:center;margin:0 auto}
+.mark svg{width:20px;height:20px}
+.rail nav{display:grid;gap:3px;align-content:start}
+.rail a{display:grid;justify-items:center;gap:4px;padding:9px 4px;border-radius:10px;
+  color:var(--ink-3);text-decoration:none;font-size:11px;cursor:pointer;
+  transition:background .15s var(--ease),color .15s var(--ease)}
+.rail a:hover{background:var(--panel-2);color:var(--ink-2)}
+.rail a[aria-current="page"]{background:var(--raised);color:var(--ink)}
+.rail a svg{width:19px;height:19px}
+.rail .foot{display:grid;gap:6px;justify-items:center}
 
-/* ---------- canvas ---------- */
-.canvas{min-width:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--bg)}
-.canvas-head{display:flex;align-items:center;gap:12px;padding:14px 18px;
-  border-bottom:1px solid var(--line);flex-wrap:wrap}
-.canvas-head h1{font-family:Archivo;font-variation-settings:"wdth" 112,"wght" 700;
-  font-size:17px;letter-spacing:-.02em;margin:0}
-.canvas-head p{margin:0;color:var(--ink-3);font-size:13px}
-/* One thing now: the result. The inputs moved to the panel, where the tool
-   says what they are. */
-/* The row is explicit. Without it the single slot takes an implicit auto
-   row, sizes itself to the image's own pixels, and a 768x1024 result spills
-   far past the viewport -- which looked like the model returning half a
-   body when it was returning a whole one nobody could see. */
-.slots{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);
-  gap:14px;padding:18px;min-height:0;overflow:hidden}
-.slot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;
-  background:var(--panel);display:grid;place-items:center;min-height:0}
-.slot.drop{border-style:dashed;cursor:pointer}
-.slot.drop:hover,.slot.over{border-color:var(--brand);background:var(--brand-soft)}
-/* Positioned rather than sized. A percentage height on a centred grid item
-   does not resolve against the slot here, so a 512x896 result rendered at its
-   own pixel size and ran off the bottom of the page -- which read as the model
-   returning half a body when it had returned a whole one. inset:0 on the
-   relative slot is exact whatever the layout does around it. */
-.slot img{position:absolute;inset:0;width:100%;height:100%;
-  object-fit:contain;background:var(--panel-2)}
-.slot .tag{position:absolute;top:10px;inset-inline-start:10px;z-index:2;
-  padding:5px 8px;border-radius:6px;background:color-mix(in srgb,var(--bg) 82%,transparent);
-  border:1px solid var(--line)}
-.slot .empty{text-align:center;padding:24px;color:var(--ink-3);display:grid;gap:8px;justify-items:center}
-.slot .empty svg{width:26px;height:26px;color:var(--ink-3)}
-.slot .empty b{color:var(--ink-2);font-weight:500;font-size:13.5px}
-.slot .empty span{font-size:12px}
-.slot input[type=file]{display:none}
-.slot .swap{position:absolute;bottom:10px;inset-inline-end:10px;z-index:2;
-  padding:7px 11px;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--bg) 82%,transparent);
-  border:1px solid var(--line-2);color:var(--ink-2)}
-.slot .swap:hover{color:var(--ink);border-color:var(--brand)}
+/* ---------- main ---------- */
+.main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0}
+.top{display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid var(--line)}
+.top .who{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.top .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;
+  border:1px solid var(--line);background:var(--panel);font-size:12.5px;color:var(--ink-2)}
+.chip b{color:var(--ink);font-weight:500;font-family:var(--mono)}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);font-style:normal}
+.chip[data-s="ok"] i{background:var(--done)}
+.chip[data-s="none"] i{background:var(--bad)}
+.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--ink-2)}
+.icon-btn:hover{background:var(--panel-2);color:var(--ink)}
+.icon-btn svg{width:16px;height:16px}
 
-.veil{position:absolute;inset:0;z-index:3;display:grid;place-items:center;gap:14px;
-  background:color-mix(in srgb,var(--bg) 88%,transparent);text-align:center;padding:24px}
-.veil[hidden]{display:none}
-.veil .num{font:500 30px/1 "Martian Mono",monospace;font-variant-numeric:tabular-nums}
-.bar-track{width:190px;height:4px;border-radius:99px;background:var(--raised);overflow:hidden}
-.bar-track i{display:block;height:100%;width:0;background:var(--run);
-  transition:width 400ms var(--ease)}
+/* ---------- stage ---------- */
+.stage{overflow:auto;display:grid;place-items:center;padding:24px}
+.stage > *{width:100%;max-width:1180px}
 
-/* ---------- history ---------- */
-.strip{border-top:1px solid var(--line);background:var(--panel);padding:10px 18px;
-  display:flex;align-items:center;gap:10px;min-height:92px}
-.strip .mono{flex:none}
-.strip-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
-.strip a{flex:none;width:56px;height:72px;border-radius:8px;overflow:hidden;
-  border:1px solid var(--line);background:var(--panel-2);transition:150ms var(--ease)}
-.strip a:hover{border-color:var(--brand);translate:0 -2px}
-.strip img{width:100%;height:100%;object-fit:cover}
-.strip .none{color:var(--ink-3);font-size:12.5px}
+.blank{display:grid;justify-items:center;gap:14px;text-align:center;padding:30px 0}
+.blank .art{display:flex;gap:6px}
+.blank .art span{width:92px;height:116px;border-radius:14px;border:1px solid var(--line);
+  background:var(--panel-2);display:grid;place-items:center;box-shadow:var(--shadow)}
+.blank .art span:nth-child(1){transform:rotate(-7deg) translateX(16px)}
+.blank .art span:nth-child(3){transform:rotate(7deg) translateX(-16px)}
+.blank .art svg{width:32px;height:32px;color:var(--ink-3)}
+.blank h2{margin:8px 0 0;font-family:var(--serif);font-weight:400;font-size:26px;
+  letter-spacing:-.01em}
+.blank p{margin:0;color:var(--ink-3);font-size:13px;max-width:44ch}
+.blank .acts{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:4px}
 
-/* ---------- right panel ---------- */
-.panel{border-inline-start:1px solid var(--line);background:var(--panel);
-  display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
-.panel-scroll{overflow-y:auto;padding:16px;display:grid;gap:18px;align-content:start}
-/* ---------- the input steps ---------- */
-/* Numbered, because a customer arriving at a tool should be able to see how
-   many things it wants before starting, not discover the second one after
-   finishing the first. */
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:16px}
-.step{display:grid;grid-template-columns:22px 1fr;gap:9px 10px;align-items:start}
-.step-n{grid-row:1;width:22px;height:22px;border-radius:50%;display:grid;
-  place-items:center;font:500 11px/1 var(--mono);color:var(--ink-3);
+.btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  padding:10px 16px;border-radius:11px;font-size:13px;font-weight:500;
+  text-decoration:none;box-shadow:var(--shadow);
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.btn:hover{background:var(--panel-2);border-color:var(--line-2)}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn svg{width:16px;height:16px;flex:none}
+
+/* the input cards, side by side, the way the competitor lays them out */
+.cards{display:flex;gap:16px;justify-content:center;align-items:stretch;flex-wrap:wrap}
+.card{position:relative;width:min(330px,42vw);aspect-ratio:3/4;border-radius:16px;
+  border:1px solid var(--line);background:var(--panel);overflow:hidden;
+  box-shadow:var(--shadow);display:grid;place-items:center;cursor:pointer;
+  transition:border-color .15s var(--ease)}
+.card:hover{border-color:var(--line-2)}
+.card.want{border-style:dashed}
+.card.over{border-color:var(--brand);border-style:solid}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:var(--panel-2)}
+.card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.card .label{position:absolute;top:10px;inset-inline-start:10px;z-index:3;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
+  padding:4px 8px;border-radius:7px;background:var(--bg);border:1px solid var(--line);
+  color:var(--ink-2)}
+.card .drop{display:grid;gap:5px;justify-items:center;color:var(--ink-3);padding:20px;
+  text-align:center;z-index:1}
+.card .drop b{color:var(--ink-2);font-weight:500;font-size:13px}
+.card .drop span{font-size:11.5px}
+.card .drop svg{width:26px;height:26px;margin-bottom:2px}
+.card .kill{position:absolute;top:9px;inset-inline-end:9px;z-index:4;width:26px;height:26px;
+  border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);
+  display:grid;place-items:center;cursor:pointer}
+.card .kill:hover{color:var(--ink);border-color:var(--line-2)}
+.card .kill svg{width:12px;height:12px}
+
+/* the result: inputs small on the left, result large, history on the right */
+.done{display:grid;grid-template-columns:118px minmax(0,1fr) 150px;gap:18px;
+  align-items:start}
+.done .ins{display:grid;gap:12px}
+.done .ins figure{margin:0;display:grid;gap:5px}
+.done .ins figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink-3)}
+.done .ins img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:11px;
   border:1px solid var(--line);background:var(--panel-2)}
-.step[data-done="true"] .step-n{border-color:var(--brand);color:var(--brand)}
-.step-h{grid-row:1;display:grid;gap:1px}
-.step-h b{font-size:13px;font-weight:500}
-.step-h > span{font-size:11.5px;color:var(--ink-3)}
-.step .chosen{grid-column:2;font-size:12px;color:var(--brand);margin-top:-4px}
-.step .drop,.step .models,.step .look,.step textarea,.step .examples{grid-column:2}
-.step textarea{width:100%;resize:vertical;min-height:84px;padding:10px 11px;
-  border-radius:10px;border:1px solid var(--line);background:var(--panel-2);
-  color:var(--ink);font:inherit;font-size:13px;line-height:1.5}
-.step textarea:focus{outline:2px solid var(--brand);outline-offset:1px;
-  border-color:transparent}
-.step textarea::placeholder{color:var(--ink-3)}
-.examples{display:grid;gap:5px;margin-top:7px}
-.examples button{cursor:pointer;font:inherit;font-size:11.5px;text-align:start;
-  padding:6px 9px;border-radius:7px;border:1px solid var(--line);
-  background:transparent;color:var(--ink-3)}
-.examples button:hover{background:var(--panel-2);color:var(--ink-2)}
-.look{display:grid;gap:9px}
-.look-row{display:grid;gap:5px}
-.look-row > span{font-size:11.5px;color:var(--ink-3)}
-.look .seg{display:flex;flex-wrap:wrap;gap:5px}
-.look .seg button{cursor:pointer;font:inherit;font-size:12px;padding:6px 11px;
-  border-radius:8px;border:1px solid var(--line);background:var(--panel-2);
-  color:var(--ink-2);transition:background .15s ease,color .15s ease}
-.look .seg button:hover{background:#252E44;color:var(--ink)}
-.look .seg button[aria-pressed="true"]{background:var(--brand);color:#0B1120;
+.big{position:relative;border-radius:18px;border:1px solid var(--line);
+  background:var(--panel);overflow:hidden;box-shadow:var(--shadow);
+  aspect-ratio:3/4;max-height:calc(100dvh - 290px);margin:0 auto}
+.big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:var(--panel-2)}
+.big .save{position:absolute;bottom:12px;inset-inline-end:12px;z-index:3}
+.hist h3{margin:0 0 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:400}
+.hist .rows{display:grid;gap:8px;max-height:calc(100dvh - 320px);overflow:auto}
+.hist button{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:var(--panel-2);cursor:pointer;aspect-ratio:3/4}
+.hist button:hover{border-color:var(--line-2)}
+.hist img{width:100%;height:100%;object-fit:cover;display:block}
+.hist .none{color:var(--ink-3);font-size:12px}
+
+/* while it runs */
+.veil{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--bg) 80%,transparent)}
+.veil > div{display:grid;gap:9px;justify-items:center;text-align:center;padding:16px}
+.veil .n{font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:-.02em}
+.veil .s{font-family:var(--mono);font-size:11.5px;color:var(--ink-2)}
+.veil .h{font-size:11.5px;color:var(--ink-3);min-height:16px}
+.track{width:190px;height:4px;border-radius:99px;background:var(--raised);overflow:hidden}
+.track i{display:block;height:100%;width:0;background:var(--run);
+  transition:width .45s var(--ease)}
+
+/* ---------- the bar that never moves ---------- */
+.bar{border-top:1px solid var(--line);background:var(--panel);padding:12px 20px 16px;
+  display:grid;gap:11px}
+.pills{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
+.pill{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink-2);
+  padding:8px 14px;border-radius:99px;font-size:13px;font-weight:500;
+  transition:background .15s var(--ease),color .15s var(--ease)}
+.pill:hover{background:var(--panel-2);color:var(--ink)}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pill[disabled]{opacity:.4;cursor:not-allowed}
+.pill svg{width:15px;height:15px}
+.pill small{font-size:10px;opacity:.7}
+
+.compose{border:1px solid var(--line);border-radius:16px;background:var(--panel-2);
+  padding:12px 14px;display:grid;gap:10px}
+.compose:focus-within{border-color:var(--line-2)}
+.compose textarea{width:100%;border:0;background:transparent;resize:none;
+  font-size:14px;line-height:1.5;min-height:24px;max-height:120px;outline:none}
+.compose textarea::placeholder{color:var(--ink-3)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row .sp{flex:1}
+.mini{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;
+  padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink-2)}
+.mini:hover{background:var(--raised);color:var(--ink)}
+.mini[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);
   border-color:var(--brand)}
-.look .seg button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.step .nothing{grid-column:1/-1;margin:0;font-size:12.5px;color:var(--ink-3)}
+.mini svg{width:14px;height:14px}
+.run{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;
+  font-weight:600;padding:10px 20px;border-radius:11px;border:1px solid var(--brand);
+  background:var(--brand);color:var(--on-brand)}
+.run:hover{filter:brightness(1.08)}
+.run[disabled]{opacity:.4;cursor:not-allowed;filter:none}
+.run svg{width:15px;height:15px}
+.hint{font-size:11.5px;color:var(--ink-3)}
 
-.step .drop{position:relative;display:grid;place-items:center;cursor:pointer;
-  aspect-ratio:4/3;border:1px dashed var(--line-2);border-radius:10px;
-  background:var(--panel-2);overflow:hidden;transition:border-color .15s ease}
-.step .drop:hover{border-color:var(--brand)}
-.step .drop:focus-within{outline:2px solid var(--brand);outline-offset:2px}
-.step .drop.over{border-color:var(--brand);border-style:solid}
-.step .drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.step .drop img{width:100%;height:100%;object-fit:contain;background:var(--bg)}
-.step .drop .empty{display:grid;gap:2px;justify-items:center;text-align:center;padding:14px}
-.step .drop .empty b{font-size:13px;font-weight:500}
-.step .drop .empty span{font-size:11.5px;color:var(--ink-3)}
-.step .drop .swap{position:absolute;right:8px;bottom:8px;padding:5px 10px;
-  border-radius:7px;font-size:11.5px;background:rgba(0,0,0,.66);color:#fff;
-  pointer-events:none}
-.group{display:grid;gap:9px}
-.group > .mono{display:flex;align-items:center;gap:8px}
-.group > .mono b{color:var(--brand);font-weight:500}
-.models{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.model{padding:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;
-  background:var(--panel-2);text-align:start;transition:150ms var(--ease)}
-.model:hover{border-color:var(--line-2);translate:0 -2px}
-.model[aria-pressed="true"]{border:2px solid var(--brand)}
-.model .ph{aspect-ratio:3/4;position:relative;background:var(--raised)}
-.model .ph img{width:100%;height:100%;object-fit:cover}
-.model .sample{position:absolute;inset-inline:0;bottom:0;padding:2px;
-  background:color-mix(in srgb,var(--bad) 90%,transparent);color:#fff;
-  font:500 7.5px/1.4 "Martian Mono",monospace;text-align:center;letter-spacing:.06em}
-.model .meta{padding:6px 7px}
-.model b{display:block;font-size:11.5px;font-weight:500}
-.model span{font-size:10px;color:var(--ink-3)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;
-  border:1px solid var(--line);border-radius:9px}
-.seg button{padding:9px 4px;border-radius:6px;color:var(--ink-2);font-size:12.5px;
-  transition:150ms var(--ease);min-height:38px}
-.seg button:hover{color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);font-weight:600}
+/* popovers: the roster, and the look */
+.pop{position:fixed;z-index:40;inset:auto 0 0 0;margin:0 auto;width:min(780px,94vw);
+  max-height:72dvh;overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:18px 18px 0 0;box-shadow:var(--shadow);padding:18px}
+.pop h3{margin:0 0 12px;font-size:14px;font-weight:600}
+.pop .close{position:absolute;top:14px;inset-inline-end:14px}
+.grid-models{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px}
+.grid-models button{padding:0;border:1px solid var(--line);border-radius:11px;
+  overflow:hidden;background:var(--panel-2);cursor:pointer;text-align:start}
+.grid-models button:hover{border-color:var(--line-2)}
+.grid-models button[aria-pressed="true"]{border:2px solid var(--brand)}
+.grid-models .ph{aspect-ratio:3/4;background:var(--raised);display:block}
+.grid-models img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-models .meta{padding:6px 8px;display:block}
+.grid-models b{display:block;font-size:12px;font-weight:500}
+.grid-models .age{display:block;font-size:10.5px;color:var(--ink-3)}
+.look{display:grid;gap:12px}
+.look-row{display:grid;gap:6px}
+.look-row > span{font-size:11.5px;color:var(--ink-3)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{cursor:pointer;font-size:12.5px;padding:7px 13px;border-radius:9px;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
+.seg button:hover{background:var(--raised);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);
+  border-color:var(--brand)}
+.scrim{position:fixed;inset:0;z-index:39;background:rgba(0,0,0,.55)}
 
-.foot{border-top:1px solid var(--line);padding:14px 16px;display:grid;gap:10px}
-.gpu{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:9px;
-  background:var(--panel-2);border:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
-.gpu i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink-3)}
-.gpu[data-s="warm"] i{background:var(--done)}
-.gpu[data-s="busy"] i{background:var(--run)}
-.go{width:100%;padding:14px;border-radius:10px;background:var(--brand);color:var(--on-brand);
-  font-weight:600;font-size:14.5px;transition:150ms var(--ease);min-height:48px}
-.go:hover:not(:disabled){filter:brightness(1.08)}
-.go:disabled{background:var(--raised);color:var(--ink-3);cursor:not-allowed}
-.need{font-size:12px;color:var(--ink-3);text-align:center;min-height:16px}
-.ghost{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line-2);
-  color:var(--ink-2);font-size:13px;transition:150ms var(--ease);min-height:42px}
-.ghost:hover{color:var(--ink);border-color:var(--brand)}
+.toast{position:fixed;left:50%;bottom:22px;translate:-50% 0;z-index:60;
+  padding:11px 18px;border-radius:11px;background:var(--ink);color:var(--bg);
+  font-size:13px;font-weight:500;box-shadow:var(--shadow);opacity:0;
+  transition:opacity .2s var(--ease),translate .2s var(--ease);pointer-events:none}
+.toast.on{opacity:1;translate:-50% -6px}
+.toast.bad{background:var(--bad);color:#fff}
 
-.toast{position:fixed;inset-inline-end:18px;bottom:18px;z-index:60;max-width:340px;
-  padding:12px 15px;border-radius:10px;background:var(--panel);border:1px solid var(--line-2);
-  box-shadow:var(--shadow);font-size:13.5px;opacity:0;translate:0 8px;
-  transition:180ms var(--ease);pointer-events:none}
-.toast[data-on="true"]{opacity:1;translate:0}
-.toast[data-bad="true"]{border-color:var(--bad);color:var(--bad)}
-
-@media (max-width:1100px){ :root{--rail:64px;--panel-w:280px} .tool b,.tool small{display:none}
-  .tool{justify-content:center} .rail > .mono{display:none} }
-@media (max-width:820px){
+@media (max-width:900px){
   body{overflow:auto}
-  /* height:100dvh on the shell is right on desktop, where the three panes
-     divide one screen and each scrolls itself. On a phone the panes stack and
-     the page must be allowed to grow, or the last one in the column -- the
-     panel holding the models and the Generate button -- is squeezed to a
-     single pixel while its contents spill out of it invisibly. */
-  .app{grid-template-rows:56px auto;height:auto;min-height:100dvh}
-  .body{grid-template-columns:1fr}
-  .rail{flex-direction:row;overflow-x:auto;border-inline-end:0;border-bottom:1px solid var(--line)}
-  .tool{width:auto;justify-content:flex-start} .tool b{display:block}
-  /* The panel is a fixed-height scroll container on desktop: one flexible row
-     for the controls, one for the footer. On a phone the body has no height of
-     its own to divide, so that 1fr resolved against zero -- the panel came out
-     0.8 px tall and the thirteen models lived in a 32 px window nobody could
-     see. Here it simply flows with the page. */
-  .panel{border-inline-start:0;border-top:1px solid var(--line);
-    grid-template-rows:auto auto}
-  .panel-scroll{overflow:visible}
-  /* Generate follows the page down, because otherwise it sits below thirteen
-     model photographs and the customer has to scroll past all of them to
-     press the only button that matters. */
-  .foot{position:sticky;bottom:0;background:var(--panel);
-    box-shadow:0 -8px 24px rgba(0,0,0,.35)}
-  .canvas{grid-template-rows:auto auto auto}
-  .slots{grid-template-columns:1fr}
-  /* No row to divide on a phone, so the slot is given a shape instead. */
-  .slots{grid-template-rows:auto}
-  .slot{aspect-ratio:3/4;min-height:0}
-  /* Two across rather than three: a third of a 375 px screen is a thumbnail
-     nobody can judge a face from. */
-  .models{grid-template-columns:repeat(2,1fr)}
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:auto;
+    min-height:100dvh}
+  .rail{grid-template-rows:auto;border-inline-end:0;border-bottom:1px solid var(--line);
+    padding:8px}
+  .rail nav{grid-auto-flow:column;justify-content:start;overflow-x:auto}
+  .rail a{padding:8px 14px}
+  .mark,.rail .foot{display:none}
+  .main{grid-template-rows:auto auto auto}
+  .stage{padding:16px}
+  .card{width:min(320px,86vw)}
+  .done{grid-template-columns:1fr}
+  .done .ins{grid-auto-flow:column;justify-content:start;align-items:start}
+  .done .ins figure{width:92px}
+  .hist .rows{grid-auto-flow:column;grid-auto-columns:92px;overflow-x:auto;max-height:none}
+  .big{max-height:none}
+  .bar{position:sticky;bottom:0;z-index:20}
 }
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  *,*::before,*::after{transition-duration:.01ms !important}
 }
 </style>
 </head>
 <body>
-
 <div class="app">
-  <div class="bar">
-    <span class="logo">lookzi</span>
-    <span class="mono" style="color:var(--ink-3)">studio</span>
-    <span class="spacer"></span>
-    <span class="chip" id="queue-chip" hidden><i></i><span id="queue-text"></span></span>
-    <span class="chip" id="credits">—</span>
-    <button class="iconbtn" id="theme" aria-label="Switch between light and dark" title="Light or dark">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>
-    </button>
+  <div class="rail">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8l4 4-3 2v12H7V9L4 7z"/></svg>
+    </div>
+    <nav aria-label="Sections">
+      <a id="nav-studio" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        Studio</a>
+      <a id="nav-gallery" href="/review">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>
+        Gallery</a>
+      <a id="nav-models">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>
+        Models</a>
+    </nav>
+    <div class="foot">
+      <button class="icon-btn" id="theme" title="Light or dark" aria-label="Light or dark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="body">
-    <nav class="rail" id="rail" aria-label="Tools"><span class="mono">Tools</span></nav>
+  <div class="main">
+    <header class="top">
+      <span class="who" id="tool-name">Studio</span>
+      <span class="sp"></span>
+      <span class="chip" id="gpu" data-s="idle"><i></i><span id="gpu-text">checking…</span></span>
+      <span class="chip"><b id="credits">—</b>&nbsp;credits</span>
+    </header>
 
-    <section class="canvas">
-      <div class="canvas-head">
-        <h1 id="tool-name">Product → Model</h1>
-        <p id="tool-blurb"></p>
-      </div>
+    <section class="stage" id="stage"></section>
 
-      <div class="slots">
-        <div class="slot" id="slot-b">
-          <span class="tag mono">Result</span>
-          <div class="empty" id="empty-b">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>
-            <b>Nothing yet</b><span>the finished image lands here</span>
-          </div>
-          <img id="img-b" alt="" hidden>
-          <div class="veil" id="veil" hidden>
-            <div>
-              <div class="num" id="veil-num">14.3s</div>
-              <div class="mono" id="veil-state" style="margin-top:8px">queued</div>
-              <div class="mono" id="veil-hint" style="margin-top:6px;font-size:11.5px;color:var(--ink-3)"></div>
-              <div class="bar-track" style="margin-top:12px"><i id="veil-bar"></i></div>
-              <button class="ghost" id="cancel-job" style="margin-top:16px;width:auto;padding:9px 16px">Cancel</button>
-            </div>
-          </div>
+    <footer class="bar">
+      <div class="pills" id="pills" role="tablist" aria-label="Tools"></div>
+      <div class="compose">
+        <textarea id="prompt" rows="1" placeholder="Describe anything you want to create…"></textarea>
+        <div class="row">
+          <span id="extras" class="row" style="gap:8px"></span>
+          <span class="sp"></span>
+          <span class="hint" id="hint"></span>
+          <button class="run" id="run" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            <span id="run-label">Run</span>
+          </button>
         </div>
       </div>
-
-      <div class="strip">
-        <span class="mono">Recent</span>
-        <div class="strip-scroll" id="strip"><span class="none">nothing yet</span></div>
-      </div>
-    </section>
-
-    <aside class="panel">
-      <div class="panel-scroll">
-        <!-- Rendered from the tool's own list of inputs. Placing them by hand
-             meant the garment lived in the canvas, the photo and the model in
-             the panel, and which appeared was decided by three separate rules
-             that disagreed: "change the model" hid the canvas entirely and
-             looked like the previous tool with its middle missing. -->
-        <ol class="steps" id="inputs"></ol>
-      </div>
-
-      <div class="foot">
-        <div class="gpu" id="gpu" data-s="idle"><i></i><span id="gpu-text">checking…</span></div>
-        <button class="go" id="go" disabled>Generate</button>
-        <div class="need" id="need"></div>
-      </div>
-    </aside>
+    </footer>
   </div>
 </div>
 
+<div class="scrim" id="scrim" hidden></div>
+<div class="pop" id="pop" hidden role="dialog" aria-modal="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
 "use strict";
+var $ = function (id) { return document.getElementById(id); };
+
+function esc(v) {
+  return String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 var CLIENT = localStorage.getItem("lookzi-client");
 if (!CLIENT) {
@@ -370,433 +344,486 @@ if (!CLIENT) {
     : Date.now() + Math.random().toString(16).slice(2));
   localStorage.setItem("lookzi-client", CLIENT);
 }
-
-var $ = function (id) { return document.getElementById(id); };
-var TOOLS = [], MODELS = [], job = null, poll = null, health = null;
-var pick = {tool: null, garment_key: null, garment_url: null,
-            person_key: null, person_url: null, model_id: null,
-            gender: "woman", age: "20s", build: "average", look: "uzbek",
-            modest: "false", prompt: ""};
-
-// Stroked SVG on a 24 grid, one shape per tool. Emoji are not icons: they
-// render differently on every platform and carry no meaning at 19px.
-var ICON = {
-  "product-to-model":'<rect x="3" y="4" width="7" height="7" rx="1"/><path d="M17 4v4M15 6h4"/><path d="M7 15v5M14 20v-5a3 3 0 0 1 6 0v5"/>',
-  "virtual-try-on":'<path d="M8 4 4 6v5h3v9h10v-9h3V6l-4-2-4 2Z"/>',
-  "model-swap":'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M14 6h5v5M10 18H5v-5"/>',
-  "packshot":'<path d="M12 3 3 7v10l9 4 9-4V7l-9-4Z"/><path d="m3 7 9 4 9-4M12 11v10"/>',
-  "model-creation":'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/>',
-  "short-video":'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 11 5-3v8l-5-3"/>'
-};
-function svg(id) {
-  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[id] || ICON["packshot"]) + '</svg>';
-}
+try {
+  var savedTheme = localStorage.getItem("lookzi-theme");
+  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+} catch (e) {}
 
 function api(path, opts) {
   opts = opts || {};
-  opts.headers = Object.assign({"X-Client-Id": CLIENT}, opts.headers || {});
-  if (opts.body && typeof opts.body !== "string") {
-    opts.headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(opts.body);
-  }
-  return fetch(path, opts).then(function (r) {
-    return r.text().then(function (t) {
-      var b = t ? JSON.parse(t) : null;
-      if (!r.ok) throw new Error((b && b.detail) || r.statusText);
-      return b;
+  return fetch(path, {
+    method: opts.method || "GET",
+    headers: {"Content-Type": "application/json", "X-Client-Id": CLIENT},
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.detail || ("request failed (" + r.status + ")"));
+      return d;
     });
   });
 }
 
 var toastTimer;
-function toast(text, bad) {
+function toast(msg, bad) {
   var el = $("toast");
-  el.textContent = text;
-  el.dataset.bad = bad ? "true" : "false";
-  el.dataset.on = "true";
+  el.textContent = msg;
+  el.classList.toggle("bad", !!bad);
+  el.classList.add("on");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { el.dataset.on = "false"; }, 3600);
+  toastTimer = setTimeout(function () { el.classList.remove("on"); }, 3800);
 }
 
-// ---- theme ---------------------------------------------------------------
-try {
-  var saved = localStorage.getItem("lookzi-theme");
-  if (saved) document.documentElement.setAttribute("data-theme", saved);
-} catch (e) {}
-$("theme").onclick = function () {
-  var root = document.documentElement;
-  var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-  root.setAttribute("data-theme", next);
-  try { localStorage.setItem("lookzi-theme", next); } catch (e) {}
-};
+// ---------------------------------------------------------------- state
+var TOOLS = [], MODELS = [], job = null, poll = null, result = null, recent = [];
+var pick = {tool: null, prompt: "",
+            garment_key: null, garment_url: null,
+            person_key: null, person_url: null,
+            model_id: null,
+            gender: "woman", age: "20s", build: "average", look: "uzbek",
+            modest: "false"};
 
-// ---- the tool shapes the workspace ---------------------------------------
-// Nothing is hidden behind a step. Every input the current tool uses is on
-// screen at once and can be changed at any time -- which is the difference
-// between a studio and a form.
-function tool() { return TOOLS.find(function (t) { return t.id === pick.tool; }); }
-
-// What each input is, so the panel can be built from the tool's own list
-// rather than from rules written per tool. Adding packshot or model creation
-// is now a line in service/tools.py and nothing here.
-// The prompt is the customer's own words going back into innerHTML. Escaped
-// on the way, because a garment description containing a quote would otherwise
-// break the panel, and one containing a tag would do worse than that.
-function esc(v) {
-  return String(v == null ? "" : v)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function tool() { return TOOLS.filter(function (t) { return t.id === pick.tool; })[0]; }
+function needs() { return (tool() || {needs: []}).needs; }
+function wants(n) {
+  var ns = needs();
+  return ns.indexOf(n) >= 0 || ns.indexOf(n + "?") >= 0;
 }
 
-var INPUT = {
-  garment: {label: "Garment", hint: "the item, laid flat", key: "garment_key"},
-  person:  {label: "Your photo", hint: "full body, facing the camera", key: "person_key"},
-  model:   {label: "Model", hint: "who wears it"},
-  look:    {label: "The look", hint: "who this model should be"},
-  prompt:  {label: "The shot", hint: "describe the person and the scene"},
-  "prompt?": {label: "Or describe them yourself",
-              hint: "optional — your words replace the choices above"}
+var ICON = {
+  "product-to-model": '<rect x="3" y="4" width="7" height="7" rx="1"/><path d="M17 4v4M15 6h4"/><path d="M7 15v5M14 20v-5a3 3 0 0 1 6 0v5"/>',
+  "virtual-try-on": '<path d="M8 3h8l4 4-3 2v12H7V9L4 7z"/>',
+  "model-swap": '<circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M14 6h5v5M10 18H5v-5"/>',
+  "product-in-scene": '<path d="M4 5h16v14H4z"/><path d="m4 15 4-4 4 3 3-2 5 4"/><circle cx="9" cy="9" r="1.4"/>',
+  "packshot": '<path d="M21 8 12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>',
+  "model-creation": '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/><path d="M19 3v4M17 5h4"/>',
+  "short-video": '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/>'
 };
+function svg(id) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (ICON[id] || ICON.packshot) + '</svg>';
+}
 
-var PROMPT_EXAMPLES = [
+var SLOT = {
+  garment: {label: "Garment", hint: "the item, laid flat"},
+  person: {label: "Your photo", hint: "full body, facing the camera"},
+  model: {label: "Model", hint: "tap to choose who wears it"}
+};
+var PROMPT_HINT = {
+  "product-in-scene": "Describe the shot — the person, the place, the light…",
+  "model-creation": "Optional: describe the model in your own words",
+  "": "Optional: anything to say about the shot"
+};
+var EXAMPLES = [
   "a man in his 30s walking among trees in autumn, golden leaves falling around him",
   "a young woman on a Tashkent street in the evening, warm shop lights behind her",
-  "a woman in her 40s in a bright airy room, morning light through a window"
+  "in a bright airy room, morning light through a window"
 ];
 
-// The choices a seller has an opinion about. Everything else -- skin, hair,
-// the shape of the face -- varies by seed, so asking twice gives two people
-// and nobody has to describe a face they have not seen.
-var LOOK = [
-  {k: "gender", label: "Who",   options: [["woman","Woman"],["man","Man"]]},
-  {k: "age",    label: "Age",   options: [["20s","20s"],["30s","30s"],["40s","40s"],["50s","50s"]]},
-  {k: "build",  label: "Build", options: [["slim","Slim"],["average","Average"],["fuller","Fuller"]]},
-  {k: "look",   label: "From",  options: [["uzbek","Uzbek"],["kazakh","Kazakh"],["tajik","Tajik"],["slavic","Slavic"]]},
-  {k: "modest", label: "Dress", options: [["false","Everyday"],["true","Modest"]]}
-];
-
-function selectTool(id) {
-  var previous = pick.tool;
-  pick.tool = id;
-  var t = tool();
-
-  // Keep an upload only if the new tool still wants that kind of thing. A
-  // garment is a garment whichever tool asks for it, and re-uploading it to
-  // switch tools is a chore; a photo the new tool has no use for is state that
-  // silently changes what gets generated.
-  if (previous !== id) {
-    t.needs.indexOf("garment") < 0 && (pick.garment_key = null, pick.garment_url = null);
-    t.needs.indexOf("person") < 0 && (pick.person_key = null, pick.person_url = null);
-    t.needs.indexOf("model") < 0 && (pick.model_id = null);
-  }
-
-  $("tool-name").textContent = t.label;
-  $("tool-blurb").textContent = t.blurb;
-  [].forEach.call($("rail").querySelectorAll(".tool"), function (b) {
-    b.setAttribute("aria-pressed", String(b.dataset.id === id));
-  });
-  drawInputs();
-  refit();
-}
-
-function drawInputs() {
-  var t = tool();
-  if (!t.needs.length) {
-    $("inputs").innerHTML = '<li class="step"><p class="nothing">' +
-      'Nothing to upload — press Generate.</p></li>';
-    return;
-  }
-  $("inputs").innerHTML = t.needs.map(function (need, i) {
-    var spec = INPUT[need];
-    if (!spec) return "";
-    var optional = need.slice(-1) === "?";
-    var done = need === "model" ? !!pick.model_id : !!pick[spec.key];
-    var head = '<span class="step-n" aria-hidden="true">' + (i + 1) + '</span>' +
-      '<span class="step-h"><b>' + spec.label + '</b><span>' + spec.hint + '</span></span>';
-    if (need === "prompt" || need === "prompt?") {
-      return '<li class="step" data-need="' + need + '" data-done="' +
-        (optional ? true : !!(pick.prompt || "").trim()) + '">' + head +
-        '<textarea id="prompt" rows="4" placeholder="' +
-        esc(PROMPT_EXAMPLES[0]) + '">' + esc(pick.prompt || "") + '</textarea>' +
-        '<div class="examples">' + PROMPT_EXAMPLES.map(function (e, i) {
-          return '<button data-example="' + i + '">' +
-            esc(e.length > 44 ? e.slice(0, 44) + "…" : e) + '</button>';
-        }).join("") + '</div></li>';
-    }
-    if (need === "look") {
-      return '<li class="step" data-need="look" data-done="true">' + head +
-        '<div class="look">' + LOOK.map(function (row) {
-          return '<div class="look-row"><span>' + row.label + '</span><div class="seg">' +
-            row.options.map(function (o) {
-              return '<button data-look="' + row.k + '" data-v="' + o[0] + '" ' +
-                'aria-pressed="' + (String(pick[row.k]) === o[0]) + '">' + o[1] + '</button>';
-            }).join("") + '</div></div>';
-        }).join("") + '</div></li>';
-    }
-    if (need === "model") {
-      var chosen = MODELS.find(function (m) { return m.id === pick.model_id; });
-      return '<li class="step" data-need="model" data-done="' + done + '">' + head +
-        (chosen ? '<span class="chosen">' + chosen.display_name + '</span>' : "") +
-        '<div class="models" id="models"></div></li>';
-    }
-    var url = pick[need + "_url"];
-    return '<li class="step" data-need="' + need + '" data-done="' + done + '">' + head +
-      '<label class="drop' + (url ? " has" : "") + '" data-need="' + need + '">' +
-        '<input type="file" accept="image/*" data-need="' + need + '">' +
-        (url ? '<img src="' + url + '" alt="">' +
-               '<span class="swap">Replace</span>'
-             : '<span class="empty"><b>Drop a photo</b><span>or click to choose</span></span>') +
-      '</label></li>';
-  }).join("");
-  if (t.needs.indexOf("model") >= 0) drawModels();
-}
-
-function drawModels() {
-  var box = $("models");
-  if (!box) return;
-  box.innerHTML = MODELS.map(function (m) {
-    return '<button class="model" aria-pressed="' + (m.id === pick.model_id) + '" data-id="' + m.id + '" ' +
-      'title="' + m.display_name + ', ' + m.age + '">' +
-      '<span class="ph">' + (m.preview ? '<img src="' + m.preview + '" alt="' + m.display_name + '">' : '') +
-      (m.hero_is_placeholder ? '<span class="sample">sample</span>' : '') + '</span>' +
-      '<span class="meta"><b>' + m.display_name + '</b><span>' + m.age + '</span></span></button>';
+// ---------------------------------------------------------------- the bar
+function drawPills() {
+  $("pills").innerHTML = TOOLS.map(function (t) {
+    return '<button class="pill" role="tab" data-id="' + esc(t.id) + '" ' +
+      'aria-pressed="' + (t.id === pick.tool) + '"' + (t.ready ? "" : " disabled") + '>' +
+      svg(t.id) + esc(t.label) + (t.ready ? "" : " <small>soon</small>") + '</button>';
   }).join("");
 }
 
-// The button says what is still missing rather than sitting dead and silent.
-function refit() {
+function drawBar() {
   var t = tool();
   if (!t) return;
+  $("tool-name").textContent = t.label;
+  $("prompt").placeholder = PROMPT_HINT[t.id] || PROMPT_HINT[""];
+
+  var extras = [];
+  if (wants("model")) {
+    var m = MODELS.filter(function (x) { return x.id === pick.model_id; })[0];
+    extras.push('<button class="mini" data-open="models" aria-pressed="' + !!m + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+      '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
+      (m ? esc(m.display_name) : "Choose a model") + '</button>');
+  }
+  if (wants("look")) {
+    extras.push('<button class="mini" data-open="look">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+      '<path d="M4 6h16M4 12h16M4 18h10"/></svg>' +
+      esc(pick.gender + ", " + pick.age + ", " + pick.look) + '</button>');
+  }
+  if (t.id === "product-in-scene" || t.id === "model-creation") {
+    extras.push('<button class="mini" data-example="1">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+      '<path d="M12 3v18M3 12h18"/></svg>Example</button>');
+  }
+  $("extras").innerHTML = extras.join("");
+
   var missing = [];
-  t.needs.forEach(function (n) {
-    if (n.slice(-1) === "?") return;   // offered, not required
+  needs().forEach(function (n) {
+    if (n.slice(-1) === "?") return;
     if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
     if (n === "person" && !pick.person_key) missing.push("your photo");
     if (n === "model" && !pick.model_id) missing.push("a model");
-    if (n === "prompt" && !(pick.prompt || "").trim()) missing.push("a description");
+    if (n === "prompt" && !pick.prompt.trim()) missing.push("a description");
   });
-  $("go").disabled = missing.length > 0 || !!job;
-  $("go").textContent = "Generate · " + t.cost + " credit" + (t.cost === 1 ? "" : "s");
-  $("need").textContent = missing.length
-    ? "Still needs " + missing.join(" and ")
-    : (job ? "" : "Nothing is charged until you press Generate");
+  $("run").disabled = missing.length > 0 || !!job;
+  $("run-label").textContent = "Run · " + t.cost + " credit" + (t.cost === 1 ? "" : "s");
+  $("hint").textContent = missing.length
+    ? "Needs " + missing.join(" and ")
+    : (t.typical_seconds ? "usually about " + Math.round(t.typical_seconds) + "s" : "");
 }
 
-// ---- uploads -------------------------------------------------------------
-// Straight to object storage with a signed link, so a 20 MB photo never
-// passes through the web tier.
-// One set of handlers on the container, because the inputs are redrawn every
-// time the tool changes and listeners bound to elements would go with them.
-function wireUploads() {
-  var box = $("inputs");
-  // The prompt is read as it is typed rather than redrawn, because redrawing
-  // the panel on every keystroke would take the cursor with it.
-  box.addEventListener("input", function (e) {
-    if (e.target.id !== "prompt") return;
-    pick.prompt = e.target.value;
-    var step = e.target.closest(".step");
-    if (step) step.dataset.done = String(!!pick.prompt.trim());
-    refit();
-  });
-  box.addEventListener("change", function (e) {
-    var input = e.target.closest('input[type=file]');
-    if (input && input.files[0]) upload(input.dataset.need, input.files[0]);
-  });
-  ["dragenter", "dragover"].forEach(function (ev) {
-    box.addEventListener(ev, function (e) {
-      var d = e.target.closest(".drop"); if (!d) return;
-      e.preventDefault(); d.classList.add("over");
-    });
-  });
-  ["dragleave", "drop"].forEach(function (ev) {
-    box.addEventListener(ev, function (e) {
-      var d = e.target.closest(".drop"); if (!d) return;
-      e.preventDefault(); d.classList.remove("over");
-    });
-  });
-  box.addEventListener("drop", function (e) {
-    var d = e.target.closest(".drop"); if (!d) return;
-    if (e.dataTransfer.files[0]) upload(d.dataset.need, e.dataTransfer.files[0]);
-  });
-  box.addEventListener("click", function (e) {
-    var ex = e.target.closest("[data-example]");
-    if (ex) {
-      pick.prompt = PROMPT_EXAMPLES[+ex.dataset.example];
-      drawInputs(); refit();
-      var box = $("prompt"); if (box) { box.focus(); }
-      return;
-    }
-    var look = e.target.closest("[data-look]");
-    if (look) {
-      pick[look.dataset.look] = look.dataset.v;
-      drawInputs(); refit();
-      return;
-    }
-    var b = e.target.closest(".model"); if (!b) return;
-    pick.model_id = b.dataset.id;
-    drawInputs(); refit();
-  });
+// ---------------------------------------------------------------- the stage
+function imageSlots() {
+  return needs().filter(function (n) { return SLOT[n]; });
 }
 
+function drawStage() {
+  if (job) return;                    // the veil owns the stage while it runs
+  if (result) return drawResult();
+  var slots = imageSlots();
+  if (!slots.length) return drawBlank();
+  $("stage").innerHTML = '<div class="cards">' + slots.map(card).join("") + '</div>';
+}
+
+function card(need) {
+  var spec = SLOT[need];
+  var killer = '<button class="kill" data-clear="' + esc(need) + '" aria-label="Remove">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">' +
+    '<path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  if (need === "model") {
+    var m = MODELS.filter(function (x) { return x.id === pick.model_id; })[0];
+    return '<div class="card' + (m ? "" : " want") + '" data-open="models">' +
+      '<span class="label">' + esc(spec.label) + '</span>' +
+      (m && m.preview
+        ? '<img src="' + esc(m.preview) + '" alt="' + esc(m.display_name) + '">' + killer
+        : '<span class="drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
+          '<b>Choose a model</b><span>' + esc(spec.hint) + '</span></span>') +
+      '</div>';
+  }
+  var url = pick[need + "_url"];
+  return '<label class="card' + (url ? "" : " want") + '" data-need="' + esc(need) + '">' +
+    '<span class="label">' + esc(spec.label) + '</span>' +
+    '<input type="file" accept="image/*" data-need="' + esc(need) + '">' +
+    (url ? '<img src="' + esc(url) + '" alt="">' + killer
+         : '<span class="drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' +
+           '<b>Drop a photo</b><span>' + esc(spec.hint) + '</span></span>') +
+    '</label>';
+}
+
+function drawBlank() {
+  var t = tool() || {};
+  $("stage").innerHTML =
+    '<div class="blank">' +
+      '<div class="art">' +
+        '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3h8l4 4-3 2v12H7V9L4 7z"/></svg></span>' +
+        '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg></span>' +
+        '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16v14H4z"/><path d="m4 15 4-4 4 3 3-2 5 4"/></svg></span>' +
+      '</div>' +
+      '<h2>' + esc(t.label || "Studio") + '</h2>' +
+      '<p>' + esc(t.blurb || "") + '</p>' +
+    '</div>';
+}
+
+function drawResult() {
+  var ins = [];
+  if (result.inputs.garment) ins.push(["Garment", result.inputs.garment]);
+  if (result.inputs.person) ins.push(["Your photo", result.inputs.person]);
+  if (result.inputs.model) ins.push(["Model", result.inputs.model]);
+  $("stage").innerHTML =
+    '<div class="done">' +
+      '<div class="ins">' +
+        '<button class="btn" id="back" style="justify-content:center">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>Back</button>' +
+        ins.map(function (p) {
+          return '<figure><figcaption>' + esc(p[0]) + '</figcaption>' +
+            '<img src="' + esc(p[1]) + '" alt=""></figure>';
+        }).join("") +
+      '</div>' +
+      '<div class="big"><img src="' + esc(result.url) + '" alt="The finished image">' +
+        '<a class="btn save" href="' + esc(result.url) + '" target="_blank" rel="noopener">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Open</a>' +
+      '</div>' +
+      '<div class="hist"><h3>History</h3><div class="rows">' +
+        (recent.length ? recent.map(function (r) {
+          return '<button data-open-result="' + esc(r.result_url) + '">' +
+            '<img src="' + esc(r.result_url) + '" alt="" loading="lazy"></button>';
+        }).join("") : '<span class="none">nothing yet</span>') +
+      '</div></div>' +
+    '</div>';
+}
+
+function drawVeil(secs, state, typical) {
+  var over = typical && secs > typical * 1.4;
+  $("stage").innerHTML =
+    '<div class="cards"><div class="card" style="width:min(420px,84vw);cursor:default">' +
+      '<div class="veil"><div>' +
+        '<div class="n">' + secs.toFixed(1) + 's</div>' +
+        '<div class="s">' + esc(state) + '</div>' +
+        '<div class="h">' + (typical
+          ? (over ? "longer than usual — normally about " + Math.round(typical) + "s"
+                  : "usually about " + Math.round(typical) + "s")
+          : "") + '</div>' +
+        '<div class="track"><i style="width:' +
+          (typical ? Math.min(96, (secs / typical) * 100) : 0) + '%"></i></div>' +
+        '<button class="btn" id="cancel-job" style="margin-top:6px">Cancel</button>' +
+      '</div></div>' +
+    '</div></div>';
+}
+
+// ---------------------------------------------------------------- popovers
+var LOOK = [
+  ["gender", "Who", [["woman", "Woman"], ["man", "Man"]]],
+  ["age", "Age", [["20s", "20s"], ["30s", "30s"], ["40s", "40s"], ["50s", "50s"]]],
+  ["build", "Build", [["slim", "Slim"], ["average", "Average"], ["fuller", "Fuller"]]],
+  ["look", "From", [["uzbek", "Uzbek"], ["kazakh", "Kazakh"], ["tajik", "Tajik"], ["slavic", "Slavic"]]],
+  ["modest", "Dress", [["false", "Everyday"], ["true", "Modest"]]]
+];
+
+function openPop(which) {
+  var html;
+  if (which === "models") {
+    html = '<h3>Who wears it</h3><div class="grid-models">' + MODELS.map(function (m) {
+      return '<button data-model="' + esc(m.id) + '" aria-pressed="' +
+        (m.id === pick.model_id) + '">' +
+        '<span class="ph">' + (m.preview ? '<img src="' + esc(m.preview) + '" alt="">' : '') + '</span>' +
+        '<span class="meta"><b>' + esc(m.display_name) + '</b>' +
+        '<span class="age">' + esc(m.age) + '</span></span></button>';
+    }).join("") + '</div>';
+  } else {
+    html = '<h3>The look</h3><div class="look">' + LOOK.map(function (r) {
+      return '<div class="look-row"><span>' + esc(r[1]) + '</span><div class="seg">' +
+        r[2].map(function (o) {
+          return '<button data-look="' + esc(r[0]) + '" data-v="' + esc(o[0]) + '" ' +
+            'aria-pressed="' + (String(pick[r[0]]) === o[0]) + '">' + esc(o[1]) + '</button>';
+        }).join("") + '</div></div>';
+    }).join("") + '</div>';
+  }
+  $("pop").innerHTML = html +
+    '<button class="icon-btn close" data-close="1" aria-label="Close">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  $("pop").hidden = false;
+  $("scrim").hidden = false;
+}
+function closePop() { $("pop").hidden = true; $("scrim").hidden = true; }
+
+// ---------------------------------------------------------------- uploading
 function upload(need, file) {
   var type = file.type || "image/jpeg";
-  // Shown from the local file straight away. Waiting for the round trip to
-  // object storage before anything appears makes a good connection feel slow
-  // and a poor one feel broken.
+  // Shown from the local file immediately: waiting for object storage before
+  // anything appears makes a good connection feel slow and a poor one broken.
   pick[need + "_url"] = URL.createObjectURL(file);
-  drawInputs();
+  result = null;
+  drawStage(); drawBar();
   api("/uploads", {method: "POST", body: {kind: need, content_type: type}})
     .then(function (u) {
       return fetch(u.url, {method: "PUT", body: file, headers: {"Content-Type": type}})
         .then(function (r) {
           if (!r.ok) throw new Error("upload failed (" + r.status + ")");
           pick[need + "_key"] = u.key;
-          drawInputs(); refit();
+          drawStage(); drawBar();
         });
     })
     .catch(function (e) {
       toast(e.message, true);
       pick[need + "_key"] = null; pick[need + "_url"] = null;
-      drawInputs(); refit();
+      drawStage(); drawBar();
     });
 }
-wireUploads();
 
-// ---- picking -------------------------------------------------------------
-// ---- running -------------------------------------------------------------
-$("go").onclick = function () {
+// ---------------------------------------------------------------- running
+function run() {
   var t = tool();
-  $("go").disabled = true;
+  if (!t) return;
+  job = "pending";
+  drawBar();
   api("/jobs", {method: "POST", body: {
-    tool: pick.tool,
+    tool: t.id,
     // Whatever was uploaded is the garment. For "change the model" that upload
-    // is a photograph of a person wearing clothes, and the clothes are the
-    // point of it.
-    garment_key: pick.garment_key || pick.person_key,
-    // When the customer picked one of our models, that model is who wears it.
-    // Sending the upload as the person as well made them wear their own
-    // photograph, which is what "change the model" did until now.
-    person_key: t.needs.indexOf("model") >= 0 ? null : (pick.person_key || null),
+    // is a person wearing clothes, and the clothes are the point of it.
+    garment_key: pick.garment_key || (wants("person") ? pick.person_key : null),
+    // When one of our models was chosen, the model is who wears it.
+    person_key: wants("model") ? null : (pick.person_key || null),
     model_id: pick.model_id || null,
+    prompt: pick.prompt.trim() || null,
     gender: pick.gender, age: pick.age, build: pick.build, look: pick.look,
     modest: pick.modest === "true",
-    prompt: pick.prompt || null,
     // A retried request must not become a second job and a second charge.
     idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
   }}).then(function (j) { watch(j.job_id); })
-    .catch(function (e) { toast(e.message, true); refit(); });
-};
+    .catch(function (e) { job = null; toast(e.message, true); drawBar(); drawStage(); });
+}
 
 function watch(id) {
   job = id;
-  $("img-b").hidden = true; $("empty-b").hidden = true;
-  $("veil").hidden = false; $("veil-bar").style.width = "0";
-  refit();
+  result = null;
+  var t0 = Date.now(), typical = (tool() || {}).typical_seconds;
+  var inputs = {
+    garment: wants("garment") ? pick.garment_url : null,
+    person: pick.person_url,
+    model: (function () {
+      var m = MODELS.filter(function (x) { return x.id === pick.model_id; })[0];
+      return m ? m.preview : null;
+    })()
+  };
+  drawVeil(0, "queued", typical);
   clearInterval(poll);
-  var t0 = Date.now();
   poll = setInterval(function () {
     api("/jobs/" + id).then(function (j) {
       var secs = (Date.now() - t0) / 1000;
-      $("veil-state").textContent = j.status === "queued"
-        ? (j.position ? j.position + " in the queue" : "queued") : j.status;
-      $("cancel-job").hidden = j.status !== "queued";
-      // Elapsed, not a countdown. It used to count down from 14.3 -- a figure
-      // measured once, on a different checkpoint, for a different tool -- so it
-      // reached zero and sat there while the job ran on. A number that is
-      // sometimes a lie is worse than no number.
-      var typical = (tool() || {}).typical_seconds;
-      $("veil-num").textContent = secs.toFixed(1) + "s";
-      if (typical) {
-        $("veil-bar").style.width = Math.min(96, (secs / typical) * 100) + "%";
-        $("veil-hint").textContent = secs > typical * 1.4
-          ? "longer than usual — normally about " + typical.toFixed(0) + "s"
-          : "usually about " + typical.toFixed(0) + "s";
-      } else {
-        $("veil-bar").style.width = "0";
-        $("veil-hint").textContent = "";
+      if (j.status === "done") {
+        clearInterval(poll); job = null;
+        result = {url: j.result_url, seconds: j.seconds, inputs: inputs};
+        toast("Done in " + (j.seconds != null ? j.seconds : secs.toFixed(1)) + "s");
+        refresh(); drawStage(); drawBar();
+        return;
       }
-
-      if (j.status === "done") { clearInterval(poll); finish(j); }
       if (j.status === "failed" || j.status === "cancelled") {
-        clearInterval(poll); job = null; $("veil").hidden = true; $("empty-b").hidden = false;
-        toast(j.status === "failed"
-          ? "That one failed — the credit was returned." : "Cancelled.", j.status === "failed");
-        refresh(); refit();
+        clearInterval(poll); job = null;
+        toast(j.status === "failed" ? "That one failed — the credit came back."
+                                    : "Cancelled.", j.status === "failed");
+        refresh(); drawStage(); drawBar();
+        return;
       }
-    }).catch(function (e) { clearInterval(poll); job = null; $("veil").hidden = true; toast(e.message, true); refit(); });
-  }, 1200);
+      drawVeil(secs, j.status === "queued"
+        ? (j.position ? j.position + " in the queue" : "queued") : j.status, typical);
+    }).catch(function (e) {
+      clearInterval(poll); job = null; toast(e.message, true); drawStage(); drawBar();
+    });
+  }, 1100);
 }
 
-function finish(j) {
-  job = null;
-  $("veil").hidden = true;
-  $("img-b").src = j.result_url; $("img-b").hidden = false;
-  toast("Done in " + j.seconds + "s");
-  refresh(); refit();
+// ---------------------------------------------------------------- events
+function selectTool(id) {
+  var before = pick.tool;
+  pick.tool = id;
+  if (before !== id) {
+    // An upload the new tool has no use for is state that silently changes what
+    // gets made; one it still wants is a chore to upload again.
+    if (!wants("garment")) { pick.garment_key = null; pick.garment_url = null; }
+    if (!wants("person")) { pick.person_key = null; pick.person_url = null; }
+    if (!wants("model")) { pick.model_id = null; }
+    result = null;
+  }
+  drawPills(); drawBar(); drawStage();
 }
 
-$("cancel-job").onclick = function () {
-  if (!job) return;
-  api("/jobs/" + job + "/cancel", {method: "POST"}).then(function (r) {
-    clearInterval(poll); job = null;
-    $("veil").hidden = true; $("empty-b").hidden = false;
-    $("credits").textContent = r.credits + " credits";
-    toast("Cancelled, and the credit is back."); refit();
-  }).catch(function () {
-    toast("Too late — it is already being generated.", true);
+$("pills").addEventListener("click", function (e) {
+  var b = e.target.closest(".pill");
+  if (!b || b.disabled) return;
+  selectTool(b.dataset.id);
+});
+
+document.addEventListener("click", function (e) {
+  var kill = e.target.closest("[data-clear]");
+  if (kill) {
+    e.preventDefault(); e.stopPropagation();
+    var n = kill.dataset.clear;
+    if (n === "model") pick.model_id = null;
+    else { pick[n + "_key"] = null; pick[n + "_url"] = null; }
+    drawStage(); drawBar();
+    return;
+  }
+  if (e.target.closest("[data-close]") || e.target.id === "scrim") { closePop(); return; }
+
+  var m = e.target.closest("[data-model]");
+  if (m) { pick.model_id = m.dataset.model; closePop(); drawStage(); drawBar(); return; }
+
+  var lk = e.target.closest("[data-look]");
+  if (lk) { pick[lk.dataset.look] = lk.dataset.v; openPop("look"); drawBar(); return; }
+
+  var open = e.target.closest("[data-open]");
+  if (open) { openPop(open.dataset.open); return; }
+
+  if (e.target.closest("[data-example]")) {
+    pick.prompt = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)];
+    $("prompt").value = pick.prompt; drawBar(); $("prompt").focus();
+    return;
+  }
+  if (e.target.closest("#back")) { result = null; drawStage(); drawBar(); return; }
+
+  var openR = e.target.closest("[data-open-result]");
+  if (openR) { window.open(openR.dataset.openResult, "_blank", "noopener"); return; }
+
+  if (e.target.closest("#cancel-job") && job && job !== "pending") {
+    api("/jobs/" + job + "/cancel", {method: "POST"})
+      .then(function () { toast("Cancelled — nothing charged."); })
+      .catch(function (err) { toast(err.message, true); });
+  }
+});
+
+$("stage").addEventListener("change", function (e) {
+  var input = e.target.closest("input[type=file]");
+  if (input && input.files[0]) upload(input.dataset.need, input.files[0]);
+});
+["dragenter", "dragover"].forEach(function (ev) {
+  $("stage").addEventListener(ev, function (e) {
+    var c = e.target.closest(".card[data-need]"); if (!c) return;
+    e.preventDefault(); c.classList.add("over");
   });
-};
+});
+["dragleave", "drop"].forEach(function (ev) {
+  $("stage").addEventListener(ev, function (e) {
+    var c = e.target.closest(".card[data-need]"); if (!c) return;
+    e.preventDefault(); c.classList.remove("over");
+  });
+});
+$("stage").addEventListener("drop", function (e) {
+  var c = e.target.closest(".card[data-need]"); if (!c) return;
+  if (e.dataTransfer.files[0]) upload(c.dataset.need, e.dataTransfer.files[0]);
+});
 
-// ---- state ---------------------------------------------------------------
+$("prompt").addEventListener("input", function () {
+  pick.prompt = this.value;
+  this.style.height = "auto";
+  this.style.height = Math.min(120, this.scrollHeight) + "px";
+  drawBar();
+});
+$("prompt").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !$("run").disabled) run();
+});
+$("run").addEventListener("click", run);
+$("theme").addEventListener("click", function () {
+  var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("lookzi-theme", next); } catch (e) {}
+});
+$("nav-models").addEventListener("click", function () { openPop("models"); });
+
+// ---------------------------------------------------------------- loading
 function refresh() {
-  api("/me").then(function (me) {
-    $("credits").textContent = me.credits + (me.credits === 1 ? " credit" : " credits");
-  }).catch(function () {});
-  api("/jobs?limit=20").then(function (rows) {
-    var done = rows.filter(function (r) { return r.result_url; });
-    $("strip").innerHTML = done.length
-      ? done.map(function (r) {
-          return '<a href="' + r.result_url + '" target="_blank" rel="noopener" ' +
-                 'title="' + r.tool + '"><img src="' + r.result_url + '" alt=""></a>';
-        }).join("")
-      : '<span class="none">nothing yet</span>';
+  api("/me").then(function (m) { $("credits").textContent = m.credits; })
+    .catch(function () {});
+  api("/jobs?limit=12").then(function (rows) {
+    recent = rows.filter(function (r) { return r.result_url; });
+    if (result) drawResult();
   }).catch(function () {});
 }
 
-function heartbeat() {
+function pulse() {
   api("/health").then(function (h) {
-    health = h;
-    var busy = h.running > 0, queued = h.queued > 0;
-    $("gpu").dataset.s = busy ? "busy" : (h.workers_seen ? "warm" : "idle");
-    $("gpu-text").textContent = busy ? "Worker busy"
-      : (h.workers ? (h.workers + " worker" + (h.workers===1?"":"s") + " ready") : "No worker running");
-    $("queue-chip").hidden = !(queued || busy);
-    $("queue-chip").dataset.s = busy ? "running" : "queued";
-    $("queue-text").textContent = (h.queued + h.running) + " in flight";
+    $("gpu").dataset.s = h.workers ? "ok" : "none";
+    $("gpu-text").textContent = h.workers
+      ? h.workers + " worker" + (h.workers === 1 ? "" : "s") + " ready" +
+        (h.queued ? " · " + h.queued + " waiting" : "")
+      : "no worker running";
   }).catch(function () {
-    $("gpu").dataset.s = "idle";
-    $("gpu-text").textContent = "Cannot reach the service";
+    $("gpu").dataset.s = "none";
+    $("gpu-text").textContent = "cannot reach the service";
   });
 }
 
-// ---- boot ----------------------------------------------------------------
 Promise.all([api("/tools"), api("/models")])
   .then(function (r) {
     TOOLS = r[0]; MODELS = r[1];
-    $("rail").innerHTML = '<span class="mono">Tools</span>' + TOOLS.map(function (t) {
-      return '<button class="tool" data-id="' + t.id + '" aria-pressed="false"' +
-        (t.ready ? "" : " disabled") + '>' + svg(t.id) + '<b>' + t.label + '</b>' +
-        (t.ready ? "" : '<small>soon</small>') + '</button>';
-    }).join("");
-    $("rail").addEventListener("click", function (e) {
-      var b = e.target.closest(".tool");
-      if (b && !b.disabled) selectTool(b.dataset.id);
-    });
-    selectTool((TOOLS.find(function (t) { return t.ready; }) || TOOLS[0]).id);
-    refresh(); heartbeat();
-    setInterval(heartbeat, 5000);
+    var first = TOOLS.filter(function (t) { return t.ready; })[0] || TOOLS[0];
+    pick.tool = first.id;
+    drawPills(); drawBar(); drawStage();
+    refresh(); pulse();
+    setInterval(pulse, 6000);
   })
-  .catch(function (e) { toast(e.message, true); });
+  .catch(function (e) {
+    $("stage").innerHTML = '<div class="blank"><h2>The service is not answering</h2>' +
+      '<p>' + esc(e.message) + '</p></div>';
+  });
 })();
 </script>
 </body>
