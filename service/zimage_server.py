@@ -39,6 +39,13 @@ STEPS = int(os.environ.get("ZIMAGE_STEPS", "9"))
 WIDTH = int(os.environ.get("ZIMAGE_W", "768"))
 HEIGHT = int(os.environ.get("ZIMAGE_H", "1152"))
 
+# Guidance stays at zero and is not offered. Z-Image Turbo is distilled for it;
+# measured on the pod at 1.5 the picture darkens, at 3.0 the blacks crush, and
+# at 5.0 it burns out entirely -- and every step above zero costs 6.4s against
+# 3.8s for no gain. The prompt is followed perfectly well at zero: asked for a
+# blond man it produced one.
+SCENE_GUIDANCE = 0.0
+
 app = FastAPI(title="Lookzi model maker")
 
 _pipe = None
@@ -90,16 +97,31 @@ def health():
             if _stats["served"] else None}
 
 
+# What a made-to-order model needs whatever was asked for. hero_prompt carries
+# its own version of this; a customer writing in their own words gets it added,
+# because "a very slim Uzbek girl" is a description of a person and not of a
+# photograph, and the try-on stage that may follow needs the whole figure.
+CREATE_FRAMING = ("full body from head to feet, standing straight, whole figure "
+                  "in frame with the feet visible, front view facing camera, "
+                  "soft diffused daylight, plain light grey studio backdrop, "
+                  "neutral expression, photorealistic, sharp focus")
+
+
 @app.post("/create")
 def create(gender: str = Form("woman"), age: str = Form("20s"),
            build: str = Form("average"), look: str = Form("uzbek"),
-           modest: str = Form("false"), seed: int = Form(0)):
-    """One model, made from a handful of choices.
+           modest: str = Form("false"), seed: int = Form(0),
+           prompt: str = Form("")):
+    """One model, made from a handful of choices -- or from your own words.
 
-    The choices are the ones a seller has an opinion about. Everything else --
-    skin, hair, the shape of the face -- is varied by seed, so asking twice
-    gives two people rather than the same person twice, and the customer is
-    never asked to describe a face they have not seen.
+    The choices are the ones a seller has an opinion about, and everything they
+    do not choose is varied by seed, so asking twice gives two people rather
+    than the same person twice.
+
+    A written description replaces the choices when there is one. The studio
+    offers the box, so it has to reach here: it was being recorded with the job
+    and never sent, and a customer who wrote "white skin, uzbek girl, very
+    slim" got whatever the five dropdowns happened to say instead.
     """
     if _error:
         raise HTTPException(503, f"the model did not load: {_error}")
@@ -113,13 +135,16 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
     face = new_face(gender=gender, age=age, build=build, look=look,
                     modest=str(modest).lower() in ("1", "true", "yes"),
                     seed=int(seed))
-    prompt = hero_prompt(face)
+    written = (prompt or "").strip()
+    if len(written) > 600:
+        raise HTTPException(413, "that description is longer than the model reads")
+    full = f"{written}, {CREATE_FRAMING}" if written else hero_prompt(face)
 
     started = time.time()
     with _gpu:
         try:
-            img = _pipe(prompt=prompt, height=HEIGHT, width=WIDTH,
-                        num_inference_steps=STEPS, guidance_scale=0.0,
+            img = _pipe(prompt=full, height=HEIGHT, width=WIDTH,
+                        num_inference_steps=STEPS, guidance_scale=SCENE_GUIDANCE,
                         generator=torch.Generator("cuda").manual_seed(int(seed))
                         ).images[0]
         except Exception as exc:                              # noqa: BLE001
@@ -146,35 +171,28 @@ def create(gender: str = Form("woman"), age: str = Form("20s"),
 # dress a figure the picture does not contain, and "no instruction can supply
 # information the reference does not carry" is written in hero.py for the same
 # reason. Appended rather than prepended, so the customer's own words lead.
-SCENE_FRAMING = ("wearing a plain fitted sleeveless top, "
-                 "full body from head to feet, whole figure in frame with the "
+SCENE_FRAMING = ("full body from head to feet, whole figure in frame with the "
                  "feet visible, the person close to the camera and filling most "
                  "of the frame, standing, facing the camera, "
                  "photorealistic, sharp focus, natural light")
 
-# Why the person starts in a sleeveless top.
+# There was a "wearing a plain fitted sleeveless top" here and it is gone.
 #
-# The try-on stage layers: it puts the garment on over what the person already
-# wears rather than replacing it. That is intermittent -- four attempts to
-# reproduce it deliberately all came back clean -- but when it happens it shows
-# as the old sleeves poking out below the new ones, which is what a customer
-# reported twice.
+# It was aimed at the layering fault -- the try-on stage puts a garment on over
+# what the person already wears, and when the new sleeves are shorter the old
+# ones show. A sleeveless base has nothing to poke out from under it, and in
+# isolation it worked.
 #
-# No wording fixes it. Four phrasings, including "swap the top for" against
-# "add", produced one identical image; the model reads the garment and ignores
-# the text (docs/CONTROLS.md). Painting the torso out is worse: the model
-# treats the gap as damage and invents a shirt instead of accepting the garment.
+# In use it did not. "Sleeveless" spread to the whole outfit: a prompt asking
+# for a woman in a bright studio came back in cycling shorts and bare feet, and
+# it did that every time. The fault it was guarding against is intermittent --
+# four deliberate attempts to reproduce it all came back clean. Trading an
+# occasional fault for a constant one is a bad trade, and this was one.
 #
-# A sleeveless base cannot poke out from under anything. It costs nothing, and
-# the customer's own words lead the prompt, so somebody who writes "in a leather
-# jacket" still gets one.
+# The layering fault is still open. docs/CONTROLS.md records what has been
+# tried, and re-dressing the roster rather than instructing the prompt is the
+# next thing worth trying.
 
-# Guidance stays at zero and is not offered. Z-Image Turbo is distilled for it;
-# measured on the pod at 1.5 the picture darkens, at 3.0 the blacks crush, and
-# at 5.0 it burns out entirely -- and every step above zero costs 6.4s against
-# 3.8s for no gain. The prompt is followed perfectly well at zero: asked for a
-# blond man it produced one.
-SCENE_GUIDANCE = 0.0
 
 
 @app.post("/prompt")

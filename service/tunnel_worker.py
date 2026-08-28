@@ -274,12 +274,13 @@ def handle(job):
             raise RunPodInput(f"{job['tool']} needs a {name} and none was sent")
         files[name] = (f"{name}.png", storage.get_bytes(key))
 
-    # Making a model takes the choices, unless the customer wrote their own
-    # description -- in which case their words win and the choices are ignored.
-    # The settings are there for somebody who does not want to write; they
-    # should not stand in the way of somebody who does.
-    if job["tool"] == "model-creation" and (p.get("prompt") or "").strip():
-        path = ZBASE + "/prompt"
+    # A written description used to send this to /prompt, the scene endpoint.
+    # That endpoint frames for a place -- natural light, wherever the customer
+    # says -- and a model is a studio photograph: plain backdrop, even light,
+    # neutral expression. Worse, it briefly carried a "plain fitted sleeveless
+    # top" instruction, so "white skin, uzbek girl, very slim" came back as a
+    # woman in a black mini dress. /create takes the description now and frames
+    # it as what it is.
 
     fields = {}
     if path.endswith("/prompt"):
@@ -290,6 +291,11 @@ def handle(job):
         fields = {k: p.get(k) for k in ("gender", "age", "build", "look", "modest")
                   if p.get(k) is not None}
         fields["seed"] = int(p.get("seed", 0))
+        # The written description, which the studio offers and this used to
+        # drop. A customer who typed "white skin, uzbek girl, very slim" got
+        # whatever the five dropdowns happened to say instead.
+        if p.get("prompt"):
+            fields["prompt"] = p["prompt"]
     elif path == "/generate":
         fields = {
             "mode": p.get("mode") or "",
