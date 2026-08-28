@@ -179,7 +179,7 @@ if [ "${1:-}" = "--zimage" ] && [ ! -d /opt/zimage-venv ]; then
     # hf_transfer because this venv downloads Z-Image: 31 GB at 1.7 MB/s on
     # the plain path against 43 MB/s with it, measured on the pod. Five hours
     # against twelve minutes.
-    /opt/zimage-venv/bin/pip install -q accelerate safetensors sentencepiece \n        protobuf pillow hf_transfer
+    /opt/zimage-venv/bin/pip install -q accelerate safetensors sentencepiece protobuf pillow hf_transfer
     /opt/zimage-venv/bin/pip install -q --upgrade transformers huggingface_hub
     # This venv also serves HTTP: zimage_server.py is a second process on the
     # same card, because the two stacks cannot share an interpreter.
