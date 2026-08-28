@@ -123,11 +123,15 @@ export TOKENIZERS_PARALLELISM=false
 # re-downloading 90 GB.
 export HF_HOME=/workspace/.cache/huggingface
 
-# Both of RunPod's preset download accelerators break large HF downloads: xet
-# stalls after ~10 GB and hf_transfer raises mid-download. Plain HTTP sustained
-# ~190 MB/s, which is fast enough and finishes.
+# xet stalls past ~10 GB, so it stays off.
+#
+# hf_transfer was switched off after it raised part-way through a 57.7 GB pull,
+# and that decision quietly cost hours. Measured on the pod, on the same file:
+# the plain path managed 1.7 MB/s against curl's 47, while hf_transfer moved
+# 4.4 GB in 35 seconds. Callers that can fall back do; this default lets them
+# start from the fast path.
 export HF_HUB_DISABLE_XET=1
-export HF_HUB_ENABLE_HF_TRANSFER=0
+export HF_HUB_ENABLE_HF_TRANSFER=1
 
 # Loading a 40 GB transformer shard by shard fragments the allocator enough to
 # OOM with gigabytes still free.
@@ -172,7 +176,10 @@ if [ "${1:-}" = "--zimage" ] && [ ! -d /opt/zimage-venv ]; then
     /opt/zimage-venv/bin/pip install -q --upgrade pip
     /opt/zimage-venv/bin/pip install -q torch --index-url https://download.pytorch.org/whl/cu128
     /opt/zimage-venv/bin/pip install -q "git+https://github.com/huggingface/diffusers"
-    /opt/zimage-venv/bin/pip install -q accelerate safetensors sentencepiece protobuf pillow
+    # hf_transfer because this venv downloads Z-Image: 31 GB at 1.7 MB/s on
+    # the plain path against 43 MB/s with it, measured on the pod. Five hours
+    # against twelve minutes.
+    /opt/zimage-venv/bin/pip install -q accelerate safetensors sentencepiece \n        protobuf pillow hf_transfer
     /opt/zimage-venv/bin/pip install -q --upgrade transformers huggingface_hub
     # This venv also serves HTTP: zimage_server.py is a second process on the
     # same card, because the two stacks cannot share an interpreter.

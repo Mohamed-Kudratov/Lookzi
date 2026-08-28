@@ -461,6 +461,10 @@ def step_zimage_weights(ssh, st):
     st.log("fetching Z-Image (31 GB) and writing the bf16 copy (20 GB)")
     ssh.run(
         _env_prefix() +
+        # Asked for here rather than inherited: this is the one download where
+        # the difference is five hours against twelve minutes, and an env var
+        # set three files away is not a thing to rely on.
+        "export HF_HUB_ENABLE_HF_TRANSFER=1\n"
         f"cd {POD_REPO}\n"
         "setsid nohup /opt/zimage-venv/bin/python elements/save_bf16.py "
         "  > /workspace/.zimage_convert.log 2>&1 < /dev/null &\n"
