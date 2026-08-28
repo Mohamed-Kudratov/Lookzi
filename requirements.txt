@@ -38,6 +38,17 @@ tqdm==4.67.1
 # extraction dies with ModuleNotFoundError inside draw_handpose.
 matplotlib==3.10.6
 
+# Background removal for packshots. A packshot is the garment on its own, and
+# cutting it out is the honest way to make one -- asking a diffusion model to
+# imagine the garment again risks it inventing a different collar, and costs a
+# hundred times more.
+#
+# It pulls numpy 2 and drops importlib_metadata, which pip warns breaks
+# diffusers and easy-dwpose. Checked on the pod: both still import and the
+# try-on pipeline still runs. Install with --break-system-packages on RunPod's
+# images, which mark the system interpreter as externally managed.
+rembg[cpu]
+
 # easy-dwpose must be installed separately with --no-deps; its own pins conflict
 # with the above:
 #     pip install easy-dwpose==1.0.2 --no-deps

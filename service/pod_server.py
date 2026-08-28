@@ -45,6 +45,15 @@ LORA_DIR = os.environ.get("LORA_DIR", os.path.join(ROOT, "weights"))
 LIGHTNING = int(os.environ.get("LIGHTNING", "8"))
 MAX_BYTES = int(os.environ.get("MAX_INPUT_BYTES", str(32 * 1024 * 1024)))
 
+# Where the cutout model's weights live. On the container disk they are fetched
+# again on every pod; on the volume they are fetched once.
+os.environ.setdefault("U2NET_HOME", "/workspace/.u2net")
+# The finished packshot. Three by four to match everything else we produce, so
+# a seller's catalogue does not come back in two shapes.
+PACKSHOT_SIZE = (int(os.environ.get("PACKSHOT_W", "768")),
+                 int(os.environ.get("PACKSHOT_H", "1024")))
+PACKSHOT_MARGIN = float(os.environ.get("PACKSHOT_MARGIN", "0.07"))
+
 app = FastAPI(title="Lookzi pod server")
 
 _pipe = None
@@ -143,6 +152,80 @@ def generate(person: UploadFile = File(...),
         # image that anything can open, including a browser pointed at it.
         headers={"X-Seconds": str(elapsed),
                  "X-Width": str(out.width), "X-Height": str(out.height)})
+
+
+# ---------------------------------------------------------------------------
+# packshot
+#
+# Not a generation. A packshot is the garment on its own, cleanly, and the
+# honest way to produce one from a photograph is to cut the garment out and
+# present it -- not to ask a diffusion model to imagine it again and hope the
+# buttons survive. It is also a hundred times cheaper and it cannot hallucinate
+# a different collar.
+
+_cutter = None
+_cutter_lock = threading.Lock()
+
+
+def cutter():
+    """The segmentation session, made once and reused.
+
+    Built on first use rather than at start-up: the try-on model is what this
+    machine is for, and a pod should not spend its first two minutes fetching
+    a 176 MB matting model it may never be asked to run.
+    """
+    global _cutter
+    with _cutter_lock:
+        if _cutter is None:
+            from rembg import new_session
+            t = time.time()
+            print("[pod] loading the cutout model", flush=True)
+            _cutter = new_session(os.environ.get("PACKSHOT_MODEL", "u2net"))
+            print(f"[pod] cutout ready in {time.time() - t:.1f}s", flush=True)
+    return _cutter
+
+
+@app.post("/packshot")
+def packshot(garment: UploadFile = File(...),
+             background: str = Form("#FFFFFF"),
+             width: int = Form(0), height: int = Form(0)):
+    from rembg import remove
+
+    img = _read(garment, "garment")
+    size = (width or PACKSHOT_SIZE[0], height or PACKSHOT_SIZE[1])
+    started = time.time()
+    try:
+        cut = remove(img, session=cutter())
+    except Exception as exc:                                  # noqa: BLE001
+        _stats["failed"] += 1
+        raise HTTPException(500, f"could not separate the garment: "
+                                 f"{type(exc).__name__}: {exc}")
+
+    # Trim to what is actually left. A photograph of a jumper on a large table
+    # is mostly table; centring the original frame would centre the table.
+    box = cut.getbbox()
+    if box:
+        cut = cut.crop(box)
+
+    canvas = Image.new("RGB", size, background)
+    margin = 1 - 2 * PACKSHOT_MARGIN
+    scale = min(size[0] * margin / cut.width, size[1] * margin / cut.height)
+    # Never enlarge: blowing a small photograph up to fill the frame turns a
+    # usable image into a soft one, and a seller can see the difference.
+    scale = min(scale, 1.0)
+    fitted = cut.resize((max(1, round(cut.width * scale)),
+                         max(1, round(cut.height * scale))), Image.LANCZOS)
+    canvas.paste(fitted, ((size[0] - fitted.width) // 2,
+                          (size[1] - fitted.height) // 2), fitted)
+
+    elapsed = round(time.time() - started, 2)
+    _stats["served"] += 1
+    _stats["seconds"] += elapsed
+    buf = io.BytesIO()
+    canvas.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"X-Seconds": str(elapsed),
+                             "X-Width": str(size[0]), "X-Height": str(size[1])})
 
 
 def main():

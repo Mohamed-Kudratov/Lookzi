@@ -31,7 +31,7 @@ TOOLS = {
     "packshot": dict(
         label="Packshot",
         blurb="A clean catalogue cut-out of the garment on its own.",
-        needs=["garment"], cost=1, ready=False),
+        needs=["garment"], cost=1, ready=True),
     "model-creation": dict(
         label="Make a new model",
         blurb="A model that belongs to you alone.",

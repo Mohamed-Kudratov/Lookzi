@@ -61,6 +61,10 @@ class PodDown(RuntimeError):
     """The pod cannot be reached or is not ready."""
 
 
+class RunPodInput(ValueError):
+    """The job is missing something the tool needs. Not the pod's fault."""
+
+
 class Tunnel:
     """An ssh port forward, kept alive.
 
@@ -187,19 +191,33 @@ def _multipart(fields, files):
     return buf.getvalue(), f"multipart/form-data; boundary={boundary}"
 
 
+# Which endpoint each tool wants, and what it needs sent. Kept here rather than
+# branched inside handle(), so a new tool is an entry rather than another if.
+ROUTES = {
+    "packshot": ("/packshot", ("garment",)),
+}
+DEFAULT_ROUTE = ("/generate", ("person", "garment"))
+
+
 def handle(job):
     p = job["params"] or {}
     _tunnel.up()
 
-    person = storage.get_bytes(p["person_key"])
-    garment = storage.get_bytes(p["garment_key"])
-    body, content_type = _multipart(
-        {"mode": p.get("mode", "upper"),
-         "description": p.get("description") or "the garment",
-         "seed": int(p.get("seed", 42))},
-        {"person": ("person.png", person), "garment": ("garment.png", garment)})
+    path, wants = ROUTES.get(job["tool"], DEFAULT_ROUTE)
+    files = {}
+    for name in wants:
+        key = p.get(f"{name}_key")
+        if not key:
+            raise RunPodInput(f"{job['tool']} needs a {name} and none was sent")
+        files[name] = (f"{name}.png", storage.get_bytes(key))
 
-    req = urllib.request.Request(f"{BASE}/generate", data=body, method="POST",
+    fields = {} if path != "/generate" else {
+        "mode": p.get("mode") or "",
+        "description": p.get("description") or "the garment",
+        "seed": int(p.get("seed", 42))}
+    body, content_type = _multipart(fields, files)
+
+    req = urllib.request.Request(f"{BASE}{path}", data=body, method="POST",
                                  headers={"Content-Type": content_type})
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
