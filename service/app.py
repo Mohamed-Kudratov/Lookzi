@@ -90,13 +90,30 @@ def health(conn=Depends(db)):
 
 
 @app.get("/tools")
-def tools():
+def tools(conn=Depends(db)):
     """What the product can do, as the client should render it.
 
     Served rather than hardcoded in the page, so switching a tool on is one
     edit in service/tools.py and not three in three places that then disagree.
     """
-    return tool_registry.public()
+    out = tool_registry.public()
+    # How long each tool has actually been taking, from its own last twenty
+    # results. The studio used to count down from a figure measured once on a
+    # different checkpoint; a tool that has never run says nothing rather than
+    # guessing.
+    rows = conn.execute(
+        """SELECT tool, percentile_cont(0.5) WITHIN GROUP (ORDER BY seconds) AS med
+             FROM (SELECT j.tool, r.seconds,
+                          row_number() OVER (PARTITION BY j.tool
+                                             ORDER BY j.finished_at DESC) AS n
+                     FROM results r JOIN jobs j ON j.id = r.job_id
+                    WHERE r.seconds IS NOT NULL) t
+            WHERE n <= 20
+            GROUP BY tool""").fetchall()
+    median = {r["tool"]: float(r["med"]) for r in rows if r["med"] is not None}
+    for t in out:
+        t["typical_seconds"] = round(median[t["id"]], 1) if t["id"] in median else None
+    return out
 
 
 @app.get("/models")

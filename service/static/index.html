@@ -37,6 +37,12 @@
   --shadow:0 1px 2px rgba(20,22,26,.06), 0 16px 38px -24px rgba(20,22,26,.4);
 }
 *{box-sizing:border-box}
+/* The hidden attribute is only display:none at the browser's own specificity,
+   so any rule that sets display -- .slot .empty{display:grid} did -- wins and
+   the element stays on screen. That put "Nothing yet" above every finished
+   image. Worth enforcing once here rather than per element, because the same
+   trap is waiting behind every display rule on the page. */
+[hidden]{display:none !important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
   font:400 15px/1.5 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;
@@ -93,12 +99,23 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
 .canvas-head p{margin:0;color:var(--ink-3);font-size:13px}
 /* One thing now: the result. The inputs moved to the panel, where the tool
    says what they are. */
-.slots{display:grid;grid-template-columns:1fr;gap:14px;padding:18px;min-height:0}
+/* The row is explicit. Without it the single slot takes an implicit auto
+   row, sizes itself to the image's own pixels, and a 768x1024 result spills
+   far past the viewport -- which looked like the model returning half a
+   body when it was returning a whole one nobody could see. */
+.slots{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);
+  gap:14px;padding:18px;min-height:0;overflow:hidden}
 .slot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;
   background:var(--panel);display:grid;place-items:center;min-height:0}
 .slot.drop{border-style:dashed;cursor:pointer}
 .slot.drop:hover,.slot.over{border-color:var(--brand);background:var(--brand-soft)}
-.slot img{width:100%;height:100%;object-fit:contain;background:var(--panel-2)}
+/* Positioned rather than sized. A percentage height on a centred grid item
+   does not resolve against the slot here, so a 512x896 result rendered at its
+   own pixel size and ran off the bottom of the page -- which read as the model
+   returning half a body when it had returned a whole one. inset:0 on the
+   relative slot is exact whatever the layout does around it. */
+.slot img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;background:var(--panel-2)}
 .slot .tag{position:absolute;top:10px;inset-inline-start:10px;z-index:2;
   padding:5px 8px;border-radius:6px;background:color-mix(in srgb,var(--bg) 82%,transparent);
   border:1px solid var(--line)}
@@ -250,7 +267,9 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
     box-shadow:0 -8px 24px rgba(0,0,0,.35)}
   .canvas{grid-template-rows:auto auto auto}
   .slots{grid-template-columns:1fr}
-  .slot{min-height:300px}
+  /* No row to divide on a phone, so the slot is given a shape instead. */
+  .slots{grid-template-rows:auto}
+  .slot{aspect-ratio:3/4;min-height:0}
   /* Two across rather than three: a third of a 375 px screen is a thumbnail
      nobody can judge a face from. */
   .models{grid-template-columns:repeat(2,1fr)}
@@ -295,7 +314,8 @@ svg{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-l
             <div>
               <div class="num" id="veil-num">14.3s</div>
               <div class="mono" id="veil-state" style="margin-top:8px">queued</div>
-              <div class="bar-track" style="margin-top:14px"><i id="veil-bar"></i></div>
+              <div class="mono" id="veil-hint" style="margin-top:6px;font-size:11.5px;color:var(--ink-3)"></div>
+              <div class="bar-track" style="margin-top:12px"><i id="veil-bar"></i></div>
               <button class="ghost" id="cancel-job" style="margin-top:16px;width:auto;padding:9px 16px">Cancel</button>
             </div>
           </div>
@@ -621,11 +641,21 @@ function watch(id) {
       $("veil-state").textContent = j.status === "queued"
         ? (j.position ? j.position + " in the queue" : "queued") : j.status;
       $("cancel-job").hidden = j.status !== "queued";
-      // Counts toward the measured figure rather than up from zero: the number
-      // people care about is how much longer, not how long so far.
-      var left = Math.max(0, 14.3 - secs);
-      $("veil-num").textContent = (j.status === "queued" ? secs : left).toFixed(1) + "s";
-      $("veil-bar").style.width = Math.min(100, (secs / 14.3) * 100) + "%";
+      // Elapsed, not a countdown. It used to count down from 14.3 -- a figure
+      // measured once, on a different checkpoint, for a different tool -- so it
+      // reached zero and sat there while the job ran on. A number that is
+      // sometimes a lie is worse than no number.
+      var typical = (tool() || {}).typical_seconds;
+      $("veil-num").textContent = secs.toFixed(1) + "s";
+      if (typical) {
+        $("veil-bar").style.width = Math.min(96, (secs / typical) * 100) + "%";
+        $("veil-hint").textContent = secs > typical * 1.4
+          ? "longer than usual — normally about " + typical.toFixed(0) + "s"
+          : "usually about " + typical.toFixed(0) + "s";
+      } else {
+        $("veil-bar").style.width = "0";
+        $("veil-hint").textContent = "";
+      }
 
       if (j.status === "done") { clearInterval(poll); finish(j); }
       if (j.status === "failed" || j.status === "cancelled") {
