@@ -187,17 +187,26 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
 
     # What is required comes from the tool, not from here. Three tools shared
     # one hardcoded rule and the fourth could not be submitted at all.
-    needs = tool_registry.TOOLS[req.tool]["needs"]
-    sent = {"garment": req.garment_key, "person": req.person_key,
-            "model": req.model_id,
-            # A look is four choices, and every one has a sensible default, so
-            # it is never missing -- it is listed so the studio knows to draw
-            # the chooser.
-            "look": True, "prompt": (req.prompt or "").strip()}
-    # A trailing "?" marks an input the tool will take but does not require --
-    # making a model accepts your own words instead of the choices, and a
-    # customer who does not want to write should not be blocked by an empty box.
-    missing = [n for n in needs if not n.endswith("?") and not sent.get(n)]
+    needs = [n for n in tool_registry.TOOLS[req.tool]["needs"]
+             # A trailing "?" marks an input the tool will take but does not
+             # require -- making a model accepts your own words instead of the
+             # choices, and an empty box should not block a job.
+             if not n.endswith("?")]
+
+    # Photographs are counted, not matched to a field. "Change the model" wants
+    # a person and a model, and the person the customer uploads is what carries
+    # the clothes -- so it arrives as the garment, and person_key is deliberately
+    # empty for the model to fill. Checking that field by name rejected every
+    # such job while the studio was sending exactly what it should.
+    photos_wanted = sum(1 for n in needs if n in ("garment", "person"))
+    photos_sent = len([k for k in (req.garment_key, req.person_key) if k])
+    missing = []
+    if photos_sent < photos_wanted:
+        missing.append(f"{photos_wanted} photo" + ("s" if photos_wanted > 1 else ""))
+    if "model" in needs and not req.model_id:
+        missing.append("a model")
+    if "prompt" in needs and not (req.prompt or "").strip():
+        missing.append("a description")
     if missing:
         raise HTTPException(400, f"{req.tool} needs {' and '.join(missing)}")
 
