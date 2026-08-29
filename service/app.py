@@ -383,12 +383,35 @@ REVIEW_KEY = os.environ.get("REVIEW_KEY", "")
 MAX_UPLOAD = int(os.environ.get("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 
 
+def _from_this_machine(request):
+    """Whether the browser asking is the one sitting at this computer.
+
+    Not by client address: behind docker every request arrives from the bridge
+    gateway, so `172.x` says nothing about who sent it. What does separate them
+    is the address the browser typed. A tab on this machine asks for
+    `localhost:8080`; anything arriving through a tunnel asks for the tunnel's
+    own hostname and carries the forwarding headers a proxy adds.
+    """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    forwarded = any(h in request.headers for h in
+                    ("x-forwarded-for", "x-forwarded-host", "ngrok-trace-id"))
+    return not forwarded and host in ("localhost", "127.0.0.1", "[::1]", "::1")
+
+
 def _may_review(request, key):
-    if REVIEW_KEY:
-        return key == REVIEW_KEY
-    host = (request.client.host if request.client else "") or ""
-    return (host.startswith(("127.", "10.", "192.168.", "172.")) or host == "::1"
-            or host == "localhost")
+    """The owner's page: open at this desk, closed to the internet.
+
+    Locking it behind a key altogether was wrong, and wrong in a way worth
+    recording. The key was added the day the studio got a public link, because
+    the old rule -- "only from a private address" -- lets every tunnelled
+    request through. But it also shut the owner out of the everyday path: the
+    gallery had been one click from the studio and became a 404 unless you
+    remembered a twenty-four character string. A change made for a visitor
+    should not take something away from the person whose page it is.
+    """
+    if _from_this_machine(request):
+        return True
+    return bool(REVIEW_KEY) and key == REVIEW_KEY
 
 
 @app.get("/api/review")
