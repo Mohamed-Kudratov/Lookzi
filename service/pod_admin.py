@@ -755,6 +755,19 @@ def step_warm(ssh, st):
     invisible until something actually ran. A pod that has produced a picture
     has proved all of it at once.
     """
+    # Not when the pod is already serving. This step loads a second copy of the
+    # model to prove the first one can load, and on a pod that is up that is
+    # 16 GB the card does not have: the run fails at 83% with an out-of-memory
+    # error about a model that is, at that moment, answering requests.
+    #
+    # A server that is up and reports ready has proved everything this step
+    # proves, and proved it on the copy the product actually uses.
+    rc, out = ssh.run("curl -s -m 5 localhost:8000/health", timeout=180)
+    if '"ready":true' in out:
+        st.log("the try-on server is already up and ready; nothing to warm")
+        st.note("warm", "already serving")
+        return
+
     want = st.options.get("model", "4bit")
     repo = MODELS[want][0]
     ssh.run(
@@ -916,6 +929,16 @@ def step_serve(ssh, st):
         return 0
 
     for name, probe, needs, human in WANT:
+        # Already up is the commonest case on a re-run, and it has to be asked
+        # first. Sized against free memory instead, a server that is serving
+        # looks like one there is no room for -- so the panel warned that it
+        # had not started the very model that was answering requests while it
+        # said so.
+        rc, out = ssh.run(f"curl -s -m 5 localhost:{PORTS[name]}/health",
+                          timeout=180)
+        if '"ready":true' in out:
+            st.log(f"{human} is already serving")
+            continue
         if probe:
             rc, out = ssh.run(f"test -e {probe} && echo HAVE || echo NONE",
                               timeout=120)
