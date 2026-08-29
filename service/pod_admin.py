@@ -117,7 +117,30 @@ class Ssh:
         self.host = host
         self.key = key or SSH_KEY
 
-    def run(self, script, timeout=600):
+    def run(self, script, timeout=600, attempts=3):
+        """Retried, because the proxy sometimes answers with nothing at all.
+
+        A run died at the last step with an empty reply: no stdout, no stderr,
+        the ssh process simply back in six seconds. Nothing was wrong with the
+        pod -- the same script had run there minutes earlier -- and nothing was
+        wrong with the script. RunPod's proxy dropped the connection.
+
+        A step that has already waited four minutes should not be lost to that.
+        Only a silent connection is retried; a pod that answers with an error
+        is answering, and repeating the question will not change what it says.
+        """
+        last = None
+        for attempt in range(attempts):
+            try:
+                return self._once(script, timeout)
+            except PodError as exc:
+                if "could not read the pod's reply" not in str(exc):
+                    raise
+                last = exc
+                time.sleep(4 * (attempt + 1))
+        raise last
+
+    def _once(self, script, timeout=600):
         blob = base64.b64encode(script.encode()).decode()
         stdin = (
             "stty -echo 2>/dev/null; export PS1= PS2=; unset PROMPT_COMMAND\n"
