@@ -307,7 +307,7 @@ button,input,textarea{font:inherit;color:inherit}
       <a id="nav-studio" aria-current="page">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         Studio</a>
-      <a id="nav-gallery" href="/review">
+      <a id="nav-gallery" href="/review" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>
         Gallery</a>
       <a id="nav-models">
@@ -940,6 +940,18 @@ $("theme").addEventListener("click", function () {
   try { localStorage.setItem("lookzi-theme", next); } catch (e) {}
 });
 $("nav-models").addEventListener("click", function () { openPop("models"); });
+
+// The gallery is the owner's, and behind a key. It is carried from the URL the
+// studio was opened with and remembered, so opening /?key=... once is enough
+// and a visitor who has the plain link never sees anybody's uploads.
+(function () {
+  var k = new URLSearchParams(location.search).get("key");
+  try {
+    if (k) localStorage.setItem("lookzi-key", k);
+    else k = localStorage.getItem("lookzi-key");
+  } catch (e) {}
+  if (k) $("nav-gallery").href = "/review?key=" + encodeURIComponent(k);
+})();
 
 // ---------------------------------------------------------------- loading
 function refresh() {

@@ -29,6 +29,19 @@ PUBLIC_BASE = os.environ.get("S3_PUBLIC_BASE", "")
 # internal endpoint is a link nobody can open. In production both are the same
 # public R2 hostname and this collapses to one value.
 PUBLIC_ENDPOINT = os.environ.get("S3_PUBLIC_ENDPOINT", ENDPOINT)
+# Hand out our own relative paths instead of signed links to the bucket.
+#
+# A signed link names a host, and the host it names is the one this machine
+# can reach. That is fine on a laptop and useless the moment the studio is
+# opened from somewhere else: the page loads and every picture is broken,
+# because 127.0.0.1:9000 is the visitor's own machine and there is nothing
+# there. Uploads fail the same way and more quietly.
+#
+# With this on, both directions go through the web app, which knows where the
+# bucket is. It costs a copy through the web tier -- the thing the comment on
+# presigned_put warns about -- and that is the right trade for a handful of
+# people looking at a link. It would be the wrong one for a crowd.
+PROXY = os.environ.get("S3_PROXY", "") not in ("", "0", "false")
 
 _client = None
 _public_client = None
@@ -125,6 +138,8 @@ def presigned_get(key, seconds=3600):
     and dies on its own, which is safer than a public bucket and cheaper than
     proxying every image through the web tier.
     """
+    if PROXY:
+        return "/files/" + key
     if PUBLIC_BASE:
         return f"{PUBLIC_BASE.rstrip('/')}/{key}"
     return public_client().generate_presigned_url(
@@ -138,6 +153,8 @@ def presigned_put(key, seconds=900, content_type="image/png"):
     file in memory and forwards it. That turns every upload into web-tier load
     for no benefit, and it is the first thing to fall over under a crowd.
     """
+    if PROXY:
+        return "/files/" + key
     return public_client().generate_presigned_url(
         "put_object",
         Params={"Bucket": BUCKET, "Key": key, "ContentType": content_type},

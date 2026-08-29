@@ -1,0 +1,2927 @@
+{
+ "run": "stress1",
+ "commit": "f86547e",
+ "seed": 20260829,
+ "rows": [
+  {
+   "id": "pack/man_upper/00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1f8b5a6005ba45348d9fd076f7475dca.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "job_id": "2c7b314c-6ed9-4799-9521-4539931cb2b4",
+   "status": "done",
+   "seconds": 2.53,
+   "error": null,
+   "image": "pack_man_upper_00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.571,
+    "colour_shift": 36.0
+   }
+  },
+  {
+   "id": "pack/man_upper/03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1ef31d7865bb401198bfd273993ee613.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "job_id": "9d908b48-a44d-4ff3-bbb9-f4bbd999c8f6",
+   "status": "done",
+   "seconds": 2.39,
+   "error": null,
+   "image": "pack_man_upper_03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.501,
+    "colour_shift": 16.2
+   }
+  },
+  {
+   "id": "pack/man_upper/0a671f9d-d105-4ec9-8642-f4f228f8a90f.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/2a95cdc731f84e58afba6733a6cb1c95.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0a671f9d-d105-4ec9-8642-f4f228f8a90f.jpg",
+   "job_id": "359fee78-35ec-49f7-ad56-7b9efc09f50b",
+   "status": "done",
+   "seconds": 1.53,
+   "error": null,
+   "image": "pack_man_upper_0a671f9d-d105-4ec9-8642-f4f228f8a90f.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.366,
+    "colour_shift": 25.6
+   }
+  },
+  {
+   "id": "pack/man_upper/0a77dbed-06fb-4ba7-b1e3-24f3a41498bc.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/e699e6638caa453c8f7a38a4601ac4fc.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0a77dbed-06fb-4ba7-b1e3-24f3a41498bc.jpg",
+   "job_id": "b51072fe-d58e-4b89-a876-0105953330b8",
+   "status": "done",
+   "seconds": 1.65,
+   "error": null,
+   "image": "pack_man_upper_0a77dbed-06fb-4ba7-b1e3-24f3a41498bc.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.391,
+    "colour_shift": 41.9
+   }
+  },
+  {
+   "id": "pack/man_upper/0b1cc7a6-be78-45e6-be22-2ad00b107328.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6e12e19124b94489b2781babc8b30dfb.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b1cc7a6-be78-45e6-be22-2ad00b107328.jpg",
+   "job_id": "df109f1e-fc72-4382-b936-fab20a150757",
+   "status": "done",
+   "seconds": 1.41,
+   "error": null,
+   "image": "pack_man_upper_0b1cc7a6-be78-45e6-be22-2ad00b107328.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.348,
+    "colour_shift": 16.0
+   }
+  },
+  {
+   "id": "pack/man_upper/0b7dc2e9-a9e9-46ed-b4e2-8b91e1e720b0.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/c51d6125fd264aa89354f5b2d6a9b074.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b7dc2e9-a9e9-46ed-b4e2-8b91e1e720b0.jpg",
+   "job_id": "1c39925a-8147-485f-8efe-f415f206a786",
+   "status": "done",
+   "seconds": 0.88,
+   "error": null,
+   "image": "pack_man_upper_0b7dc2e9-a9e9-46ed-b4e2-8b91e1e720b0.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.406,
+    "colour_shift": 17.1
+   }
+  },
+  {
+   "id": "pack/man_upper/0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/7324ab103828442a931fb7c1e4f5c6d6.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg",
+   "job_id": "f02bc611-b084-4b08-af5a-674c015f5c85",
+   "status": "done",
+   "seconds": 1.16,
+   "error": null,
+   "image": "pack_man_upper_0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.355,
+    "colour_shift": 44.7
+   }
+  },
+  {
+   "id": "pack/man_upper/0d293c69-ba4f-4ffc-b6b9-fa05316a02c5.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/f4297405f4314a7a97b01f6c5462b2fb.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d293c69-ba4f-4ffc-b6b9-fa05316a02c5.jpg",
+   "job_id": "7bf556ed-886a-40b6-8571-90e4c711d6d9",
+   "status": "done",
+   "seconds": 2.47,
+   "error": null,
+   "image": "pack_man_upper_0d293c69-ba4f-4ffc-b6b9-fa05316a02c5.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.438,
+    "colour_shift": 33.5
+   }
+  },
+  {
+   "id": "pack/man_upper/0d73e759-eeaa-43ab-98d4-196b6974c41e.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/d0fcf72f5c5741cebdd74eb24a3f281b.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d73e759-eeaa-43ab-98d4-196b6974c41e.jpg",
+   "job_id": "260fb956-8032-4fb5-b5e8-61f97e6e63e4",
+   "status": "done",
+   "seconds": 1.32,
+   "error": null,
+   "image": "pack_man_upper_0d73e759-eeaa-43ab-98d4-196b6974c41e.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.286,
+    "colour_shift": 29.1
+   }
+  },
+  {
+   "id": "pack/man_upper/0d9f1bf9-0008-4247-b22b-832ab1c62a70.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6e286d40bcfd43af976527c13b00228f.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d9f1bf9-0008-4247-b22b-832ab1c62a70.jpg",
+   "job_id": "2f3a55fa-4607-4ea0-908f-7404cda63203",
+   "status": "done",
+   "seconds": 0.3,
+   "error": null,
+   "image": "pack_man_upper_0d9f1bf9-0008-4247-b22b-832ab1c62a70.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.369,
+    "colour_shift": 12.4
+   }
+  },
+  {
+   "id": "pack/man_upper/1b00c860-4121-475e-8991-a26247be3145.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/17eec82a4bec4c2eb71bf801c3a4b251.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1b00c860-4121-475e-8991-a26247be3145.jpg",
+   "job_id": "345955df-ce6f-43b0-8ad9-63498fc154b3",
+   "status": "done",
+   "seconds": 1.64,
+   "error": null,
+   "image": "pack_man_upper_1b00c860-4121-475e-8991-a26247be3145.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.351,
+    "colour_shift": 34.5
+   }
+  },
+  {
+   "id": "pack/man_upper/1b2a7169-fb57-4b9e-9990-ae92a02305a1.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/07843394fc0342f2bc8126deb32e7c31.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1b2a7169-fb57-4b9e-9990-ae92a02305a1.jpg",
+   "job_id": "c6bb78e1-bd70-4285-a336-a861a0748f8e",
+   "status": "done",
+   "seconds": 1.25,
+   "error": null,
+   "image": "pack_man_upper_1b2a7169-fb57-4b9e-9990-ae92a02305a1.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.405,
+    "colour_shift": 22.1
+   }
+  },
+  {
+   "id": "pack/man_upper/1c9f16a4-85cf-4c4a-ae3c-52f14270128d.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/ba1120a223104ac1bda60176e14eb4a7.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1c9f16a4-85cf-4c4a-ae3c-52f14270128d.jpg",
+   "job_id": "3f73aed6-5955-47f1-892e-9615262f5952",
+   "status": "done",
+   "seconds": 1.73,
+   "error": null,
+   "image": "pack_man_upper_1c9f16a4-85cf-4c4a-ae3c-52f14270128d.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.432,
+    "colour_shift": 28.8
+   }
+  },
+  {
+   "id": "pack/man_upper/1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/bdd2744f440c45d8b3a047c830aeab08.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg",
+   "job_id": "1bec4868-8362-4d0e-a423-65d9ac2bae0d",
+   "status": "done",
+   "seconds": 2.35,
+   "error": null,
+   "image": "pack_man_upper_1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.46,
+    "colour_shift": 26.0
+   }
+  },
+  {
+   "id": "pack/man_upper/1fd19366-a938-4eb3-83c9-4bc474f495be.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1cbc392be4da4ef4a11b4821df7571c2.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1fd19366-a938-4eb3-83c9-4bc474f495be.jpg",
+   "job_id": "43035fc8-75e6-4932-be84-dbe106d85266",
+   "status": "done",
+   "seconds": 0.7,
+   "error": null,
+   "image": "pack_man_upper_1fd19366-a938-4eb3-83c9-4bc474f495be.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.335,
+    "colour_shift": 56.8
+   }
+  },
+  {
+   "id": "pack/man_upper/1fe43e89-0e78-4667-881b-3feb27a63ce3.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/a578e2009aa54df49bc6ac86bda5b94c.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1fe43e89-0e78-4667-881b-3feb27a63ce3.jpg",
+   "job_id": "034c70ec-42af-4742-87f5-4b073eee6a71",
+   "status": "done",
+   "seconds": 2.53,
+   "error": null,
+   "image": "pack_man_upper_1fe43e89-0e78-4667-881b-3feb27a63ce3.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.513,
+    "colour_shift": 19.0
+   }
+  },
+  {
+   "id": "pack/man_upper/2ca50463-77b2-41ca-a96d-7a2d2d7fca5a.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/c6f3635c21344a06b234b197fdebcaf7.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2ca50463-77b2-41ca-a96d-7a2d2d7fca5a.jpg",
+   "job_id": "25c52b43-b452-4a0f-a51a-8ac34674ab37",
+   "status": "done",
+   "seconds": 2.43,
+   "error": null,
+   "image": "pack_man_upper_2ca50463-77b2-41ca-a96d-7a2d2d7fca5a.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.497,
+    "colour_shift": 11.9
+   }
+  },
+  {
+   "id": "pack/man_upper/2ce576f8-cb93-43ee-933b-22d1c6d1678f.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/d85f6b6b0fae456aa2541c48c880f1d8.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2ce576f8-cb93-43ee-933b-22d1c6d1678f.jpg",
+   "job_id": "61284f40-9e90-43b5-8764-927fe7ae544a",
+   "status": "done",
+   "seconds": 2.04,
+   "error": null,
+   "image": "pack_man_upper_2ce576f8-cb93-43ee-933b-22d1c6d1678f.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.368,
+    "colour_shift": 81.5
+   }
+  },
+  {
+   "id": "pack/man_upper/2fabbb28-f7b2-4da2-89cf-7937da3c6f67.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/60ef1e70c96746ff9283f3711768c100.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2fabbb28-f7b2-4da2-89cf-7937da3c6f67.jpg",
+   "job_id": "52dc9abb-d3a3-4b38-a6f8-2df4b4395d25",
+   "status": "done",
+   "seconds": 1.83,
+   "error": null,
+   "image": "pack_man_upper_2fabbb28-f7b2-4da2-89cf-7937da3c6f67.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.366,
+    "colour_shift": 69.0
+   }
+  },
+  {
+   "id": "pack/man_upper/2fff27df-def9-4410-962e-cbba35a6b29f.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/96b61171dfbb47bd911b371d9da32984.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2fff27df-def9-4410-962e-cbba35a6b29f.jpg",
+   "job_id": "e9abd463-c654-426c-a339-240e5d505ed5",
+   "status": "done",
+   "seconds": 0.29,
+   "error": null,
+   "image": "pack_man_upper_2fff27df-def9-4410-962e-cbba35a6b29f.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.432,
+    "colour_shift": 35.3
+   }
+  },
+  {
+   "id": "pack/man_lower/03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/73e6a55272af4bf9bf8b1c38f99c042f.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "job_id": "a81cd668-5da4-490e-8dd9-ccf680c18a02",
+   "status": "done",
+   "seconds": 1.5,
+   "error": null,
+   "image": "pack_man_lower_03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.379,
+    "colour_shift": 18.2
+   }
+  },
+  {
+   "id": "pack/man_lower/03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/a2e44e05a4a14a44a80cfcfe6fdf7520.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "job_id": "78dde1f6-7e8d-4ec4-9696-4944825cfd49",
+   "status": "done",
+   "seconds": 1.8,
+   "error": null,
+   "image": "pack_man_lower_03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.316,
+    "colour_shift": 18.9
+   }
+  },
+  {
+   "id": "pack/man_lower/0c224954-0e0f-4caa-82c8-cf9581e89336.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/9a2e1fb0414040eb9bbc98a26ca14d1d.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0c224954-0e0f-4caa-82c8-cf9581e89336.jpg",
+   "job_id": "112233a7-237b-4533-85c3-564bd065de11",
+   "status": "done",
+   "seconds": 2.14,
+   "error": null,
+   "image": "pack_man_lower_0c224954-0e0f-4caa-82c8-cf9581e89336.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.347,
+    "colour_shift": 31.4
+   }
+  },
+  {
+   "id": "pack/man_lower/0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/eecce39cb8714da4bca05dc187240256.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg",
+   "job_id": "c470a6eb-678b-4724-8eed-2852bdb5ee5d",
+   "status": "done",
+   "seconds": 0.33,
+   "error": null,
+   "image": "pack_man_lower_0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.389,
+    "colour_shift": 44.9
+   }
+  },
+  {
+   "id": "pack/man_lower/0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4d631ac56b9940d2b8da51ad9377587a.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg",
+   "job_id": "7c9cefe8-f722-4465-a827-62a66875a8e1",
+   "status": "done",
+   "seconds": 1.69,
+   "error": null,
+   "image": "pack_man_lower_0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.434,
+    "colour_shift": 18.0
+   }
+  },
+  {
+   "id": "pack/man_lower/0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1876df4fdb1749fc81dcee5c739a15d9.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg",
+   "job_id": "da006651-0aaa-4066-bbf4-29e49a05a886",
+   "status": "done",
+   "seconds": 1.81,
+   "error": null,
+   "image": "pack_man_lower_0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.308,
+    "colour_shift": 9.4
+   }
+  },
+  {
+   "id": "pack/man_lower/1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/b4cbfee7934b4b0eb26c674c1c9f9f1c.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg",
+   "job_id": "43850a24-bfe3-4e2e-ab36-f138227526d8",
+   "status": "done",
+   "seconds": 1.96,
+   "error": null,
+   "image": "pack_man_lower_1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.294,
+    "colour_shift": 1.4
+   }
+  },
+  {
+   "id": "pack/man_lower/1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/68922e5d07e546b5ad5d0f6e6a476e42.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg",
+   "job_id": "764bf7f1-8b5b-4500-8227-876f0823ec10",
+   "status": "done",
+   "seconds": 1.72,
+   "error": null,
+   "image": "pack_man_lower_1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.348,
+    "colour_shift": 14.9
+   }
+  },
+  {
+   "id": "pack/man_lower/1ca03195-b1e8-4c47-85de-81a942ea561e.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/5ad4142d80f745ab981e2ff41aa4a466.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1ca03195-b1e8-4c47-85de-81a942ea561e.jpg",
+   "job_id": "91dcb26c-4982-4e5e-aa3a-1609779d10ae",
+   "status": "done",
+   "seconds": 2.07,
+   "error": null,
+   "image": "pack_man_lower_1ca03195-b1e8-4c47-85de-81a942ea561e.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.341,
+    "colour_shift": 13.4
+   }
+  },
+  {
+   "id": "pack/man_lower/1caba263-088a-448a-be6d-30072c29af09.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/c071bd76bcc44a5aaf4d0b970c116d8f.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1caba263-088a-448a-be6d-30072c29af09.jpg",
+   "job_id": "07cea00d-b32e-4c62-aa64-9cb8a0fccf28",
+   "status": "done",
+   "seconds": 2.11,
+   "error": null,
+   "image": "pack_man_lower_1caba263-088a-448a-be6d-30072c29af09.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.361,
+    "colour_shift": 37.1
+   }
+  },
+  {
+   "id": "pack/man_lower/1d226430-72e6-4be7-998e-604df0fae43d.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/a6445a1004a64d8da51db5987227cce9.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1d226430-72e6-4be7-998e-604df0fae43d.jpg",
+   "job_id": "8ab33c6e-2f1b-48f7-ac71-1dc0f202ee0b",
+   "status": "done",
+   "seconds": 1.84,
+   "error": null,
+   "image": "pack_man_lower_1d226430-72e6-4be7-998e-604df0fae43d.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.387,
+    "colour_shift": 30.4
+   }
+  },
+  {
+   "id": "pack/man_lower/1d407629-87e5-4702-b9fc-e3b19de93570.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/30a975b204e94544bb71b7c1fa6afa1f.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1d407629-87e5-4702-b9fc-e3b19de93570.jpg",
+   "job_id": "62e1fe63-dc7d-4594-a695-9184b25051ae",
+   "status": "done",
+   "seconds": 1.36,
+   "error": null,
+   "image": "pack_man_lower_1d407629-87e5-4702-b9fc-e3b19de93570.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.425,
+    "colour_shift": 24.5
+   }
+  },
+  {
+   "id": "pack/man_lower/1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/0411b22de4b04ace8954b1337dc29c4e.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg",
+   "job_id": "30472534-aacd-4ac3-b77f-c8dd7d9c9f5a",
+   "status": "done",
+   "seconds": 1.96,
+   "error": null,
+   "image": "pack_man_lower_1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.349,
+    "colour_shift": 20.8
+   }
+  },
+  {
+   "id": "pack/man_lower/1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/821c152e6ad24e298536ff1554a55add.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg",
+   "job_id": "2c439ba8-5f6f-46a0-a145-50e49007d8b0",
+   "status": "done",
+   "seconds": 1.42,
+   "error": null,
+   "image": "pack_man_lower_1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.412,
+    "colour_shift": 11.3
+   }
+  },
+  {
+   "id": "pack/man_lower/1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/f49cec6090b94e75a7f894c53a4ad5d8.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg",
+   "job_id": "67d9963e-1987-41e2-94f5-6b79f377bc12",
+   "status": "done",
+   "seconds": 2.04,
+   "error": null,
+   "image": "pack_man_lower_1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.319,
+    "colour_shift": 2.9
+   }
+  },
+  {
+   "id": "pack/man_lower/2d6fce79-1631-43b6-974d-b246247e3249.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/dc881a2e5c5d412a93d66c49c7e636ad.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\2d6fce79-1631-43b6-974d-b246247e3249.jpg",
+   "job_id": "1eb463b2-22ce-44d3-94a1-a539878047d7",
+   "status": "done",
+   "seconds": 1.37,
+   "error": null,
+   "image": "pack_man_lower_2d6fce79-1631-43b6-974d-b246247e3249.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.417,
+    "colour_shift": 33.7
+   }
+  },
+  {
+   "id": "pack/man_lower/3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3a92ea14868141cdbbfb3957c58af9b6.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg",
+   "job_id": "563abacb-4b84-46ff-bced-bd6c429d3783",
+   "status": "done",
+   "seconds": 0.41,
+   "error": null,
+   "image": "pack_man_lower_3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.29,
+    "colour_shift": 40.9
+   }
+  },
+  {
+   "id": "pack/man_lower/4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/e6b5f3042d6f4625b44f3c63d655eb03.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg",
+   "job_id": "cfaf63ec-6cb3-4927-b97f-a13ffa151a30",
+   "status": "done",
+   "seconds": 2.17,
+   "error": null,
+   "image": "pack_man_lower_4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.404,
+    "colour_shift": 18.5
+   }
+  },
+  {
+   "id": "pack/man_lower/4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/7b4b79c95ced4ee2aa7cda3de6f4d781.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg",
+   "job_id": "1f029074-cf02-48a1-a2c1-2c4491e1f565",
+   "status": "done",
+   "seconds": 0.26,
+   "error": null,
+   "image": "pack_man_lower_4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.28,
+    "colour_shift": 23.0
+   }
+  },
+  {
+   "id": "pack/man_lower/9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/12ee4b774a1148e8a6c2dc2b804939da.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg",
+   "job_id": "9d646494-b671-4802-aa24-59496b221048",
+   "status": "done",
+   "seconds": 1.05,
+   "error": null,
+   "image": "pack_man_lower_9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.326,
+    "colour_shift": 27.7
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/c371e381ed9a40c5a32d13f6f65f91fb.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "job_id": "a403b33b-68c9-44a4-a719-c3ec40736aea",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.183,
+    "colour_shift": 19.7
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/73b01a564a1a4f588e044a9efa576105.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "job_id": "edfd4e99-494b-419c-bf0a-b6f1eed55f64",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_Upper_04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.141,
+    "colour_shift": 19.6
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/02c071ae61c34252884e229583660bc1.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg",
+   "job_id": "917cf602-13dd-498e-982c-d36c86de2bdb",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_Upper_0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.11,
+    "colour_shift": 13.9
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/0aa095c3-9d4d-4416-8788-82655af859a8.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/ad9683593a6141e8af38ed8892dccf2c.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0aa095c3-9d4d-4416-8788-82655af859a8.jpg",
+   "job_id": "db610483-25f9-40e6-b485-66ae9f381a4b",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_Upper_0aa095c3-9d4d-4416-8788-82655af859a8.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.138,
+    "colour_shift": 12.2
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6dac423f69b84802a2d7fddd8a4b96ca.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg",
+   "job_id": "5a881b88-de2f-4ce6-b7e8-bb5be4a7c57b",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_Upper_0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.098,
+    "colour_shift": 10.5
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/0ef80b69-2c18-435d-b091-91f401e01ed4.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/fdf4655401934ea4acd8a84c7f97b16c.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0ef80b69-2c18-435d-b091-91f401e01ed4.jpg",
+   "job_id": "54e098d8-ad31-418b-a668-8dcb763c8ad1",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_Upper_0ef80b69-2c18-435d-b091-91f401e01ed4.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.139,
+    "colour_shift": 25.9
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/2a064fe6-224b-4146-abfe-97e9d292a61d.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/7f49b1cc68824de8b2b40687279b81c7.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2a064fe6-224b-4146-abfe-97e9d292a61d.jpg",
+   "job_id": "baa9929e-14f2-4e4d-b3af-5b6d5c60a487",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_Upper_2a064fe6-224b-4146-abfe-97e9d292a61d.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.148,
+    "colour_shift": 9.2
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/5ee0b8fd311640b5b2778acf65167027.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg",
+   "job_id": "8178a1aa-49f8-4e29-8cd3-79f2979fe24d",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.125,
+    "colour_shift": 32.8
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/2fcb5130-d1f4-4b74-8059-df548f949347.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/2c57f615e53f459fbc89a7b117060cc9.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2fcb5130-d1f4-4b74-8059-df548f949347.jpg",
+   "job_id": "6619eb21-29a0-430b-a4a3-dd6eb2a39857",
+   "status": "done",
+   "seconds": 0.24,
+   "error": null,
+   "image": "pack_Woman_Upper_2fcb5130-d1f4-4b74-8059-df548f949347.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.111,
+    "colour_shift": 33.4
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/3b062efe-02a6-4e19-a280-739f366d1d92.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3ddd4d72b5ea4c589fb9dbf1c2805c45.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\3b062efe-02a6-4e19-a280-739f366d1d92.jpg",
+   "job_id": "75fb8a99-938d-4365-bf7a-214576d60cba",
+   "status": "done",
+   "seconds": 0.25,
+   "error": null,
+   "image": "pack_Woman_Upper_3b062efe-02a6-4e19-a280-739f366d1d92.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.112,
+    "colour_shift": 76.8
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/4cf67efe-100e-4174-9772-ffc9d644deec.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/f7dbcd44542a41899caafe2d37576614.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4cf67efe-100e-4174-9772-ffc9d644deec.jpg",
+   "job_id": "dc3097df-c1d7-4184-838a-5e36ecb8aae6",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_4cf67efe-100e-4174-9772-ffc9d644deec.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.099,
+    "colour_shift": 18.0
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/2cebd171f7e44392844b65dd17552525.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg",
+   "job_id": "9befb3f1-29b3-41cc-8a91-51c90950c776",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_Upper_4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.116,
+    "colour_shift": 25.5
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3c9f416e21934085828a5a33e8aeedc1.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg",
+   "job_id": "5ee26850-476f-4001-b1a5-ced32f4543e3",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.09,
+    "colour_shift": 15.5
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/05f700d7a53849e4853e7808e1304994.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg",
+   "job_id": "790d2a83-4099-472c-a4a6-99cd83a64cfe",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_Upper_4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.178,
+    "colour_shift": 32.0
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/5b0b2f96-d429-4dc8-a43b-33804236a351.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3aa192666d8147a5a288fac9e47bba96.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\5b0b2f96-d429-4dc8-a43b-33804236a351.jpg",
+   "job_id": "ccac371a-2e75-4689-a782-f8d452a6a561",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_Upper_5b0b2f96-d429-4dc8-a43b-33804236a351.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.093,
+    "colour_shift": 17.6
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/51386e89f9e244a3b0ab9e2ee29d454a.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg",
+   "job_id": "0ae680ae-b5d0-4b17-ad31-94c5de38aa87",
+   "status": "done",
+   "seconds": 0.25,
+   "error": null,
+   "image": "pack_Woman_Upper_6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.168,
+    "colour_shift": 19.5
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/79f98f2078c14379a96d96db1f2f6b78.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg",
+   "job_id": "7bb38dfc-d958-4c2f-ac3f-79d0f07c715c",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.11,
+    "colour_shift": 36.8
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/7ac347b0-0147-4f0e-8174-c40177d53287.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/2ce54f4a69ba47ae860ee5b2c4e8e357.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\7ac347b0-0147-4f0e-8174-c40177d53287.jpg",
+   "job_id": "ed5d02bc-1be0-4a50-be7a-608a4f4e8d96",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_Upper_7ac347b0-0147-4f0e-8174-c40177d53287.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.131,
+    "colour_shift": 12.0
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/7fe3f9b7-ccee-4d88-a165-389762f3d77a.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6873e9b4a46147569c5372da8d873a08.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\7fe3f9b7-ccee-4d88-a165-389762f3d77a.jpg",
+   "job_id": "21806d71-942c-486b-a6ec-29bc82a6ed0d",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_Upper_7fe3f9b7-ccee-4d88-a165-389762f3d77a.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.12,
+    "colour_shift": 26.8
+   }
+  },
+  {
+   "id": "pack/Woman_Upper/8d19dfbe-1d4a-4e4e-b4be-da8aae7bda45.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4eb3f60bb879497389a44f18a330364e.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\8d19dfbe-1d4a-4e4e-b4be-da8aae7bda45.jpg",
+   "job_id": "a47e7b4e-5638-4410-9ea6-961098cb9b1e",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_Upper_8d19dfbe-1d4a-4e4e-b4be-da8aae7bda45.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.114,
+    "colour_shift": 22.6
+   }
+  },
+  {
+   "id": "pack/Woman_lower/0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/0ab940837d024626b92af39d428120b9.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "job_id": "704d1ffa-84c8-4941-8dbd-d56387462a4b",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_lower_0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.11,
+    "colour_shift": 83.5
+   }
+  },
+  {
+   "id": "pack/Woman_lower/0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/552f05fe133d41fda8889b230e80471e.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "job_id": "fe81d0cd-f411-4107-82aa-1adf60403050",
+   "status": "done",
+   "seconds": 0.22,
+   "error": null,
+   "image": "pack_Woman_lower_0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.086,
+    "colour_shift": 6.6
+   }
+  },
+  {
+   "id": "pack/Woman_lower/104b1054-3d95-4738-8199-d4b0581e735f.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/ae8353ee4fe64f0e99a2e5f7d8ba4933.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\104b1054-3d95-4738-8199-d4b0581e735f.jpg",
+   "job_id": "ae5820cb-e249-4fa8-8753-4b593be72cbd",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_lower_104b1054-3d95-4738-8199-d4b0581e735f.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.115,
+    "colour_shift": 13.4
+   }
+  },
+  {
+   "id": "pack/Woman_lower/2fdb6ac9-dfe4-4824-baab-6bf4e1d2f802.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/e090046e59b54d27a8e17ec0adb6e708.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\2fdb6ac9-dfe4-4824-baab-6bf4e1d2f802.jpg",
+   "job_id": "24227f15-b222-4000-b8ed-b896e40b05c9",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_lower_2fdb6ac9-dfe4-4824-baab-6bf4e1d2f802.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.099,
+    "colour_shift": 5.1
+   }
+  },
+  {
+   "id": "pack/Woman_lower/3c8b71f9-ed39-4916-8fa1-ecc82a3d5986.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/b3489b78c9ba4b1486be416c94052783.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\3c8b71f9-ed39-4916-8fa1-ecc82a3d5986.jpg",
+   "job_id": "e6db4db8-5e02-4521-8c9d-826ed6c3a7eb",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_3c8b71f9-ed39-4916-8fa1-ecc82a3d5986.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.084,
+    "colour_shift": 17.2
+   }
+  },
+  {
+   "id": "pack/Woman_lower/3ca5dd7f-08c6-4be2-91aa-3a2c56d59bbe.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/d53de80055924db89a6104e56263d851.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\3ca5dd7f-08c6-4be2-91aa-3a2c56d59bbe.jpg",
+   "job_id": "d1338bb0-a805-45e4-9e56-0f14c5a6e116",
+   "status": "done",
+   "seconds": 0.24,
+   "error": null,
+   "image": "pack_Woman_lower_3ca5dd7f-08c6-4be2-91aa-3a2c56d59bbe.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.111,
+    "colour_shift": 19.1
+   }
+  },
+  {
+   "id": "pack/Woman_lower/3de45082-17de-47da-b096-216dc834b15b.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/65b6cd88e36141ce89fad211e6132c1e.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\3de45082-17de-47da-b096-216dc834b15b.jpg",
+   "job_id": "71d251c8-9728-4ce6-8b46-3a084c22a92b",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_3de45082-17de-47da-b096-216dc834b15b.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.125,
+    "colour_shift": 13.2
+   }
+  },
+  {
+   "id": "pack/Woman_lower/4d4f6900-da14-4e6c-9236-e3a98261fdc2.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4f61a82fa5404356bc8841c7bbd31c09.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\4d4f6900-da14-4e6c-9236-e3a98261fdc2.jpg",
+   "job_id": "27570f2c-a923-49a7-98d0-756f1e45d3ca",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_4d4f6900-da14-4e6c-9236-e3a98261fdc2.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.088,
+    "colour_shift": 32.6
+   }
+  },
+  {
+   "id": "pack/Woman_lower/549efe03-629e-4620-9fe2-4ed3a9d856fd.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1c264f7fd92b48a4bae1c5e05a7bc70d.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\549efe03-629e-4620-9fe2-4ed3a9d856fd.jpg",
+   "job_id": "974ad99d-592c-4328-b7f5-b75dec075641",
+   "status": "done",
+   "seconds": 0.17,
+   "error": null,
+   "image": "pack_Woman_lower_549efe03-629e-4620-9fe2-4ed3a9d856fd.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.095,
+    "colour_shift": 17.2
+   }
+  },
+  {
+   "id": "pack/Woman_lower/574a2370-af89-4c9a-bbb9-9acfd31489f3.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/de0c75e458eb40dc9db0843243af6bc7.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\574a2370-af89-4c9a-bbb9-9acfd31489f3.jpg",
+   "job_id": "322387fc-b5d4-4c33-a70c-bb125a8677e3",
+   "status": "done",
+   "seconds": 0.17,
+   "error": null,
+   "image": "pack_Woman_lower_574a2370-af89-4c9a-bbb9-9acfd31489f3.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.17,
+    "colour_shift": 70.9
+   }
+  },
+  {
+   "id": "pack/Woman_lower/5e2b335d-2f5e-4356-9aba-a735af742b6a.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/25b6fcedd9a546a3901d6c9ec6815193.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\5e2b335d-2f5e-4356-9aba-a735af742b6a.jpg",
+   "job_id": "a7175df8-f075-4135-948e-5d83587030cf",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_lower_5e2b335d-2f5e-4356-9aba-a735af742b6a.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.103,
+    "colour_shift": 21.6
+   }
+  },
+  {
+   "id": "pack/Woman_lower/628d1234-90c7-41fd-b761-2697b5b528c9.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/315b0d573e6044e2b628e242a4066041.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\628d1234-90c7-41fd-b761-2697b5b528c9.jpg",
+   "job_id": "617eb068-3152-45ff-809b-d1337c7250fd",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_lower_628d1234-90c7-41fd-b761-2697b5b528c9.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.077,
+    "colour_shift": 22.1
+   }
+  },
+  {
+   "id": "pack/Woman_lower/637a56e4-7fa6-4f75-8859-0f8902461554.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/b1a732230b474cdcaa974afc1f80983c.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\637a56e4-7fa6-4f75-8859-0f8902461554.jpg",
+   "job_id": "957f0518-7765-43df-8c5f-605031a40a36",
+   "status": "done",
+   "seconds": 0.25,
+   "error": null,
+   "image": "pack_Woman_lower_637a56e4-7fa6-4f75-8859-0f8902461554.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.171,
+    "colour_shift": 40.7
+   }
+  },
+  {
+   "id": "pack/Woman_lower/663c933e-ff70-4221-b3f1-9a4f63f828e8.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6bf982d976184731af62f80e92c75f01.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\663c933e-ff70-4221-b3f1-9a4f63f828e8.jpg",
+   "job_id": "8a880d28-5639-4413-94e3-e118a960336e",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_663c933e-ff70-4221-b3f1-9a4f63f828e8.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.113,
+    "colour_shift": 39.4
+   }
+  },
+  {
+   "id": "pack/Woman_lower/6b5007a3-1ea0-4870-9325-cfd312065f78.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/751f90106aff48748eb82ba2c1ecc201.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\6b5007a3-1ea0-4870-9325-cfd312065f78.jpg",
+   "job_id": "56c8a360-ce35-4b13-9a3c-aacc7f21b527",
+   "status": "done",
+   "seconds": 0.23,
+   "error": null,
+   "image": "pack_Woman_lower_6b5007a3-1ea0-4870-9325-cfd312065f78.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.108,
+    "colour_shift": 11.6
+   }
+  },
+  {
+   "id": "pack/Woman_lower/6b6416d0-7fae-4858-ba58-f0420302a1b2.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/f6d0af9286034ce494171437a891c10f.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\6b6416d0-7fae-4858-ba58-f0420302a1b2.jpg",
+   "job_id": "f0517f10-68be-45e2-8ecc-293d99381e30",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_6b6416d0-7fae-4858-ba58-f0420302a1b2.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.151,
+    "colour_shift": 34.0
+   }
+  },
+  {
+   "id": "pack/Woman_lower/6ce43abd-eb73-474b-bc3d-f8da15d83593.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/cc4e33f2887a44ea9344595c3e9b5ef5.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\6ce43abd-eb73-474b-bc3d-f8da15d83593.jpg",
+   "job_id": "2faa6653-4a39-4b49-87f2-dbb2db267b3f",
+   "status": "done",
+   "seconds": 0.25,
+   "error": null,
+   "image": "pack_Woman_lower_6ce43abd-eb73-474b-bc3d-f8da15d83593.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.183,
+    "colour_shift": 64.8
+   }
+  },
+  {
+   "id": "pack/Woman_lower/7eed8816-32bc-441b-8f7a-aa6ac2557ce5.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/c7d8207d4a674a9eb6b07ab2849e24d3.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\7eed8816-32bc-441b-8f7a-aa6ac2557ce5.jpg",
+   "job_id": "cabfc7c5-39a5-4611-be6b-b272699f09a3",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_lower_7eed8816-32bc-441b-8f7a-aa6ac2557ce5.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.115,
+    "colour_shift": 20.2
+   }
+  },
+  {
+   "id": "pack/Woman_lower/7faefb36-4547-4743-b8f6-2669aebb4759.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/072bb924c6944b8dbe3ab85ef14d2d6c.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\7faefb36-4547-4743-b8f6-2669aebb4759.jpg",
+   "job_id": "c7255914-3b4f-4059-a7b9-d21048c38d7d",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_lower_7faefb36-4547-4743-b8f6-2669aebb4759.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.129,
+    "colour_shift": 26.1
+   }
+  },
+  {
+   "id": "pack/Woman_lower/95e66e02-b4ed-4fe9-b538-db6bac4fb7df.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/54c0659328904d099c08496bbbf65746.png",
+   "category": "bottoms",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\95e66e02-b4ed-4fe9-b538-db6bac4fb7df.jpg",
+   "job_id": "0b8e3dfd-2904-4175-b1d3-e81e1ae09175",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_lower_95e66e02-b4ed-4fe9-b538-db6bac4fb7df.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.066,
+    "colour_shift": 18.8
+   }
+  },
+  {
+   "id": "pack/Woman_overall/04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6fd64858c15f44c6ab3856669ef1f954.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "job_id": "da63df7e-eba9-4f0d-bd90-01a562548a66",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.169,
+    "colour_shift": 53.5
+   }
+  },
+  {
+   "id": "pack/Woman_overall/08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3878477c826a413aa43623227ffd4bbd.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "job_id": "21266f8e-87d1-447f-a423-b18aea06ee15",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.154,
+    "colour_shift": 55.9
+   }
+  },
+  {
+   "id": "pack/Woman_overall/4b72d5a8-4a05-4df9-ab95-2404cfff4c03.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/ff894ef46f2c446a820048dca76d5563.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\4b72d5a8-4a05-4df9-ab95-2404cfff4c03.jpg",
+   "job_id": "16ecfbd0-a9ca-4fc5-aa7a-8dca4f9fd173",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_overall_4b72d5a8-4a05-4df9-ab95-2404cfff4c03.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.148,
+    "colour_shift": 29.0
+   }
+  },
+  {
+   "id": "pack/Woman_overall/4b8e5d41-3e12-4d2b-8634-e62e71d613ff.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/31f8f1560bf54debb0394c0c26a8eecd.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\4b8e5d41-3e12-4d2b-8634-e62e71d613ff.jpg",
+   "job_id": "ef0c798a-5219-4e1c-82fd-dd45945c8a4a",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_4b8e5d41-3e12-4d2b-8634-e62e71d613ff.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.212,
+    "colour_shift": 9.5
+   }
+  },
+  {
+   "id": "pack/Woman_overall/4e788cda-1b2a-43dd-ad4f-8a275475ea88.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4245244256604f07ba593407e2de1a43.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\4e788cda-1b2a-43dd-ad4f-8a275475ea88.jpg",
+   "job_id": "b3151177-8557-4131-825b-4d9c6260d30d",
+   "status": "done",
+   "seconds": 0.21,
+   "error": null,
+   "image": "pack_Woman_overall_4e788cda-1b2a-43dd-ad4f-8a275475ea88.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.117,
+    "colour_shift": 8.5
+   }
+  },
+  {
+   "id": "pack/Woman_overall/5a2b4bbf-d9fe-45a2-aa0d-295a86804cb6.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/790f701c3bd0482daba2e575b252e707.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\5a2b4bbf-d9fe-45a2-aa0d-295a86804cb6.jpg",
+   "job_id": "3fd15c81-0b9e-4d6b-8dca-9b7fd1536b27",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_5a2b4bbf-d9fe-45a2-aa0d-295a86804cb6.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.188,
+    "colour_shift": 11.1
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6a41c325-3fda-46db-974d-bf9e62668a6b.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/380ca42e5c3e4e6ea85d2f18f7a10241.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6a41c325-3fda-46db-974d-bf9e62668a6b.jpg",
+   "job_id": "24a06e15-10e3-465f-a277-435014f343b2",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_6a41c325-3fda-46db-974d-bf9e62668a6b.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.162,
+    "colour_shift": 32.6
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6b779a54-4cdc-4205-ba1f-9597c779a683.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/f9fb8026f92d440395a5a44c68dc9ac7.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6b779a54-4cdc-4205-ba1f-9597c779a683.jpg",
+   "job_id": "af5107e0-bf5a-487a-8768-c9fce12280ee",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_overall_6b779a54-4cdc-4205-ba1f-9597c779a683.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.123,
+    "colour_shift": 34.3
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6b801e31-9073-40dd-aa87-956ce6c02c7c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/70e3dad0c67a47a1af91236b3445eda0.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6b801e31-9073-40dd-aa87-956ce6c02c7c.jpg",
+   "job_id": "89067ba7-3bed-4bc5-a10f-f22bd832b6ae",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_overall_6b801e31-9073-40dd-aa87-956ce6c02c7c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.083,
+    "colour_shift": 40.6
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6ccb3f12-7087-4303-a522-3a76d3db8ce6.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/9ffc44da592a41b6ace18ae4e70153e9.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6ccb3f12-7087-4303-a522-3a76d3db8ce6.jpg",
+   "job_id": "bec4bfc1-ba40-4ead-a1ea-5b53b0bcd6ad",
+   "status": "done",
+   "seconds": 0.26,
+   "error": null,
+   "image": "pack_Woman_overall_6ccb3f12-7087-4303-a522-3a76d3db8ce6.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.085,
+    "colour_shift": 8.4
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6e143162-9472-43c3-8db1-04eeea838ae8.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/3ddee2380a2343428db8fb894849037a.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6e143162-9472-43c3-8db1-04eeea838ae8.jpg",
+   "job_id": "37d8916b-79a3-4086-a2f0-a5c671f5c420",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_6e143162-9472-43c3-8db1-04eeea838ae8.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.105,
+    "colour_shift": 16.9
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6eaff8d0-517f-4fad-ad54-4249b8c53ff9.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/367486a3f84f434fa966fa49fc20767f.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6eaff8d0-517f-4fad-ad54-4249b8c53ff9.jpg",
+   "job_id": "36b5cf3b-59ed-4bf1-902d-0907853f760f",
+   "status": "done",
+   "seconds": 0.22,
+   "error": null,
+   "image": "pack_Woman_overall_6eaff8d0-517f-4fad-ad54-4249b8c53ff9.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.112,
+    "colour_shift": 25.8
+   }
+  },
+  {
+   "id": "pack/Woman_overall/6f5d2dc7-5c5c-4d53-85fc-76b64950fd10.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/a183ed4d13714a1080f74d386a657abb.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\6f5d2dc7-5c5c-4d53-85fc-76b64950fd10.jpg",
+   "job_id": "f220b37e-69a7-465c-a495-0b55fd64a819",
+   "status": "done",
+   "seconds": 0.22,
+   "error": null,
+   "image": "pack_Woman_overall_6f5d2dc7-5c5c-4d53-85fc-76b64950fd10.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.117,
+    "colour_shift": 11.6
+   }
+  },
+  {
+   "id": "pack/Woman_overall/7a634f1b-53ef-4314-b4d0-829a4be0933c.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/9b30d69b2e184a34a8c988834f8f6031.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\7a634f1b-53ef-4314-b4d0-829a4be0933c.jpg",
+   "job_id": "c6a96e88-8e97-4c69-b6bf-04cc77c05173",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_overall_7a634f1b-53ef-4314-b4d0-829a4be0933c.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.094,
+    "colour_shift": 3.8
+   }
+  },
+  {
+   "id": "pack/Woman_overall/7aa53761-7711-4850-b94e-9d8ae3272320.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/1107c4bcf32a49a5ba15424411c9009f.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\7aa53761-7711-4850-b94e-9d8ae3272320.jpg",
+   "job_id": "92fde4f3-ab5b-460b-8e5f-746463131e83",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_overall_7aa53761-7711-4850-b94e-9d8ae3272320.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.154,
+    "colour_shift": 7.3
+   }
+  },
+  {
+   "id": "pack/Woman_overall/7e72662d-d284-4e75-800e-051cf95f4750.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4ab978d46bba42f992a665ee9a6e7c3b.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\7e72662d-d284-4e75-800e-051cf95f4750.jpg",
+   "job_id": "936ae419-0457-4ee7-bbb6-94776e7dcd3b",
+   "status": "done",
+   "seconds": 0.26,
+   "error": null,
+   "image": "pack_Woman_overall_7e72662d-d284-4e75-800e-051cf95f4750.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.18,
+    "colour_shift": 6.4
+   }
+  },
+  {
+   "id": "pack/Woman_overall/8b366b95-1958-4b76-a9c3-f8195f589499.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/9fc5146a36984df09fa37a2544e4079e.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\8b366b95-1958-4b76-a9c3-f8195f589499.jpg",
+   "job_id": "ce2eac33-921c-40e5-ade7-bc2864bfde71",
+   "status": "done",
+   "seconds": 0.18,
+   "error": null,
+   "image": "pack_Woman_overall_8b366b95-1958-4b76-a9c3-f8195f589499.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.163,
+    "colour_shift": 149.2
+   }
+  },
+  {
+   "id": "pack/Woman_overall/8b5b161a-f197-4f82-98f0-62767a883e0a.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/6b1e4672c1114d32ba78467e2c45d359.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\8b5b161a-f197-4f82-98f0-62767a883e0a.jpg",
+   "job_id": "9f9e75a1-f24c-4b25-922a-a783f4db953c",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_8b5b161a-f197-4f82-98f0-62767a883e0a.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.107,
+    "colour_shift": 98.1
+   }
+  },
+  {
+   "id": "pack/Woman_overall/8d9bc810-e146-4160-aeeb-47a5e131c56e.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/a59a626bd09c4a7bbfaea9d877888432.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\8d9bc810-e146-4160-aeeb-47a5e131c56e.jpg",
+   "job_id": "0c9780aa-b134-4886-8227-11ecfd7f86d6",
+   "status": "done",
+   "seconds": 0.19,
+   "error": null,
+   "image": "pack_Woman_overall_8d9bc810-e146-4160-aeeb-47a5e131c56e.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.169,
+    "colour_shift": 57.8
+   }
+  },
+  {
+   "id": "pack/Woman_overall/97cddbc9-a59f-490e-a10d-7878b2aff826.jpg",
+   "tool": "packshot",
+   "garment_key": "uploads/garment/2026/08/29/142/4d081b6493614027b66823e9cd9a1a8b.png",
+   "category": "one-pieces",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\97cddbc9-a59f-490e-a10d-7878b2aff826.jpg",
+   "job_id": "1e44ce26-03f5-4972-9fea-49f6dbe34ad4",
+   "status": "done",
+   "seconds": 0.2,
+   "error": null,
+   "image": "pack_Woman_overall_97cddbc9-a59f-490e-a10d-7878b2aff826.jpg.png",
+   "m": {
+    "white_mean": 255.0,
+    "white_sd": 0.0,
+    "subject_frac": 0.155,
+    "colour_shift": 22.7
+   }
+  },
+  {
+   "id": "tryon/man_upper/00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/1f8b5a6005ba45348d9fd076f7475dca.png",
+   "person_key": "uploads/person/2026/08/29/142/1077a5ce0831443b87507670fcd70c4a.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-31.jpg",
+   "job_id": "eb98063d-d6d6-45a1-bd30-a12588822aa4",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/1ef31d7865bb401198bfd273993ee613.png",
+   "person_key": "uploads/person/2026/08/29/142/d72aff70e90843dca1b4db6f747770b7.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-39.jpg",
+   "job_id": "a409053a-1ce7-4cbd-864f-01266f6cf357",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0a671f9d-d105-4ec9-8642-f4f228f8a90f.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/2a95cdc731f84e58afba6733a6cb1c95.png",
+   "person_key": "uploads/person/2026/08/29/142/a42e3619f37a4e03bcdc9160ddcabe1e.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0a671f9d-d105-4ec9-8642-f4f228f8a90f.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-43.jpg",
+   "job_id": "c072150d-923b-4ead-9944-231f5763da34",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0a77dbed-06fb-4ba7-b1e3-24f3a41498bc.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/e699e6638caa453c8f7a38a4601ac4fc.png",
+   "person_key": "uploads/person/2026/08/29/142/38b845abb38748c6a5a50f500350284b.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0a77dbed-06fb-4ba7-b1e3-24f3a41498bc.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-46.jpg",
+   "job_id": "6d4c1001-9cc5-4acb-8098-99ac3af5ae5d",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0b1cc7a6-be78-45e6-be22-2ad00b107328.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/6e12e19124b94489b2781babc8b30dfb.png",
+   "person_key": "uploads/person/2026/08/29/142/c9360d28b68a4d79ac897e1567e092ba.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b1cc7a6-be78-45e6-be22-2ad00b107328.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-50.jpg",
+   "job_id": "2f842392-476b-4e52-b77a-ff77b2155c94",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0b7dc2e9-a9e9-46ed-b4e2-8b91e1e720b0.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/c51d6125fd264aa89354f5b2d6a9b074.png",
+   "person_key": "uploads/person/2026/08/29/142/3908042652c44d1f80ff5872d5245cfc.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b7dc2e9-a9e9-46ed-b4e2-8b91e1e720b0.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-54.jpg",
+   "job_id": "48a6b526-351d-447c-b49d-b3306eefc412",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/7324ab103828442a931fb7c1e4f5c6d6.png",
+   "person_key": "uploads/person/2026/08/29/142/672c18a2918d45f281084da3f363620b.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-57.jpg",
+   "job_id": "10932c8e-9ce4-49da-9e0e-3e1790fce2e2",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0d293c69-ba4f-4ffc-b6b9-fa05316a02c5.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/f4297405f4314a7a97b01f6c5462b2fb.png",
+   "person_key": "uploads/person/2026/08/29/142/1da2de6ff3f14ff3826cfccf8831d043.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d293c69-ba4f-4ffc-b6b9-fa05316a02c5.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-00.jpg",
+   "job_id": "ff4e2182-3830-4077-929f-58a6bbd8518b",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0d73e759-eeaa-43ab-98d4-196b6974c41e.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/d0fcf72f5c5741cebdd74eb24a3f281b.png",
+   "person_key": "uploads/person/2026/08/29/142/a3781d4d5d5d4ad5b3e2e549fd728ba7.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d73e759-eeaa-43ab-98d4-196b6974c41e.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-03.jpg",
+   "job_id": "8a63de8f-04a7-4128-b2c1-4c76d35ca1a4",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/0d9f1bf9-0008-4247-b22b-832ab1c62a70.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/6e286d40bcfd43af976527c13b00228f.png",
+   "person_key": "uploads/person/2026/08/29/142/c9c8486ef02843999ed9a8c9fdf50180.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\0d9f1bf9-0008-4247-b22b-832ab1c62a70.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-06.jpg",
+   "job_id": "8da7f77c-9ca8-44eb-b1bc-ef5083d63618",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1b00c860-4121-475e-8991-a26247be3145.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/17eec82a4bec4c2eb71bf801c3a4b251.png",
+   "person_key": "uploads/person/2026/08/29/142/6c697dea98054158b8a32e07d1437a26.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1b00c860-4121-475e-8991-a26247be3145.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-10.jpg",
+   "job_id": "a80094fa-d43d-4420-978f-e5e6da2e2c58",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1b2a7169-fb57-4b9e-9990-ae92a02305a1.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/07843394fc0342f2bc8126deb32e7c31.png",
+   "person_key": "uploads/person/2026/08/29/142/594de2636b5340efbfad76852cbc2087.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1b2a7169-fb57-4b9e-9990-ae92a02305a1.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-13.jpg",
+   "job_id": "d4720cd8-020a-417b-add8-77822bb01050",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1c9f16a4-85cf-4c4a-ae3c-52f14270128d.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/ba1120a223104ac1bda60176e14eb4a7.png",
+   "person_key": "uploads/person/2026/08/29/142/72757f1a932a4578ac7ad749fac96794.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1c9f16a4-85cf-4c4a-ae3c-52f14270128d.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-17.jpg",
+   "job_id": "51210c07-5296-4977-ba18-e6cff9af8b55",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/bdd2744f440c45d8b3a047c830aeab08.png",
+   "person_key": "uploads/person/2026/08/29/142/a209f53417a54b10aeebfde8b9c2714e.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-20.jpg",
+   "job_id": "f7600940-9e23-42d6-8e0c-d32ba1477230",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1fd19366-a938-4eb3-83c9-4bc474f495be.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/1cbc392be4da4ef4a11b4821df7571c2.png",
+   "person_key": "uploads/person/2026/08/29/142/bd82d8b9310f430caa41e14b154c862e.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1fd19366-a938-4eb3-83c9-4bc474f495be.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-23.jpg",
+   "job_id": "49351dfa-8589-4072-a650-6d3695a045f6",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/1fe43e89-0e78-4667-881b-3feb27a63ce3.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/a578e2009aa54df49bc6ac86bda5b94c.png",
+   "person_key": "uploads/person/2026/08/29/142/5f6de962e10c4b8ea14ff4ce6e02586d.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\1fe43e89-0e78-4667-881b-3feb27a63ce3.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-26.jpg",
+   "job_id": "b247abca-0e32-4b60-8d46-dbf188b8054f",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 19.19 MiB is free. Including non-PyTorch memory, this process has 18.50 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/2ca50463-77b2-41ca-a96d-7a2d2d7fca5a.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/c6f3635c21344a06b234b197fdebcaf7.png",
+   "person_key": "uploads/person/2026/08/29/142/14b29d9c72724679901f237b5cf7559c.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2ca50463-77b2-41ca-a96d-7a2d2d7fca5a.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-29.jpg",
+   "job_id": "afded72f-3901-4cc4-8e94-50e4a5643b56",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 39.19 MiB is free. Including non-PyTorch memory, this process has 18.48 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/2ce576f8-cb93-43ee-933b-22d1c6d1678f.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/d85f6b6b0fae456aa2541c48c880f1d8.png",
+   "person_key": "uploads/person/2026/08/29/142/d9b17f4dfc60409f945874c90a601e9a.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2ce576f8-cb93-43ee-933b-22d1c6d1678f.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-32.jpg",
+   "job_id": "5df024f9-797a-4dd7-9874-241f1951db99",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 39.19 MiB is free. Including non-PyTorch memory, this process has 18.48 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/2fabbb28-f7b2-4da2-89cf-7937da3c6f67.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/60ef1e70c96746ff9283f3711768c100.png",
+   "person_key": "uploads/person/2026/08/29/142/8ed8c5fdc4934da59e1c3a5007b301e1.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2fabbb28-f7b2-4da2-89cf-7937da3c6f67.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-35.jpg",
+   "job_id": "ef306cd5-8316-4067-87e9-abf9e2f2e2be",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_upper/2fff27df-def9-4410-962e-cbba35a6b29f.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/96b61171dfbb47bd911b371d9da32984.png",
+   "person_key": "uploads/person/2026/08/29/142/5ce14d1c336245cdb2c31ba79b969c40.png",
+   "category": "tops",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\2fff27df-def9-4410-962e-cbba35a6b29f.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-38.jpg",
+   "job_id": "4a04ef8b-07f2-4230-b7dd-828f6d937507",
+   "status": "failed",
+   "seconds": null,
+   "error": "PodDown: pod returned 500: {\"detail\":\"OutOfMemoryError: CUDA out of memory. Tried to allocate 84.00 MiB. GPU 0 has a total capacity of 44.42 GiB of which 59.19 MiB is free. Including non-PyTorch memory, this process has 18.46 GiB memory in use. Process 11563 has 21.85 GiB memory in use. Process 11693 has 4.03 GiB memory in us"
+  },
+  {
+   "id": "tryon/man_lower/03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/73e6a55272af4bf9bf8b1c38f99c042f.png",
+   "person_key": "uploads/person/2026/08/29/142/1077a5ce0831443b87507670fcd70c4a.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-31.jpg",
+   "job_id": "7038ccb8-2fe1-4309-86ba-8a3ca563269d",
+   "status": "done",
+   "seconds": 32.99,
+   "error": null,
+   "image": "tryon_man_lower_03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "m": {
+    "bg_change": 8.6,
+    "torso_change": 37.5,
+    "garment_colour_gap": 101.4
+   }
+  },
+  {
+   "id": "tryon/man_lower/03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/a2e44e05a4a14a44a80cfcfe6fdf7520.png",
+   "person_key": "uploads/person/2026/08/29/142/d72aff70e90843dca1b4db6f747770b7.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-39.jpg",
+   "job_id": "82cd8316-8fc2-444d-b280-e46705e0b2a5",
+   "status": "done",
+   "seconds": 32.82,
+   "error": null,
+   "image": "tryon_man_lower_03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "m": {
+    "bg_change": 12.1,
+    "torso_change": 70.6,
+    "garment_colour_gap": 47.2
+   }
+  },
+  {
+   "id": "tryon/man_lower/0c224954-0e0f-4caa-82c8-cf9581e89336.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/9a2e1fb0414040eb9bbc98a26ca14d1d.png",
+   "person_key": "uploads/person/2026/08/29/142/a42e3619f37a4e03bcdc9160ddcabe1e.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0c224954-0e0f-4caa-82c8-cf9581e89336.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-43.jpg",
+   "job_id": "47776d75-2ea7-42a6-be69-a1d154185c50",
+   "status": "done",
+   "seconds": 33.16,
+   "error": null,
+   "image": "tryon_man_lower_0c224954-0e0f-4caa-82c8-cf9581e89336.jpg.png",
+   "m": {
+    "bg_change": 15.0,
+    "torso_change": 34.8,
+    "garment_colour_gap": 84.3
+   }
+  },
+  {
+   "id": "tryon/man_lower/0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/eecce39cb8714da4bca05dc187240256.png",
+   "person_key": "uploads/person/2026/08/29/142/38b845abb38748c6a5a50f500350284b.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-46.jpg",
+   "job_id": "038f6444-044f-4419-b84f-dda46d8e54af",
+   "status": "done",
+   "seconds": 33.0,
+   "error": null,
+   "image": "tryon_man_lower_0c99f0b4-3a0d-4d24-bfdd-e9e98914892c.jpg.png",
+   "m": {
+    "bg_change": 5.0,
+    "torso_change": 50.5,
+    "garment_colour_gap": 23.0
+   }
+  },
+  {
+   "id": "tryon/man_lower/0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/4d631ac56b9940d2b8da51ad9377587a.png",
+   "person_key": "uploads/person/2026/08/29/142/c9360d28b68a4d79ac897e1567e092ba.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-50.jpg",
+   "job_id": "123e456a-6480-4e1c-a2fb-902c0c9a0e67",
+   "status": "done",
+   "seconds": 54.72,
+   "error": null,
+   "image": "tryon_man_lower_0ccc318a-7d69-4d7f-a442-aac1f88bc453.jpg.png",
+   "m": {
+    "bg_change": 17.8,
+    "torso_change": 67.3,
+    "garment_colour_gap": 166.4
+   }
+  },
+  {
+   "id": "tryon/man_lower/0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/1876df4fdb1749fc81dcee5c739a15d9.png",
+   "person_key": "uploads/person/2026/08/29/142/3908042652c44d1f80ff5872d5245cfc.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-54.jpg",
+   "job_id": "1c3efb53-f134-4731-92ea-9cd54e7bef99",
+   "status": "done",
+   "seconds": 56.46,
+   "error": null,
+   "image": "tryon_man_lower_0d0c2308-2c58-4e38-90c1-c893358b5f86.jpg.png",
+   "m": {
+    "bg_change": 16.9,
+    "torso_change": 79.5,
+    "garment_colour_gap": 16.1
+   }
+  },
+  {
+   "id": "tryon/man_lower/1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/b4cbfee7934b4b0eb26c674c1c9f9f1c.png",
+   "person_key": "uploads/person/2026/08/29/142/672c18a2918d45f281084da3f363620b.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-03-57.jpg",
+   "job_id": "7c0cc5c8-deff-492c-a2ae-da3f63654701",
+   "status": "done",
+   "seconds": 54.56,
+   "error": null,
+   "image": "tryon_man_lower_1a08f33a-2ff4-4fb8-920b-8ff514bcdda8.jpg.png",
+   "m": {
+    "bg_change": 9.5,
+    "torso_change": 36.8,
+    "garment_colour_gap": 194.1
+   }
+  },
+  {
+   "id": "tryon/man_lower/1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/68922e5d07e546b5ad5d0f6e6a476e42.png",
+   "person_key": "uploads/person/2026/08/29/142/1da2de6ff3f14ff3826cfccf8831d043.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-00.jpg",
+   "job_id": "00a7792e-94c5-451b-81ff-0443a596ff2f",
+   "status": "done",
+   "seconds": 56.72,
+   "error": null,
+   "image": "tryon_man_lower_1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg.png",
+   "m": {
+    "bg_change": 14.3,
+    "torso_change": 42.8,
+    "garment_colour_gap": 36.4
+   }
+  },
+  {
+   "id": "tryon/man_lower/1ca03195-b1e8-4c47-85de-81a942ea561e.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/5ad4142d80f745ab981e2ff41aa4a466.png",
+   "person_key": "uploads/person/2026/08/29/142/a3781d4d5d5d4ad5b3e2e549fd728ba7.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1ca03195-b1e8-4c47-85de-81a942ea561e.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-03.jpg",
+   "job_id": "d68bf465-965e-41c5-a60e-ab982a53d0b4",
+   "status": "done",
+   "seconds": 58.37,
+   "error": null,
+   "image": "tryon_man_lower_1ca03195-b1e8-4c47-85de-81a942ea561e.jpg.png",
+   "m": {
+    "bg_change": 9.8,
+    "torso_change": 26.6,
+    "garment_colour_gap": 80.7
+   }
+  },
+  {
+   "id": "tryon/man_lower/1caba263-088a-448a-be6d-30072c29af09.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/c071bd76bcc44a5aaf4d0b970c116d8f.png",
+   "person_key": "uploads/person/2026/08/29/142/c9c8486ef02843999ed9a8c9fdf50180.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1caba263-088a-448a-be6d-30072c29af09.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-06.jpg",
+   "job_id": "a2c4f0d9-8dfe-4548-9a08-165de23c188e",
+   "status": "done",
+   "seconds": 57.17,
+   "error": null,
+   "image": "tryon_man_lower_1caba263-088a-448a-be6d-30072c29af09.jpg.png",
+   "m": {
+    "bg_change": 27.0,
+    "torso_change": 45.8,
+    "garment_colour_gap": 139.7
+   }
+  },
+  {
+   "id": "tryon/man_lower/1d226430-72e6-4be7-998e-604df0fae43d.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/a6445a1004a64d8da51db5987227cce9.png",
+   "person_key": "uploads/person/2026/08/29/142/6c697dea98054158b8a32e07d1437a26.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1d226430-72e6-4be7-998e-604df0fae43d.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-10.jpg",
+   "job_id": "04bc22a4-2c15-4a27-834b-7c75e2a540bd",
+   "status": "done",
+   "seconds": 54.74,
+   "error": null,
+   "image": "tryon_man_lower_1d226430-72e6-4be7-998e-604df0fae43d.jpg.png",
+   "m": {
+    "bg_change": 16.5,
+    "torso_change": 75.5,
+    "garment_colour_gap": 78.0
+   }
+  },
+  {
+   "id": "tryon/man_lower/1d407629-87e5-4702-b9fc-e3b19de93570.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/30a975b204e94544bb71b7c1fa6afa1f.png",
+   "person_key": "uploads/person/2026/08/29/142/594de2636b5340efbfad76852cbc2087.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1d407629-87e5-4702-b9fc-e3b19de93570.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-13.jpg",
+   "job_id": "317bcb70-f73b-44ce-a191-9629a27ad045",
+   "status": "done",
+   "seconds": 57.19,
+   "error": null,
+   "image": "tryon_man_lower_1d407629-87e5-4702-b9fc-e3b19de93570.jpg.png",
+   "m": {
+    "bg_change": 26.0,
+    "torso_change": 36.5,
+    "garment_colour_gap": 37.7
+   }
+  },
+  {
+   "id": "tryon/man_lower/1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/0411b22de4b04ace8954b1337dc29c4e.png",
+   "person_key": "uploads/person/2026/08/29/142/72757f1a932a4578ac7ad749fac96794.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-17.jpg",
+   "job_id": "f2d244c2-4aab-448a-86db-5f36c257f4b0",
+   "status": "done",
+   "seconds": 56.96,
+   "error": null,
+   "image": "tryon_man_lower_1e9ba1e2-eefe-4853-ab05-63598cb144f1.jpg.png",
+   "m": {
+    "bg_change": 8.0,
+    "torso_change": 48.9,
+    "garment_colour_gap": 37.0
+   }
+  },
+  {
+   "id": "tryon/man_lower/1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/821c152e6ad24e298536ff1554a55add.png",
+   "person_key": "uploads/person/2026/08/29/142/a209f53417a54b10aeebfde8b9c2714e.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-20.jpg",
+   "job_id": "f878fc3a-7588-4bfb-85eb-2ddba68deac2",
+   "status": "done",
+   "seconds": 56.02,
+   "error": null,
+   "image": "tryon_man_lower_1ef9945d-0934-4b5e-bfc2-1d11dfea181c.jpg.png",
+   "m": {
+    "bg_change": 64.4,
+    "torso_change": 44.8,
+    "garment_colour_gap": 30.8
+   }
+  },
+  {
+   "id": "tryon/man_lower/1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/f49cec6090b94e75a7f894c53a4ad5d8.png",
+   "person_key": "uploads/person/2026/08/29/142/bd82d8b9310f430caa41e14b154c862e.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-23.jpg",
+   "job_id": "72e56bdf-0467-4b2d-a008-b293745a2326",
+   "status": "done",
+   "seconds": 56.77,
+   "error": null,
+   "image": "tryon_man_lower_1f3fe0f5-4724-43f8-bfce-6e22d1f1f5ba.jpg.png",
+   "m": {
+    "bg_change": 6.2,
+    "torso_change": 90.8,
+    "garment_colour_gap": 11.5
+   }
+  },
+  {
+   "id": "tryon/man_lower/2d6fce79-1631-43b6-974d-b246247e3249.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/dc881a2e5c5d412a93d66c49c7e636ad.png",
+   "person_key": "uploads/person/2026/08/29/142/5f6de962e10c4b8ea14ff4ce6e02586d.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\2d6fce79-1631-43b6-974d-b246247e3249.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-26.jpg",
+   "job_id": "1a1673c5-e8b0-4c33-ab50-faca80e8b8dd",
+   "status": "done",
+   "seconds": 56.02,
+   "error": null,
+   "image": "tryon_man_lower_2d6fce79-1631-43b6-974d-b246247e3249.jpg.png",
+   "m": {
+    "bg_change": 80.4,
+    "torso_change": 68.6,
+    "garment_colour_gap": 11.1
+   }
+  },
+  {
+   "id": "tryon/man_lower/3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/3a92ea14868141cdbbfb3957c58af9b6.png",
+   "person_key": "uploads/person/2026/08/29/142/14b29d9c72724679901f237b5cf7559c.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-29.jpg",
+   "job_id": "5f7f3c23-a1e3-4d63-8bbb-458da378418a",
+   "status": "done",
+   "seconds": 56.84,
+   "error": null,
+   "image": "tryon_man_lower_3a2d0b05-06c2-4bba-830b-1e2582340cdd.jpg.png",
+   "m": {
+    "bg_change": 24.9,
+    "torso_change": 55.2,
+    "garment_colour_gap": 107.5
+   }
+  },
+  {
+   "id": "tryon/man_lower/4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/e6b5f3042d6f4625b44f3c63d655eb03.png",
+   "person_key": "uploads/person/2026/08/29/142/d9b17f4dfc60409f945874c90a601e9a.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-32.jpg",
+   "job_id": "abd5b470-e8c3-440a-ac56-d31a01c241da",
+   "status": "done",
+   "seconds": 57.24,
+   "error": null,
+   "image": "tryon_man_lower_4cc4e673-fecd-4e4e-a7eb-f2efd39a5291.jpg.png",
+   "m": {
+    "bg_change": 23.5,
+    "torso_change": 22.8,
+    "garment_colour_gap": 105.4
+   }
+  },
+  {
+   "id": "tryon/man_lower/4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/7b4b79c95ced4ee2aa7cda3de6f4d781.png",
+   "person_key": "uploads/person/2026/08/29/142/8ed8c5fdc4934da59e1c3a5007b301e1.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-35.jpg",
+   "job_id": "a0e6ebbe-e477-48f3-96b1-6e5b338c2410",
+   "status": "done",
+   "seconds": 56.58,
+   "error": null,
+   "image": "tryon_man_lower_4feeec9c-a8ae-4f00-a37c-217cb8e8d5ef.jpg.png",
+   "m": {
+    "bg_change": 29.2,
+    "torso_change": 71.0,
+    "garment_colour_gap": 31.6
+   }
+  },
+  {
+   "id": "tryon/man_lower/9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/12ee4b774a1148e8a6c2dc2b804939da.png",
+   "person_key": "uploads/person/2026/08/29/142/5ce14d1c336245cdb2c31ba79b969c40.png",
+   "category": "bottoms",
+   "gender": "man",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\man/models\\photo_2026-05-22_20-04-38.jpg",
+   "job_id": "c88d6820-6e00-4131-8087-a19190c82253",
+   "status": "done",
+   "seconds": 56.8,
+   "error": null,
+   "image": "tryon_man_lower_9b94e20c-7ed2-4e8d-a9c2-884e3b685770.jpg.png",
+   "m": {
+    "bg_change": 7.5,
+    "torso_change": 70.7,
+    "garment_colour_gap": 129.4
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/c371e381ed9a40c5a32d13f6f65f91fb.png",
+   "person_key": "uploads/person/2026/08/29/142/7381ffe4dd6047ebaccc66ae9be99c16.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\8461.jpg",
+   "job_id": "5145e565-9d26-4ca1-ab7b-2d39e6970094",
+   "status": "done",
+   "seconds": 57.66,
+   "error": null,
+   "image": "tryon_Woman_Upper_03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "m": {
+    "bg_change": 31.6,
+    "torso_change": 68.2,
+    "garment_colour_gap": 13.3
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/73b01a564a1a4f588e044a9efa576105.png",
+   "person_key": "uploads/person/2026/08/29/142/529b5af3a7744f97ab9b888cd696100c.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-14.jpg",
+   "job_id": "db5ab817-c572-47b0-8c1a-185d3773c057",
+   "status": "done",
+   "seconds": 58.14,
+   "error": null,
+   "image": "tryon_Woman_Upper_04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "m": {
+    "bg_change": 27.2,
+    "torso_change": 25.8,
+    "garment_colour_gap": 29.0
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/02c071ae61c34252884e229583660bc1.png",
+   "person_key": "uploads/person/2026/08/29/142/a005527c5a97442ebffd1f6c4884ebdb.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-17.jpg",
+   "job_id": "85771645-1847-4229-b64b-7e50ff994c8b",
+   "status": "done",
+   "seconds": 56.47,
+   "error": null,
+   "image": "tryon_Woman_Upper_0a18630c-527b-4d56-9a98-8a0cfe341ab5.jpg.png",
+   "m": {
+    "bg_change": 20.0,
+    "torso_change": 86.2,
+    "garment_colour_gap": 87.9
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/0aa095c3-9d4d-4416-8788-82655af859a8.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/ad9683593a6141e8af38ed8892dccf2c.png",
+   "person_key": "uploads/person/2026/08/29/142/082c50c511f84c0ea619b7b62101f514.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0aa095c3-9d4d-4416-8788-82655af859a8.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-21.jpg",
+   "job_id": "187dda38-cd27-4193-a59a-91480250f05b",
+   "status": "done",
+   "seconds": 56.56,
+   "error": null,
+   "image": "tryon_Woman_Upper_0aa095c3-9d4d-4416-8788-82655af859a8.jpg.png",
+   "m": {
+    "bg_change": 45.7,
+    "torso_change": 60.2,
+    "garment_colour_gap": 63.2
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/6dac423f69b84802a2d7fddd8a4b96ca.png",
+   "person_key": "uploads/person/2026/08/29/142/3cc41a6df4ad49d08b20a75f12fb17af.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-26.jpg",
+   "job_id": "d00968de-40e5-44d1-8473-514fb18edde5",
+   "status": "done",
+   "seconds": 57.51,
+   "error": null,
+   "image": "tryon_Woman_Upper_0dc84ada-ef62-494b-8965-1a6fe28379c7.jpg.png",
+   "m": {
+    "bg_change": 9.0,
+    "torso_change": 42.8,
+    "garment_colour_gap": 62.6
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/0ef80b69-2c18-435d-b091-91f401e01ed4.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/fdf4655401934ea4acd8a84c7f97b16c.png",
+   "person_key": "uploads/person/2026/08/29/142/80195a48f34c4c219f0dee60aad464f7.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\0ef80b69-2c18-435d-b091-91f401e01ed4.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-29.jpg",
+   "job_id": "1eea0c7a-3c1f-4b64-b68b-2045dc1de018",
+   "status": "done",
+   "seconds": 56.57,
+   "error": null,
+   "image": "tryon_Woman_Upper_0ef80b69-2c18-435d-b091-91f401e01ed4.jpg.png",
+   "m": {
+    "bg_change": 41.8,
+    "torso_change": 69.9,
+    "garment_colour_gap": 89.1
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/2a064fe6-224b-4146-abfe-97e9d292a61d.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/7f49b1cc68824de8b2b40687279b81c7.png",
+   "person_key": "uploads/person/2026/08/29/142/1b74609e2dfb43d4a8214be75cabf7b8.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2a064fe6-224b-4146-abfe-97e9d292a61d.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-32.jpg",
+   "job_id": "c6197f64-f080-45da-9b8d-a77d90415251",
+   "status": "done",
+   "seconds": 57.39,
+   "error": null,
+   "image": "tryon_Woman_Upper_2a064fe6-224b-4146-abfe-97e9d292a61d.jpg.png",
+   "m": {
+    "bg_change": 60.7,
+    "torso_change": 60.0,
+    "garment_colour_gap": 43.2
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/5ee0b8fd311640b5b2778acf65167027.png",
+   "person_key": "uploads/person/2026/08/29/142/26869148be264127869bc84405270f4a.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-36.jpg",
+   "job_id": "6b8e7fc7-2057-462b-b22f-4c7827ff2357",
+   "status": "done",
+   "seconds": 57.64,
+   "error": null,
+   "image": "tryon_Woman_Upper_2fc44c1b-c482-46d5-b34b-f559c1d976d7.jpg.png",
+   "m": {
+    "bg_change": 19.8,
+    "torso_change": 56.0,
+    "garment_colour_gap": 31.5
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/2fcb5130-d1f4-4b74-8059-df548f949347.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/2c57f615e53f459fbc89a7b117060cc9.png",
+   "person_key": "uploads/person/2026/08/29/142/dd461b63758f45338175a9ec5d901796.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\2fcb5130-d1f4-4b74-8059-df548f949347.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-39.jpg",
+   "job_id": "bf7fb620-9ca3-4026-b1fd-d0f060452159",
+   "status": "done",
+   "seconds": 57.62,
+   "error": null,
+   "image": "tryon_Woman_Upper_2fcb5130-d1f4-4b74-8059-df548f949347.jpg.png",
+   "m": {
+    "bg_change": 6.9,
+    "torso_change": 76.0,
+    "garment_colour_gap": 65.0
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/3b062efe-02a6-4e19-a280-739f366d1d92.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/3ddd4d72b5ea4c589fb9dbf1c2805c45.png",
+   "person_key": "uploads/person/2026/08/29/142/98f4da1f0ecf41e2911c43bde071f556.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\3b062efe-02a6-4e19-a280-739f366d1d92.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-42.jpg",
+   "job_id": "0bcec0de-d9a8-4695-9563-63d85b7e1985",
+   "status": "done",
+   "seconds": 56.53,
+   "error": null,
+   "image": "tryon_Woman_Upper_3b062efe-02a6-4e19-a280-739f366d1d92.jpg.png",
+   "m": {
+    "bg_change": 17.3,
+    "torso_change": 39.8,
+    "garment_colour_gap": 201.3
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/4cf67efe-100e-4174-9772-ffc9d644deec.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/f7dbcd44542a41899caafe2d37576614.png",
+   "person_key": "uploads/person/2026/08/29/142/8994fa57bc4346feb01f74fc57f694ba.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4cf67efe-100e-4174-9772-ffc9d644deec.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-45.jpg",
+   "job_id": "b25cc252-47fb-476c-afaf-c0188f680d08",
+   "status": "done",
+   "seconds": 56.67,
+   "error": null,
+   "image": "tryon_Woman_Upper_4cf67efe-100e-4174-9772-ffc9d644deec.jpg.png",
+   "m": {
+    "bg_change": 19.8,
+    "torso_change": 41.3,
+    "garment_colour_gap": 144.8
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/2cebd171f7e44392844b65dd17552525.png",
+   "person_key": "uploads/person/2026/08/29/142/4bc76ecdb709482d96363b2457a11bfa.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-49.jpg",
+   "job_id": "10f01f17-9799-4c96-822b-d3c70f84f434",
+   "status": "done",
+   "seconds": 57.57,
+   "error": null,
+   "image": "tryon_Woman_Upper_4ef0dece-adfc-4036-ad34-922d607d4bd5.jpg.png",
+   "m": {
+    "bg_change": 13.4,
+    "torso_change": 125.3,
+    "garment_colour_gap": 15.0
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/3c9f416e21934085828a5a33e8aeedc1.png",
+   "person_key": "uploads/person/2026/08/29/142/92d5c777dc1d4c3eb9ef0aaf6597cdac.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-52.jpg",
+   "job_id": "c02d2456-0b10-41d0-9492-70469ffa2dbf",
+   "status": "done",
+   "seconds": 59.09,
+   "error": null,
+   "image": "tryon_Woman_Upper_4efd804b-6c0e-48c5-9467-be5fcd5e3cf7.jpg.png",
+   "m": {
+    "bg_change": 11.3,
+    "torso_change": 67.0,
+    "garment_colour_gap": 25.7
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/05f700d7a53849e4853e7808e1304994.png",
+   "person_key": "uploads/person/2026/08/29/142/07d92b8ec3ce403fad97eb5554215f22.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-56.jpg",
+   "job_id": "c421f9e1-a674-4f92-96e7-7dc77c7682ec",
+   "status": "done",
+   "seconds": 57.33,
+   "error": null,
+   "image": "tryon_Woman_Upper_4fcf9e51-501f-4bb7-ac40-5e2fc68bd651.jpg.png",
+   "m": {
+    "bg_change": 17.2,
+    "torso_change": 52.6,
+    "garment_colour_gap": 86.7
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/5b0b2f96-d429-4dc8-a43b-33804236a351.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/3aa192666d8147a5a288fac9e47bba96.png",
+   "person_key": "uploads/person/2026/08/29/142/f59bc4c0671e41a6a44faaaa99b0d23f.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\5b0b2f96-d429-4dc8-a43b-33804236a351.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-00-58.jpg",
+   "job_id": "16ee3640-58f0-4584-bc05-835a3ba6c15f",
+   "status": "done",
+   "seconds": 58.33,
+   "error": null,
+   "image": "tryon_Woman_Upper_5b0b2f96-d429-4dc8-a43b-33804236a351.jpg.png",
+   "m": {
+    "bg_change": 68.1,
+    "torso_change": 87.7,
+    "garment_colour_gap": 105.6
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/51386e89f9e244a3b0ab9e2ee29d454a.png",
+   "person_key": "uploads/person/2026/08/29/142/3b7e45e36d2a44bda8558a63ab9c6bf4.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-01-02.jpg",
+   "job_id": "b9dcabb1-336e-4daf-9d24-3eb6148b33b2",
+   "status": "done",
+   "seconds": 55.76,
+   "error": null,
+   "image": "tryon_Woman_Upper_6b1355ff-cc52-4e2a-a870-e91e75b926fe.jpg.png",
+   "m": {
+    "bg_change": 14.7,
+    "torso_change": 59.9,
+    "garment_colour_gap": 113.8
+   }
+  },
+  {
+   "id": "tryon/Woman_Upper/6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg",
+   "tool": "virtual-try-on",
+   "garment_key": "uploads/garment/2026/08/29/142/79f98f2078c14379a96d96db1f2f6b78.png",
+   "person_key": "uploads/person/2026/08/29/142/cff3af0aeef943909dbad3c7247a2ba7.png",
+   "category": "tops",
+   "gender": "woman",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg",
+   "model_source": "D:\\projects\\lvton\\test products\\Woman/models\\photo_2026-05-22_20-01-07.jpg",
+   "job_id": "3b5cc4f9-8795-433e-bc46-55a1cf0022c1",
+   "status": "done",
+   "seconds": 57.15,
+   "error": null,
+   "image": "tryon_Woman_Upper_6d3a3735-2676-4bdc-86d0-292d27a4ab81.jpg.png",
+   "m": {
+    "bg_change": 54.1,
+    "torso_change": 60.0,
+    "garment_colour_gap": 148.4
+   }
+  }
+ ]
+}

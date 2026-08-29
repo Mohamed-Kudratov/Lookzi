@@ -945,42 +945,95 @@ def step_serve(ssh, st):
     left nothing running. Everything after that was four commands typed by hand,
     and forgetting the second one meant two tools silently did not work.
     """
-    rc, out = ssh.run(
-        f"cd {POD_REPO}\n"
-        "bash tools/pod_serve.sh start 2>&1 | tail -2\n", timeout=600)
-    st.log(out)
-    if "ready" not in out and "starting" not in out:
-        raise PodError("the try-on server did not start:\n" + out[-400:])
+    # What each one takes once it is warm, measured on this card, plus a
+    # little. They are started in this order and only while there is room.
+    #
+    # All three together come to 45.4 GB on a 46 GB card. That left nineteen
+    # megabytes free, and every try-on in a hundred-job benchmark failed with
+    # an allocation error somewhere in the middle of it. The panel started all
+    # three and said nothing, which is the part worth fixing: a card that
+    # cannot hold the third model is a fact to be told, not discovered an hour
+    # later in somebody else's error message.
+    WANT = [("tryon", "", 20000, "the try-on model"),
+            ("zimage", "/opt/zimage-venv/bin/python", 23000, "the model maker"),
+            ("fashn", "/opt/fashn-venv/bin/python", 5000, "the new engine")]
+    PORTS = {"tryon": 8000, "zimage": 8001, "fashn": 8002}
 
-    rc, out = ssh.run(
-        "test -x /opt/zimage-venv/bin/python && echo HAVE || echo NONE",
-        timeout=120)
-    if "HAVE" in out:
+    def free_mb():
+        rc, out = ssh.run(
+            "nvidia-smi --query-gpu=memory.total,memory.used "
+            "--format=csv,noheader,nounits | head -1", timeout=180)
+        for line in out.splitlines():
+            if "," in line:
+                try:
+                    total, used = (int(x.strip()) for x in line.split(",")[:2])
+                    return total - used
+                except ValueError:
+                    pass
+        return 0
+
+    for name, probe, needs, human in WANT:
+        if probe:
+            rc, out = ssh.run(f"test -e {probe} && echo HAVE || echo NONE",
+                              timeout=120)
+            if "HAVE" not in out:
+                st.warn(f"no {name} environment, so {human} will not answer")
+                continue
+        room = free_mb()
+        if room < needs:
+            st.warn(f"{human} wants about {needs // 1000} GB and the card has "
+                    f"{room // 1000} GB free, so it was not started. Stop one "
+                    "of the others to make room for it.")
+            continue
         rc, out = ssh.run(
             f"cd {POD_REPO}\n"
-            "bash tools/pod_serve.sh start zimage 2>&1 | tail -2\n",
-            timeout=600)
+            f"bash tools/pod_serve.sh start {'' if name == 'tryon' else name}"
+            " 2>&1 | tail -2\n", timeout=900)
         st.log(out)
-    else:
-        st.warn("no z-image venv, so only the try-on tools will work")
+        if name == "tryon" and "ready" not in out and "starting" not in out:
+            raise PodError("the try-on server did not start:\n" + out[-400:])
+        # Weights land over the following minute or two. Waiting for them is
+        # what makes the next model's room check honest: asked too early, it
+        # sees memory this one has not taken yet and starts something that
+        # will not fit.
+        for _ in range(45):
+            time.sleep(6)
+            rc, h = ssh.run(f"curl -s -m 5 localhost:{PORTS[name]}/health",
+                            timeout=180)
+            if '"ready":true' in h or '"error":"' in h and "null" not in h:
+                break
+        st.log(f"{human}: {free_mb() // 1000} GB free after it loaded")
 
-    rc, out = ssh.run(
-        "test -x /opt/fashn-venv/bin/python && echo HAVE || echo NONE", timeout=120)
-    if "HAVE" in out:
-        rc, out = ssh.run(
-            f"cd {POD_REPO}\n"
-            "bash tools/pod_serve.sh start fashn 2>&1 | tail -2\n", timeout=600)
-        st.log(out)
-    else:
-        st.warn("no fashn venv, so the new engine will not answer")
-
-    # What the bridge needs, read once, so nobody has to go and find it.
+    # What the bridge needs, read once and written down, so nobody has to go
+    # and find it. RunPod hands out a new address every migration, and the
+    # bridge that is already running is pointing at the last pod -- which
+    # answers nothing, or worse, answers as somebody else's machine. Every
+    # migration so far has meant editing a file by hand and forgetting once.
     rc, out = ssh.run(
         "echo BRIDGE=root@$RUNPOD_PUBLIC_IP -p $RUNPOD_TCP_PORT_22", timeout=120)
     for line in out.splitlines():
         if line.startswith("BRIDGE="):
-            st.facts["bridge_ssh"] = line[7:].strip()
-            st.log("bridge address: " + line[7:].strip())
+            addr = line[7:].strip()
+            st.facts["bridge_ssh"] = addr
+            st.log("bridge address: " + addr)
+            _remember_address(st, addr)
+
+
+def _remember_address(st, addr):
+    """Write the pod's address into .env, where tools/bridge.sh reads it."""
+    env = os.path.join(os.path.dirname(HERE), ".env")
+    try:
+        lines = []
+        if os.path.exists(env):
+            with open(env, encoding="utf-8") as fh:
+                lines = fh.read().splitlines()
+        lines = [ln for ln in lines if not ln.startswith("POD_SSH=")]
+        lines.append(f'POD_SSH="{addr}"')
+        with open(env, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+        st.log("written to .env as POD_SSH; start it with tools/bridge.sh")
+    except Exception as exc:                                  # noqa: BLE001
+        st.warn(f"could not write the address to .env: {exc}")
 
 
 STEPS = [

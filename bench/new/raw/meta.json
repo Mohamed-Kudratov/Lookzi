@@ -1,0 +1,386 @@
+[
+ {
+  "file": "0_0.png",
+  "desc": "Lounge trousers",
+  "colors": "['Red', 'Blue', 'White']",
+  "view": "front",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "0_1.png",
+  "desc": "bl\u00e5 jeans shorts med fl\u00e4ckar fram",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 3,
+  "stains": 2
+ },
+ {
+  "file": "0_2.png",
+  "desc": "",
+  "colors": "['Blue', 'White']",
+  "view": "front",
+  "condition": 3,
+  "stains": 1
+ },
+ {
+  "file": "0_3.png",
+  "desc": "cardigan med bruna knappar",
+  "colors": "['Blue', 'Grey', 'Brown']",
+  "view": "back",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "0_4.png",
+  "desc": "shorts",
+  "colors": "['Grey']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "0_5.png",
+  "desc": "",
+  "colors": "['Multicolor']",
+  "view": "front",
+  "condition": 5,
+  "stains": 7
+ },
+ {
+  "file": "400_400.png",
+  "desc": "",
+  "colors": "['Pink']",
+  "view": "front",
+  "condition": 3,
+  "stains": 1
+ },
+ {
+  "file": "400_401.png",
+  "desc": "",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 4,
+  "stains": 1
+ },
+ {
+  "file": "400_402.png",
+  "desc": "knitted grey sweater with buttons",
+  "colors": "['Grey']",
+  "view": "front",
+  "condition": 3,
+  "stains": 1
+ },
+ {
+  "file": "400_403.png",
+  "desc": "",
+  "colors": "['Grey']",
+  "view": "front",
+  "condition": 4,
+  "stains": 1
+ },
+ {
+  "file": "400_404.png",
+  "desc": "jumpsuit",
+  "colors": "['Green', 'White', 'Black', 'Blue']",
+  "view": "back",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "400_405.png",
+  "desc": "r\u00f6d overall med h\u00e5l i skrevet.",
+  "colors": "['Red', 'Purple']",
+  "view": "back",
+  "condition": 3,
+  "stains": 1
+ },
+ {
+  "file": "1200_1200.png",
+  "desc": "",
+  "colors": "['Green']",
+  "view": "back",
+  "condition": 4,
+  "stains": 7
+ },
+ {
+  "file": "1200_1201.png",
+  "desc": "hoddie med tryck",
+  "colors": "['Blue', 'White']",
+  "view": "front",
+  "condition": 3,
+  "stains": 0
+ },
+ {
+  "file": "1200_1202.png",
+  "desc": "Red thin jacket from Rosebud, size M. Poor condition.",
+  "colors": "['Red']",
+  "view": "front",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "1200_1203.png",
+  "desc": "",
+  "colors": "['Blue']",
+  "view": "back",
+  "condition": 4,
+  "stains": 1
+ },
+ {
+  "file": "1200_1204.png",
+  "desc": "",
+  "colors": "['Black']",
+  "view": "front",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "1200_1205.png",
+  "desc": "",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 3,
+  "stains": 1
+ },
+ {
+  "file": "2500_2500.png",
+  "desc": "lila stickad tr\u00f6ja",
+  "colors": "['Purple']",
+  "view": "front",
+  "condition": 4,
+  "stains": 1
+ },
+ {
+  "file": "2500_2501.png",
+  "desc": "Basic blue shirt",
+  "colors": "['Blue']",
+  "view": "back",
+  "condition": 2,
+  "stains": 0
+ },
+ {
+  "file": "2500_2502.png",
+  "desc": "beige byxor",
+  "colors": "['Beige']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "2500_2503.png",
+  "desc": "gr\u00e5 kofta med knappar utan \u00e4rmar, stickat m\u00f6nster och gul i krage",
+  "colors": "['Grey']",
+  "view": "back",
+  "condition": 3,
+  "stains": 2
+ },
+ {
+  "file": "2500_2504.png",
+  "desc": "",
+  "colors": "['Black']",
+  "view": "front",
+  "condition": 4,
+  "stains": 1
+ },
+ {
+  "file": "2500_2505.png",
+  "desc": "",
+  "colors": "['Grey', 'Blue']",
+  "view": "front",
+  "condition": 5,
+  "stains": 7
+ },
+ {
+  "file": "4000_4000.png",
+  "desc": "floral dress",
+  "colors": "['Black', 'Blue', 'Green']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "4000_4001.png",
+  "desc": "bruna kostymbyxor",
+  "colors": "['Brown']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "4000_4002.png",
+  "desc": "",
+  "colors": "['Multicolor', 'White', 'Purple', 'Blue']",
+  "view": "back",
+  "condition": 3,
+  "stains": 0
+ },
+ {
+  "file": "4000_4003.png",
+  "desc": "",
+  "colors": "['White', 'Blue', 'Red']",
+  "view": "back",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "4000_4004.png",
+  "desc": "",
+  "colors": "['White', 'Blue', 'Red']",
+  "view": "front",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "4000_4005.png",
+  "desc": "Blouse with floral print",
+  "colors": "['Multicolor', 'Yellow', 'Green', 'White']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "6000_6000.png",
+  "desc": "Blue and white striped cropped jeans",
+  "colors": "['Blue', 'White']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "6000_6001.png",
+  "desc": "",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 4,
+  "stains": 0
+ },
+ {
+  "file": "6000_6002.png",
+  "desc": "",
+  "colors": "['Black', 'Grey']",
+  "view": "back",
+  "condition": 2,
+  "stains": 0
+ },
+ {
+  "file": "6000_6003.png",
+  "desc": "Knitted vest with v neck",
+  "colors": "['Beige']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "6000_6004.png",
+  "desc": "gr\u00f6n kjol, n\u00e5gra \"vita\" streck",
+  "colors": "['Green']",
+  "view": "back",
+  "condition": 4,
+  "stains": 0
+ },
+ {
+  "file": "6000_6005.png",
+  "desc": "",
+  "colors": "['Blue', 'Grey']",
+  "view": "back",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "9000_9000.png",
+  "desc": "",
+  "colors": "['Pink']",
+  "view": "back",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "9000_9001.png",
+  "desc": "blue t-shirt",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "9000_9002.png",
+  "desc": "",
+  "colors": "['Blue']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "9000_9003.png",
+  "desc": "",
+  "colors": "['White']",
+  "view": "back",
+  "condition": 3,
+  "stains": 0
+ },
+ {
+  "file": "9000_9004.png",
+  "desc": "black winter trousers",
+  "colors": "['Black']",
+  "view": "front",
+  "condition": 2,
+  "stains": 2
+ },
+ {
+  "file": "9000_9005.png",
+  "desc": "",
+  "colors": "['Black']",
+  "view": "front",
+  "condition": 2,
+  "stains": 1
+ },
+ {
+  "file": "13000_13000.png",
+  "desc": "t-shirt med tryck",
+  "colors": "['White', 'Blue', 'Red']",
+  "view": "back",
+  "condition": 1,
+  "stains": 2
+ },
+ {
+  "file": "13000_13001.png",
+  "desc": "gult linne, solblekt/oj\u00e4mn i f\u00e4rgen, l\u00e4tt nopprig",
+  "colors": "['Yellow']",
+  "view": "back",
+  "condition": 3,
+  "stains": 2
+ },
+ {
+  "file": "13000_13002.png",
+  "desc": "blommig byxdress",
+  "colors": "['Black', 'Green', 'Pink', 'Multicolor']",
+  "view": "back",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "13000_13003.png",
+  "desc": "black shorts",
+  "colors": "['Black']",
+  "view": "front",
+  "condition": 5,
+  "stains": 1
+ },
+ {
+  "file": "13000_13004.png",
+  "desc": "",
+  "colors": "['Black', 'Pink', 'White']",
+  "view": "front",
+  "condition": 3,
+  "stains": 6
+ },
+ {
+  "file": "13000_13005.png",
+  "desc": "vita jeans",
+  "colors": "['White', 'Brown']",
+  "view": "front",
+  "condition": 4,
+  "stains": 0
+ }
+]

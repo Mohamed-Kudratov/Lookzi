@@ -60,6 +60,11 @@ services:
       S3_BUCKET: lookzi
       # What the container talks to, and what it tells the outside world.
       S3_PUBLIC_ENDPOINT: http://127.0.0.1:9000
+      # Pictures and uploads go through the app rather than straight at the
+      # bucket, so a link works from anywhere and not only from this machine.
+      S3_PROXY: "${S3_PROXY:-1}"
+      # Without a key the gallery is open to whoever has the link.
+      REVIEW_KEY: "${REVIEW_KEY:-}"
       PYTHONUNBUFFERED: "1"
     # 8080 on the host. As with the database, a developer machine often has
     # something on the obvious port already, and Docker then wins only the
@@ -76,6 +81,27 @@ services:
     depends_on:
       db: { condition: service_healthy }
       storage: { condition: service_healthy }
+
+  # The public link, and it runs here rather than on the host for two reasons:
+  # the agent Windows has installed is too old for the service and refuses to
+  # authenticate, and a fresh download is quarantined by Defender the moment it
+  # lands -- ngrok is a tunnel, so every scanner treats it as one. In a
+  # container neither is a problem, nothing is installed on the machine, and it
+  # reaches the app over the compose network instead of through the host.
+  #
+  #     docker compose --profile public up -d ngrok
+  #     docker compose logs ngrok | grep url=
+  #
+  # Off unless asked for: a link that opens itself every time the stack starts
+  # is a link nobody remembers is open.
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["public"]
+    command: ["http", "web:8000", "--log", "stdout"]
+    environment:
+      NGROK_AUTHTOKEN: "${NGROK_AUTHTOKEN:?set NGROK_AUTHTOKEN in .env}"
+    ports: ["4040:4040"]
+    depends_on: [web]
 
   worker:
     build: { context: ., dockerfile: docker/web.Dockerfile }

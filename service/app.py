@@ -20,7 +20,8 @@ import uuid
 
 import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (HTMLResponse, JSONResponse, RedirectResponse,
+                               StreamingResponse)
 from pydantic import BaseModel, Field
 
 from . import accounts
@@ -377,6 +378,9 @@ def cancel_job(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
 # and the route only answers from a private address.
 
 REVIEW_KEY = os.environ.get("REVIEW_KEY", "")
+# The same ceiling the pod enforces, so a file that would be refused there
+# is refused here rather than after it has been carried twice.
+MAX_UPLOAD = int(os.environ.get("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 
 
 def _may_review(request, key):
@@ -468,6 +472,46 @@ def review_page(request: Request, key: str = ""):
         raise HTTPException(500, "review.html is missing")
     with open(path, encoding="utf-8") as fh:
         return HTMLResponse(fh.read())
+
+
+# ---------------------------------------------------------------------------
+# files
+#
+# Only mounted when S3_PROXY is on, which is when the studio is reachable from
+# somewhere other than this machine. A signed link names a host; the host it
+# names is one only this machine can reach, so from anywhere else every picture
+# is broken and every upload fails. These two routes make the app the address
+# instead, and then there is no address to configure.
+
+@app.get("/files/{key:path}")
+def get_file(key: str):
+    if not storage.PROXY:
+        raise HTTPException(404, "not found")
+    try:
+        obj = storage.client().get_object(Bucket=storage.BUCKET, Key=key)
+    except Exception:                                         # noqa: BLE001
+        raise HTTPException(404, "no such file")
+    return StreamingResponse(
+        obj["Body"], media_type=obj.get("ContentType") or "image/png",
+        # Keys carry a uuid, so a link is not guessable and may be cached.
+        headers={"Cache-Control": "private, max-age=3600"})
+
+
+@app.put("/files/{key:path}")
+async def put_file(key: str, request: Request):
+    if not storage.PROXY:
+        raise HTTPException(404, "not found")
+    # Only where an upload slot was just issued. Without this the route is a
+    # writable bucket on the open internet, which is a different product.
+    if not key.startswith("uploads/"):
+        raise HTTPException(403, "that is not an upload key")
+    body = await request.body()
+    if len(body) > MAX_UPLOAD:
+        raise HTTPException(413, f"larger than {MAX_UPLOAD} bytes")
+    storage.client().put_object(
+        Bucket=storage.BUCKET, Key=key, Body=body,
+        ContentType=request.headers.get("Content-Type", "image/png"))
+    return {"key": key}
 
 
 @app.get("/me")
