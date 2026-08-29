@@ -107,6 +107,16 @@ def get_bytes(key):
     return client().get_object(Bucket=BUCKET, Key=key)["Body"].read()
 
 
+def delete(key):
+    """Remove one object. Deleting what is not there is not an error here.
+
+    S3 delete is idempotent by design, and the caller is usually removing a row
+    and its picture together -- a picture that has already gone should not stop
+    the row from going.
+    """
+    client().delete_object(Bucket=BUCKET, Key=key)
+
+
 def presigned_get(key, seconds=3600):
     """A link that works without credentials and expires.
 

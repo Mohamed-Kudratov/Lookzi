@@ -161,6 +161,7 @@ button,input,textarea{font:inherit;color:inherit}
 .big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
   background:var(--panel-2);cursor:zoom-in}
 .big .save{position:absolute;bottom:12px;inset-inline-end:12px;z-index:3}
+.big .keep{position:absolute;bottom:12px;inset-inline-start:12px;z-index:3}
 .hist h3{margin:0 0 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--ink-3);font-weight:400}
 .hist .rows{display:grid;gap:9px;max-height:calc(100dvh - 320px);overflow:auto;
@@ -589,6 +590,14 @@ function drawResult() {
       '<div class="big"><img src="' + esc(result.url) + '" alt="The finished image">' +
         '<button class="btn save" id="save">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Save</button>' +
+        // A model made to order was a picture in the history and nothing more.
+        // The tool promises one that belongs to you; this is what makes it true.
+        (result.tool === "model-creation"
+          ? '<button class="btn keep" id="keep"' + (result.kept ? " disabled" : "") + '>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">' +
+            '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
+            (result.kept ? "In your models" : "Keep as my model") + '</button>'
+          : "") +
       '</div>' +
       '<div class="hist"><h3>History</h3><div class="rows">' +
         (recent.length ? recent.map(function (r, i) {
@@ -688,7 +697,7 @@ function openPop(which) {
         (m.id === pick.model_id) + '">' +
         '<span class="ph">' + (m.preview ? '<img src="' + esc(m.preview) + '" alt="">' : '') + '</span>' +
         '<span class="meta"><b>' + esc(m.display_name) + '</b>' +
-        '<span class="age">' + esc(m.age) + '</span></span></button>';
+        '<span class="age">' + (m.mine ? "yours" : esc(m.age)) + '</span></span></button>';
     }).join("") + '</div>';
   } else {
     var rows = which === "category" ? CATEGORY : LOOK;
@@ -776,7 +785,8 @@ function watch(id) {
       var secs = (Date.now() - t0) / 1000;
       if (j.status === "done") {
         clearInterval(poll); job = null;
-        result = {url: j.result_url, seconds: j.seconds, inputs: inputs};
+        result = {url: j.result_url, seconds: j.seconds, inputs: inputs,
+                  tool: pick.tool, job_id: id, kept: false};
         toast("Done in " + (j.seconds != null ? j.seconds : secs.toFixed(1)) + "s");
         refresh(); drawStage(); drawBar();
         return;
@@ -871,6 +881,20 @@ document.addEventListener("click", function (e) {
     return;
   }
   if (e.target.closest("#save") && result) { save(result.url); return; }
+
+  if (e.target.closest("#keep") && result && result.job_id) {
+    api("/models/keep", {method: "POST", body: {job_id: result.job_id}})
+      .then(function (m) {
+        result.kept = true;
+        // Chosen straight away: keeping a model and then having to go and find
+        // it in the picker is two steps where the point was one.
+        pick.model_id = m.id;
+        return api("/models").then(function (rows) { MODELS = rows; });
+      })
+      .then(function () { toast("Kept — it is in your models now."); drawResult(); drawBar(); })
+      .catch(function (err) { toast(err.message, true); });
+    return;
+  }
 
   if (e.target.closest("#cancel-job") && job && job !== "pending") {
     api("/jobs/" + job + "/cancel", {method: "POST"})

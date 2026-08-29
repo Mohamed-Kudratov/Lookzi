@@ -117,16 +117,74 @@ def tools(conn=Depends(db)):
 
 
 @app.get("/models")
-def models(conn=Depends(db)):
+def models(conn=Depends(db), user=Depends(current_user)):
+    """The shared roster, plus whatever this account made for itself.
+
+    exclusive_to has been on the table since the beginning and nothing read it,
+    so a model made to order was a picture in the history and nothing more --
+    the tool promised "a model that belongs to you alone" and then offered no
+    way to use them again.
+    """
     rows = conn.execute(
         """SELECT id, display_name, age, gender, ethnicity, build, modest,
-                  hero_key, hero_is_placeholder
+                  hero_key, hero_is_placeholder, exclusive_to
              FROM models
             WHERE duplicate_of IS NULL
-            ORDER BY gender, age""").fetchall()
+              AND (exclusive_to IS NULL OR exclusive_to = %s)
+            ORDER BY exclusive_to NULLS LAST, gender, age""",
+        (user["id"],)).fetchall()
     for r in rows:
         r["preview"] = storage.presigned_get(r.pop("hero_key")) if r["hero_key"] else None
+        r["mine"] = r.pop("exclusive_to") is not None
     return rows
+
+
+AGE_YEARS = {"20s": 24, "30s": 34, "40s": 44, "50s": 54}
+
+
+class KeepModel(BaseModel):
+    job_id: uuid.UUID
+    display_name: str = Field("", max_length=40)
+
+
+@app.post("/models/keep")
+def keep_model(req: KeepModel, conn=Depends(db), user=Depends(current_user)):
+    """Turn a made-to-order model into one this account can use again.
+
+    The job already holds everything the roster needs -- who was asked for, and
+    the picture that came back -- so nothing is re-generated and nothing is
+    copied in storage: the result key becomes the hero key, and the same object
+    is now the model's photograph.
+    """
+    row = conn.execute(
+        """SELECT j.tool, j.params, j.user_id, r.object_key
+             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+            WHERE j.id = %s""", (req.job_id,)).fetchone()
+    if row is None or row["user_id"] != user["id"]:
+        raise HTTPException(404, "unknown job")
+    if row["tool"] != "model-creation":
+        raise HTTPException(400, "only a model you made can be kept as a model")
+    if not row["object_key"]:
+        raise HTTPException(409, "that job has no picture yet")
+
+    p = row["params"] or {}
+    # A short id from the job, so keeping the same one twice is the same row
+    # rather than a second identical model in the picker.
+    mid = "own_" + str(req.job_id).replace("-", "")[:10]
+    gender = p.get("gender") or "woman"
+    name = (req.display_name or "").strip() or ("My model " + mid[-4:])
+    conn.execute(
+        """INSERT INTO models (id, display_name, age, gender, ethnicity, build,
+                               modest, hero_key, exclusive_to)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+           ON CONFLICT (id) DO UPDATE
+                   SET display_name = EXCLUDED.display_name,
+                       hero_key = EXCLUDED.hero_key""",
+        (mid, name, AGE_YEARS.get(p.get("age"), 28), gender,
+         p.get("look") or "uzbek", p.get("build") or "average",
+         str(p.get("modest")).lower() in ("1", "true", "yes"),
+         row["object_key"], user["id"]))
+    return {"id": mid, "display_name": name}
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +425,38 @@ def review_data(request: Request, conn=Depends(db), limit: int = 60,
         row["result"] = storage.presigned_get(k) if k else None
         out.append(row)
     return out
+
+
+@app.delete("/api/review/{job_id}")
+def review_delete(job_id: uuid.UUID, request: Request, conn=Depends(db),
+                  key: str = ""):
+    """Remove one job from the archive, picture and all.
+
+    The page used to promise that nothing here is ever deleted, and that was a
+    reasonable promise for an archive nobody could edit. It is the wrong one
+    for a working gallery: a failed experiment kept forever is noise in the one
+    place we go to judge quality.
+
+    The stored object goes with the row. Keeping the bytes after removing the
+    only reference to them is not caution, it is a bill.
+    """
+    if not _may_review(request, key):
+        raise HTTPException(404, "not found")
+    row = conn.execute("SELECT object_key FROM results WHERE job_id = %s",
+                       (job_id,)).fetchone()
+    gone = conn.execute("DELETE FROM jobs WHERE id = %s RETURNING id",
+                        (job_id,)).fetchone()
+    if gone is None:
+        raise HTTPException(404, "unknown job")
+    if row and row["object_key"]:
+        try:
+            storage.delete(row["object_key"])
+        except Exception as exc:                              # noqa: BLE001
+            # The row is already gone; say so rather than failing the request
+            # and leaving the caller thinking nothing happened.
+            print(f"[review] deleted job {job_id} but not its object: {exc}",
+                  flush=True)
+    return {"deleted": str(job_id)}
 
 
 @app.get("/review", response_class=HTMLResponse)
