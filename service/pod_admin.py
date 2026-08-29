@@ -420,14 +420,25 @@ def _room_for(ssh, want_mb):
 
     df on this mount reports the whole cluster -- 207 TB of it -- and says
     nothing about the per-volume quota, which is the number that matters and
-    the one that ran out. No command here reads that quota, so ask the
-    filesystem the only way it will answer: try to claim the space, then give
-    it back.
+    the one that ran out. No command reads that quota, so the only honest test
+    is to ask for the space and see.
+
+    The first version of this asked with fallocate, which the volume does not
+    implement: "fallocate: Operation not supported", every time, for any size.
+    So the check would have refused every download on every fresh volume --
+    a guard against one failure that quietly caused another. It was written
+    and shipped the same afternoon without once being run against a volume
+    that had room.
+
+    Writing the bytes is slower and it is the truth. Measured at 511 MB/s
+    here, so a 33 GB question costs about a minute -- against the twenty
+    minutes it saves when the answer is no.
     """
     rc, out = ssh.run(
-        f"if fallocate -l {int(want_mb)}M /workspace/.room_probe 2>/dev/null; "
-        "then echo ROOM=yes; else echo ROOM=no; fi\n"
-        "rm -f /workspace/.room_probe\n", timeout=600)
+        f"if dd if=/dev/zero of=/workspace/.room_probe bs=1M "
+        f"count={int(want_mb)} 2>/dev/null; then echo ROOM=yes; "
+        "else echo ROOM=no; fi\n"
+        "rm -f /workspace/.room_probe\n", timeout=1800)
     return "ROOM=yes" in out
 
 
