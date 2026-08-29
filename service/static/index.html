@@ -416,7 +416,7 @@ var pick = {tool: null, prompt: "",
             person_key: null, person_url: null,
             model_id: null,
             gender: "woman", age: "20s", build: "average", look: "uzbek",
-            modest: "false", category: "tops"};
+            modest: "false"};
 
 function tool() { return TOOLS.filter(function (t) { return t.id === pick.tool; })[0]; }
 function needs() { return (tool() || {needs: []}).needs; }
@@ -432,7 +432,6 @@ var ICON = {
   "product-in-scene": '<path d="M4 5h16v14H4z"/><path d="m4 15 4-4 4 3 3-2 5 4"/><circle cx="9" cy="9" r="1.4"/>',
   "packshot": '<path d="M21 8 12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>',
   "model-creation": '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/><path d="M19 3v4M17 5h4"/>',
-  "try-on-v2": '<path d="M8 3h8l4 4-3 2v12H7V9L4 7z"/><path d="M12 21v-4M10 19h4"/>',
   "short-video": '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/>'
 };
 function svg(id) {
@@ -440,12 +439,6 @@ function svg(id) {
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     (ICON[id] || ICON.packshot) + '</svg>';
 }
-
-// The one control the new engine reads. Ours has an equivalent and ignores it,
-// so the studio stopped offering it; this one changes the answer, so it asks.
-var CATEGORY = [["category", "Covers", [["tops", "Top"], ["bottoms", "Bottom"],
-                                        ["one-pieces", "Whole outfit"]]]];
-var CAT_LABEL = {tops: "Top", bottoms: "Bottom", "one-pieces": "Whole outfit"};
 
 var SLOT = {
   garment: {label: "Garment", hint: "the item, laid flat"},
@@ -485,12 +478,6 @@ function drawBar() {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
       '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
       (m ? esc(m.display_name) : "Choose a model") + '</button>');
-  }
-  if (wants("category")) {
-    extras.push('<button class="mini" data-open="category">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
-      '<path d="M8 3h8l3 3-2 2v13H7V8L5 6z"/></svg>' +
-      esc(CAT_LABEL[pick.category] || "Top") + '</button>');
   }
   if (wants("look")) {
     extras.push('<button class="mini" data-open="look">' +
@@ -700,9 +687,7 @@ function openPop(which) {
         '<span class="age">' + (m.mine ? "yours" : esc(m.age)) + '</span></span></button>';
     }).join("") + '</div>';
   } else {
-    var rows = which === "category" ? CATEGORY : LOOK;
-    html = '<h3>' + (which === "category" ? "What the garment covers" : "The look") +
-      '</h3><div class="look">' + rows.map(function (r) {
+    html = '<h3>The look</h3><div class="look">' + LOOK.map(function (r) {
       return '<div class="look-row"><span>' + esc(r[1]) + '</span><div class="seg">' +
         r[2].map(function (o) {
           return '<button data-look="' + esc(r[0]) + '" data-v="' + esc(o[0]) + '" ' +
@@ -759,7 +744,6 @@ function run() {
     prompt: pick.prompt.trim() || null,
     gender: pick.gender, age: pick.age, build: pick.build, look: pick.look,
     modest: pick.modest === "true",
-    category: wants("category") ? pick.category : null,
     // A retried request must not become a second job and a second charge.
     idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
   }}).then(function (j) { watch(j.job_id); })
@@ -844,11 +828,7 @@ document.addEventListener("click", function (e) {
 
   var lk = e.target.closest("[data-look]");
   if (lk) {
-    pick[lk.dataset.look] = lk.dataset.v;
-    // Reopen the one that was open. Sending every row back to the look sheet
-    // closed the category sheet the moment you used it.
-    openPop(lk.dataset.look === "category" ? "category" : "look");
-    drawBar(); return;
+    pick[lk.dataset.look] = lk.dataset.v; openPop("look"); drawBar(); return;
   }
 
   var open = e.target.closest("[data-open]");

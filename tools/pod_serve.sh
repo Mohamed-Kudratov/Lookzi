@@ -21,16 +21,7 @@ REPO="${REPO:-/opt/lookzi}"
 # cannot have it -- their huggingface_hub requirements do not overlap. Same
 # machine, same card, two interpreters.
 WHICH="${2:-tryon}"
-if [ "$WHICH" = "fashn" ]; then
-    # FASHN VTON 1.5: a third interpreter, because it brings onnxruntime and
-    # its own huggingface_hub. 3.6 GiB of VRAM, which is what makes a third
-    # resident model possible on one 46 GB card at all.
-    PORT="${FASHN_PORT:-8002}"
-    LOG="${FASHN_LOG:-/workspace/fashn_server.log}"
-    PYTHON="${FASHN_PYTHON:-/opt/fashn-venv/bin/python}"
-    MODULE="service.fashn_server"
-    MODEL="fashn-vton-1.5"
-elif [ "$WHICH" = "zimage" ]; then
+if [ "$WHICH" = "zimage" ]; then
     PORT="${ZIMAGE_PORT:-8001}"
     LOG="${ZIMAGE_LOG:-/workspace/zimage_server.log}"
     PYTHON="${ZIMAGE_PYTHON:-/opt/zimage-venv/bin/python}"
@@ -72,7 +63,6 @@ start|restart)
     export HF_HOME=/workspace/.cache/huggingface HF_HUB_DISABLE_XET=1
     export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     export MODEL_PATH="$MODEL" POD_SERVER_PORT="$PORT" ZIMAGE_PORT="$PORT"
-    export FASHN_PORT="$PORT"
 
     if [ ! -x "$PYTHON" ] && [ "$PYTHON" != "python" ]; then
         echo "no interpreter at $PYTHON -- run tools/setup_pod.sh --zimage" >&2
@@ -107,5 +97,5 @@ status)
     curl -s -m 8 "http://127.0.0.1:$PORT/health"; echo
     ;;
 *)
-    echo "usage: $0 start|stop|status [tryon|zimage|fashn]" >&2; exit 2 ;;
+    echo "usage: $0 start|stop|status [tryon|zimage]" >&2; exit 2 ;;
 esac

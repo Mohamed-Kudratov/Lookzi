@@ -39,7 +39,7 @@ export S3_SECRET="${S3_SECRET:-lookzi-dev-secret}"
 export S3_BUCKET="${S3_BUCKET:-lookzi}"
 # Every tool the product offers. A tool missing from this list is a tool whose
 # jobs sit in the queue for ever while the studio says a worker is ready.
-export WORKER_TOOLS="${WORKER_TOOLS:-product-to-model,virtual-try-on,model-swap,packshot,model-creation,product-in-scene,try-on-v2}"
+export WORKER_TOOLS="${WORKER_TOOLS:-product-to-model,virtual-try-on,model-swap,packshot,model-creation,product-in-scene}"
 
 echo "bridge -> ${POD_SSH}"
 exec python -m service.tunnel_worker

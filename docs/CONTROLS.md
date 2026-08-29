@@ -144,3 +144,30 @@ the fix is a cut-out step before the try-on, which is work we half have in
 packshot.
 
 Not investigated yet. Deferred deliberately: the simple faults come first.
+
+## The second engine, and why it is not here — 2026-08-29
+
+FASHN publish their try-on model under Apache-2.0. It was installed beside
+ours, measured on the same pod against the same four pairs, and it won all
+four: 17.5 s against 32, 3.6 GiB of VRAM against 15.8, and a garment category
+it actually reads. Two of those wins were our faults rather than its merits --
+ours turns a dress into a tunic over the trousers the model already wore, and
+takes the headscarf off a woman who was wearing one.
+
+It has been removed anyway. That is a product decision and it is recorded here
+so the measurements are not rediscovered and re-argued in three months.
+
+What stands with it gone, and what does not:
+
+- **The layering fault is open and has no fix.** Three approaches failed:
+  wording, clearing the torso first, and a sleeveless base layer. The adapter
+  is named Layering VTON and putting a garment over what is already there is
+  its purpose, not a defect in it.
+- **The background leak does have a fix** and it is measured: cut the garment
+  out before the try-on. 0.18 s, and the studio backdrop survives. Not yet
+  applied to the pipeline.
+- **Which half of the body a garment belongs on cannot be communicated.** On a
+  hundred-garment run where forty were bottoms, trousers came back as skirts.
+- **The card fits two models, not three.** All three came to 45.4 GB of 46 and
+  a benchmark failed halfway through with allocation errors. With this gone
+  there is room again.

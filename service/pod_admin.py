@@ -871,73 +871,6 @@ def step_zimage(ssh, st):
                        + out[-400:])
 
 
-def step_fashn(ssh, st):
-    """The third interpreter, for FASHN VTON 1.5.
-
-    Same shape as the z-image step and for the same reason: the venv lives on
-    the container disk and dies with the pod, while the 2.2 GB of weights live
-    on the volume and do not. So a fresh pod rebuilds an environment in about
-    two minutes and downloads nothing.
-
-    Skipped entirely when it is already usable, which is what a migration onto
-    a volume that still has the weights should cost.
-    """
-    def usable():
-        rc, out = ssh.run(
-            "/opt/fashn-venv/bin/python -c \"from fashn_vton import "
-            "TryOnPipeline; import fastapi; print('FASHN_OK')\" 2>&1 | tail -2",
-            timeout=300)
-        return "FASHN_OK" in out, out
-
-    ok, out = usable()
-    have_weights = "HAVE" in ssh.run(
-        "test -f /workspace/models/fashn-vton-1.5/model.safetensors "
-        "&& echo HAVE || echo NONE", timeout=120)[1]
-    if ok and have_weights:
-        st.log("the fashn venv and its weights are already here")
-        st.note("fashn", "already built")
-        return
-
-    if not ok:
-        rc, out = ssh.run("test -d /opt/fashn-venv && echo PARTIAL || echo NONE",
-                          timeout=120)
-        if "PARTIAL" in out:
-            st.log("an incomplete venv is there; removing it and building again")
-            ssh.run("rm -rf /opt/fashn-venv", timeout=300)
-
-    st.log("building the fashn venv"
-           + ("" if have_weights else " and fetching 2.2 GB of weights"))
-    ssh.run(
-        f"cd {POD_REPO}\n"
-        "setsid nohup bash tools/setup_pod.sh --fashn "
-        "  > /workspace/fashn_setup.log 2>&1 < /dev/null &\n"
-        "echo started\n", timeout=180)
-
-    budget = 160 if have_weights else 320
-    started = time.time()
-    while not st.cancelled:
-        time.sleep(10)
-        ok, _ = usable()
-        if ok:
-            rc, w = ssh.run(
-                "test -f /workspace/models/fashn-vton-1.5/model.safetensors "
-                "&& echo HAVE || echo NONE", timeout=120)
-            if "HAVE" in w:
-                break
-        rc, alive = ssh.run(
-            "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE",
-            timeout=180)
-        if "GONE" in alive:
-            rc, tail = ssh.run("tail -15 /workspace/fashn_setup.log", timeout=180)
-            raise PodError("the fashn venv did not build:\n" + tail[-700:])
-        st.step_progress("fashn", min(0.95, (time.time() - started) / budget))
-
-    ok, out = usable()
-    st.log(out)
-    if not ok:
-        raise PodError("the fashn venv is incomplete after building:\n" + out[-400:])
-
-
 def step_serve(ssh, st):
     """Leave the pod actually serving, not merely proven.
 
@@ -955,9 +888,8 @@ def step_serve(ssh, st):
     # cannot hold the third model is a fact to be told, not discovered an hour
     # later in somebody else's error message.
     WANT = [("tryon", "", 20000, "the try-on model"),
-            ("zimage", "/opt/zimage-venv/bin/python", 23000, "the model maker"),
-            ("fashn", "/opt/fashn-venv/bin/python", 5000, "the new engine")]
-    PORTS = {"tryon": 8000, "zimage": 8001, "fashn": 8002}
+            ("zimage", "/opt/zimage-venv/bin/python", 23000, "the model maker")]
+    PORTS = {"tryon": 8000, "zimage": 8001}
 
     def free_mb():
         rc, out = ssh.run(
@@ -1051,8 +983,6 @@ STEPS = [
          "a second interpreter; the two stacks cannot share one"),
     Step("zimage_weights", "Get Z-Image", 900, step_zimage_weights,
          "31 GB down, 20 GB kept, the rest deleted at once"),
-    Step("fashn", "Build the new engine", 150, step_fashn,
-         "a third interpreter; 2.2 GB of weights that outlive the pod"),
     Step("download", "Download what is missing", 420, step_download,
          "measured in bytes"),
     Step("warm", "Load and generate", 360, step_warm,

@@ -41,12 +41,6 @@ TOOLS = {
         label="Make a new model",
         blurb="A model that belongs to you alone.",
         needs=["look", "prompt?"], cost=4, ready=True),
-    "try-on-v2": dict(
-        label="New engine (test)",
-        blurb="The same job as Product → Model, through a different model: "
-              "FASHN VTON 1.5, open weights, Apache-2.0. Here so the two can be "
-              "compared on the same garment.",
-        needs=["garment", "model", "category"], cost=1, ready=True),
     "short-video": dict(
         label="Short video",
         blurb="Five or ten seconds of motion from a finished image.",

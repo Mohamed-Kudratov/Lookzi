@@ -186,28 +186,5 @@ if [ "${1:-}" = "--zimage" ] && [ ! -d /opt/zimage-venv ]; then
     /opt/zimage-venv/bin/pip install -q fastapi "uvicorn[standard]" python-multipart
 fi
 
-if [ "${1:-}" = "--fashn" ] && [ ! -d /opt/fashn-venv ]; then
-    # A third interpreter, for FASHN VTON 1.5. Its own tree -- onnxruntime and
-    # a huggingface_hub the try-on stack caps below -- and 3.6 GiB of VRAM,
-    # which is the only reason a third resident model fits on one card.
-    #
-    # The venv is on the container disk and dies with the pod. The 2.2 GB of
-    # weights go to the volume and do not, so a migration rebuilds this in
-    # about two minutes rather than re-downloading anything.
-    echo "=== fashn venv ==="
-    [ -d /opt/fashn-vton ] || git clone -q --depth 1         https://github.com/fashn-AI/fashn-vton-1.5.git /opt/fashn-vton
-    python -m venv /opt/fashn-venv
-    /opt/fashn-venv/bin/pip install -q --upgrade pip wheel
-    /opt/fashn-venv/bin/pip install -q torch torchvision         --index-url https://download.pytorch.org/whl/cu124
-    (cd /opt/fashn-vton && /opt/fashn-venv/bin/pip install -q -e .)
-    /opt/fashn-venv/bin/pip install -q fastapi "uvicorn[standard]" python-multipart hf_transfer
-    if [ ! -f /workspace/models/fashn-vton-1.5/model.safetensors ]; then
-        echo "  fetching weights (2.2 GB)"
-        HF_HUB_ENABLE_HF_TRANSFER=1 /opt/fashn-venv/bin/python             /opt/fashn-vton/scripts/download_weights.py             --weights-dir /workspace/models/fashn-vton-1.5
-    else
-        echo "  weights already on the volume"
-    fi
-fi
-
 echo "=== ready ==="
 echo "source $REPO/.podenv before running anything"
