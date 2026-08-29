@@ -178,6 +178,11 @@ class JobRequest(BaseModel):
     # the try-on model ignores text entirely, so offering it elsewhere would be
     # a control that does nothing. See docs/CONTROLS.md.
     prompt: str | None = Field(None, max_length=800)
+    # Which part of the body the garment covers. Ours ignores the equivalent --
+    # measured five ways in docs/CONTROLS.md -- but the new engine reads it, and
+    # it is the difference between a dress worn as a dress and a dress worn as a
+    # tunic over the trousers the model already had on.
+    category: str | None = Field(None, pattern="^(tops|bottoms|one-pieces)$")
 
 
 @app.post("/jobs", status_code=201)
@@ -238,7 +243,8 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "gender": req.gender or "woman", "age": req.age or "20s",
               "build": req.build or "average", "look": req.look or "uzbek",
               "modest": "true" if req.modest else "false",
-              "prompt": (req.prompt or "").strip()}
+              "prompt": (req.prompt or "").strip(),
+              "category": req.category or "tops"}
     try:
         job, charged = q.submit(
             conn, user["id"], req.tool, params, model_id=req.model_id,

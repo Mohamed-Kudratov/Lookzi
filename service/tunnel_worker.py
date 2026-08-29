@@ -50,6 +50,9 @@ REMOTE_PORT = int(os.environ.get("POD_SERVER_PORT", "8000"))
 # diffusers from source and the try-on stack cannot have it. One ssh connection
 # carries both.
 ZIMAGE_LOCAL = int(os.environ.get("ZIMAGE_LOCAL_PORT", "18001"))
+# The third model on the card. 3.6 GiB, which is the only reason three fit.
+FASHN_LOCAL = int(os.environ.get("FASHN_LOCAL_PORT", "18002"))
+FASHN_REMOTE = int(os.environ.get("FASHN_PORT", "8002"))
 ZIMAGE_REMOTE = int(os.environ.get("ZIMAGE_PORT", "8001"))
 # Generous, because it covers the model still loading on a pod that has just
 # started. The queue's own lease is fifteen minutes and this must end first.
@@ -61,6 +64,7 @@ TUNNEL_BACKOFF = float(os.environ.get("POD_TUNNEL_BACKOFF", "4"))
 
 BASE = f"http://127.0.0.1:{LOCAL_PORT}"
 ZBASE = f"http://127.0.0.1:{ZIMAGE_LOCAL}"
+FBASE = f"http://127.0.0.1:{FASHN_LOCAL}"
 
 
 class PodDown(RuntimeError):
@@ -101,7 +105,8 @@ class Tunnel:
                "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3",
                "-o", "IdentitiesOnly=yes", "-i", self.key,
                "-L", f"{self.local}:127.0.0.1:{self.remote}",
-               "-L", f"{ZIMAGE_LOCAL}:127.0.0.1:{ZIMAGE_REMOTE}"] + self.target
+               "-L", f"{ZIMAGE_LOCAL}:127.0.0.1:{ZIMAGE_REMOTE}",
+               "-L", f"{FASHN_LOCAL}:127.0.0.1:{FASHN_REMOTE}"] + self.target
         self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.PIPE)
 
@@ -203,6 +208,8 @@ def _multipart(fields, files):
 ROUTES = {
     "packshot": ("/packshot", ("garment",)),
     "model-creation": (ZBASE + "/create", ()),
+    # Same two photographs as product-to-model, a different model behind them.
+    "try-on-v2": (FBASE + "/generate", ("person", "garment")),
 }
 DEFAULT_ROUTE = ("/generate", ("person", "garment"))
 
@@ -296,6 +303,10 @@ def handle(job):
         # whatever the five dropdowns happened to say instead.
         if p.get("prompt"):
             fields["prompt"] = p["prompt"]
+    elif path.startswith(FBASE):
+        # The one control this model actually answers. Ours takes a mode too
+        # and does nothing with it.
+        fields = {"category": p.get("category") or "tops"}
     elif path == "/generate":
         fields = {
             "mode": p.get("mode") or "",
