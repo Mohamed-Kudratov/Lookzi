@@ -357,6 +357,57 @@ def step_verify(ssh, st):
             st.facts[k.lower()] = v
 
 
+def _wait_for_volume(ssh, st, gap=20, tries=30):
+    """Do not read a volume that is still arriving.
+
+    This cost a pod. A network volume was migrating while the panel measured
+    it, so the read came back 4 MB of a 16 GB checkpoint, no Lightning and no
+    Z-Image at all -- and the panel, believing the volume empty, began a 31 GB
+    download onto a disk that was already filling itself from the other side.
+    The quota ran out four minutes later and the run died in the middle of it.
+
+    Nothing was wrong with the measurement. It was taken thirteen seconds in
+    and it was true at the time. What was missing was the question of whether
+    it would still be true a minute later. So read the total twice, and trust
+    it only once it has stopped moving.
+    """
+    last = None
+    for i in range(tries):
+        rc, out = ssh.run("echo TOTAL=$(du -sm /workspace 2>/dev/null | cut -f1)",
+                          timeout=900)
+        now = 0
+        for line in out.splitlines():
+            if line.startswith("TOTAL="):
+                v = line.split("=", 1)[1].strip()
+                now = int(v) if v.isdigit() else 0
+        if last is not None and now == last:
+            if i > 1:
+                st.log(f"the volume has stopped growing, at {now} MB")
+            return now
+        if last is not None:
+            st.log(f"the volume is still arriving: {last} MB -> {now} MB, waiting")
+        last = now
+        time.sleep(gap)
+    st.warn(f"the volume was still growing after {tries * gap}s; measuring anyway")
+    return last
+
+
+def _room_for(ssh, want_mb):
+    """Whether a download of this size can actually land.
+
+    df on this mount reports the whole cluster -- 207 TB of it -- and says
+    nothing about the per-volume quota, which is the number that matters and
+    the one that ran out. No command here reads that quota, so ask the
+    filesystem the only way it will answer: try to claim the space, then give
+    it back.
+    """
+    rc, out = ssh.run(
+        f"if fallocate -l {int(want_mb)}M /workspace/.room_probe 2>/dev/null; "
+        "then echo ROOM=yes; else echo ROOM=no; fi\n"
+        "rm -f /workspace/.room_probe\n", timeout=600)
+    return "ROOM=yes" in out
+
+
 def step_weights(ssh, st):
     """What the volume already holds, read before anything depends on it.
 
@@ -365,6 +416,7 @@ def step_weights(ssh, st):
     know when they press start is whether this is a five minute run or a forty
     minute one.
     """
+    _wait_for_volume(ssh, st)
     checks = "\n".join(
         f"echo {k}=$(du -sm {H} 2>/dev/null | cut -f1 || echo 0)"
         for k, H in (("4bit", CACHE + "/models--ovedrive--Qwen-Image-Edit-2509-4bit"),
@@ -478,6 +530,15 @@ def step_zimage_weights(ssh, st):
     # top of whatever is already there -- 69 GB in the case that just took the
     # container down. Staging locally keeps the volume peak at 31 GB, and the
     # container disk is fast besides.
+    # Asked before it is spent, not discovered four minutes in. The peak here
+    # is the 31 GB source plus whatever is already on the volume; the copy goes
+    # to the container disk, so 33 GB of headroom is the honest requirement.
+    if not _room_for(ssh, 33000):
+        raise PodError(
+            "there is not room on the volume for the 31 GB Z-Image download. "
+            "The bf16 copy is 20 GB and only has to be made once -- if another "
+            "pod has already made it, attach that volume instead of paying for "
+            "this again. Otherwise free space, or grow the volume.")
     st.log("fetching Z-Image (31 GB) and writing the bf16 copy (20 GB)")
     ssh.run(
         _env_prefix() +

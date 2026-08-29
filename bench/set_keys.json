@@ -1,0 +1,63 @@
+{
+ "garments": {
+  "polo": {
+   "key": "uploads/garment/2026/08/28/142/324b6d7a1b9f483fa8159c65dda93e25.png",
+   "category": "tops",
+   "why": "clean product shot, solid colour"
+  },
+  "knit": {
+   "key": "uploads/garment/2026/08/28/161/225eef823dd64c9899662aa00ac6bb54.png",
+   "category": "tops",
+   "why": "clean product shot, textured, long sleeve"
+  },
+  "jacket": {
+   "key": "uploads/garment/2026/08/28/159/3fc8259dfc774729b9fec94e72721963.png",
+   "category": "tops",
+   "why": "clean product shot, black -- hard to segment"
+  },
+  "trousers": {
+   "key": "uploads/garment/2026/08/28/160/278e72e99f4540bb8aa8383e2bb585e5.png",
+   "category": "bottoms",
+   "why": "clean product shot, the only bottoms"
+  },
+  "dress_blue": {
+   "key": "uploads/garment/2026/08/28/142/971d18328980429facf30605e8704794.png",
+   "category": "one-pieces",
+   "why": "phone snap, on a hanger, room behind"
+  },
+  "dress_print": {
+   "key": "uploads/garment/2026/08/29/142/8bc92e4004144b6d87e74a7b9347a265.png",
+   "category": "one-pieces",
+   "why": "phone snap, hanger, dense print -- the hardest"
+  },
+  "dress_navy": {
+   "key": "uploads/garment/2026/08/28/142/75f76bc1a1804f8aad8c928ed70922f7.png",
+   "category": "one-pieces",
+   "why": "phone snap, dark, camera date burnt in"
+  },
+  "dress_strip": {
+   "key": "uploads/garment/2026/08/28/142/dcb6dba120c6429f961fabbfab264cbd.png",
+   "category": "one-pieces",
+   "why": "phone snap, on a bed, striped"
+  },
+  "outfit": {
+   "key": "uploads/garment/2026/08/28/142/cb4327cb25974e4bab957989a069d81f.png",
+   "category": "one-pieces",
+   "why": "clean product shot, a whole look"
+  }
+ },
+ "people": {
+  "man_tee": {
+   "key": "uploads/garment/2026/08/28/163/35a394362b904a04992928015c4fbd7a.png",
+   "why": "a man in a white tee and jeans"
+  },
+  "woman_tee": {
+   "key": "uploads/garment/2026/08/28/163/ef039eb8344f4e9280e94cd6afd95e8a.png",
+   "why": "a woman in a white tee and jeans"
+  },
+  "woman_fit": {
+   "key": "uploads/garment/2026/08/28/142/52c6e019e41e413f94e315d9f13d1759.png",
+   "why": "a woman in a full outfit, harder"
+  }
+ }
+}
