@@ -186,6 +186,26 @@ def _detail(rgb, mask, step=4):
     return np.concatenate(out)
 
 
+def _patterned(rgb, mask):
+    """Whether the garment carries a pattern, or is one colour.
+
+    Two signals, and both have to agree: a printed garment has more than one
+    hue in quantity, and it has fine detail everywhere rather than only at the
+    seams and folds.
+    """
+    h = _colour_hist(rgb, mask)
+    if h is None:
+        return False
+    # How spread the hues are. One colour concentrates in a bin or two.
+    spread = float((h > 0.03).sum())
+    grey = rgb.mean(axis=2)
+    inside = grey[mask]
+    if inside.size < 200:
+        return False
+    busy = float(np.percentile(inside, 90) - np.percentile(inside, 10))
+    return bool(spread >= 4 and busy > 45)
+
+
 def _silhouette(mask, size=64):
     """The outline, normalised, so position and scale do not count as change."""
     ys, xs = np.nonzero(mask)
@@ -234,6 +254,12 @@ def compare(reference, candidate):
     da, db = _detail(a_rgb, a_m), _detail(b_rgb, b_m)
     out["print"] = (round(float(np.abs(da - db).sum() / 2 / 2), 3)
                     if da is not None and db is not None else None)
+    # Whether there is a print to compare at all. On a plain blue dress this
+    # number measures fabric texture, and pressing the fabric is the job -- it
+    # scored 0.508 against a limit of 0.5 and failed a good result, while the
+    # flowered dress beside it scored 0.097. The check is for a redrawn
+    # pattern, so it only applies where there is a pattern.
+    out["patterned"] = _patterned(a_rgb, a_m)
 
     sa, sb = _silhouette(a_m), _silhouette(b_m)
     if sa is not None and sb is not None:
@@ -278,7 +304,9 @@ def verdict(scores, mode="packshot"):
     Returns the decision and what drove it, because "it drifted" is not
     something to tell a seller and "the print does not match" is.
     """
-    limits = LIMITS.get(mode, LIMITS["packshot"])
+    limits = dict(LIMITS.get(mode, LIMITS["packshot"]))
+    if not scores.get("patterned"):
+        limits["print"] = None
     failed = [k for k, cap in limits.items()
               if cap is not None and scores.get(k) is not None
               and scores[k] > cap]
