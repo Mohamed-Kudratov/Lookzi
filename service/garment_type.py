@@ -28,34 +28,38 @@ MODEL = os.environ.get("GARMENT_TYPE_MODEL", "openai/clip-vit-base-patch32")
 # per class averaged. A blouse and a padded jacket are both tops and they do
 # not sit near each other; asking whether a picture is nearer to *any* top
 # beats asking whether it is near the average of all tops.
+# The noun matters and the class does not. Told "this photograph shows a
+# lower-body garment such as a skirt or trousers", the model still returned a
+# sundress; told "this photograph shows a skirt", it returned a skirt. A
+# generative model answers a concrete noun and shrugs at a category. So the
+# winning phrase is kept, not only the class it belongs to.
 PHRASES = {
     "tops": [
-        "a photo of a t-shirt", "a photo of a shirt", "a photo of a blouse",
-        "a photo of a jacket", "a photo of a sweater", "a photo of a hoodie",
-        "a photo of a cardigan", "a photo of a coat",
+        ("a t-shirt", "a photo of a t-shirt"), ("a shirt", "a photo of a shirt"),
+        ("a blouse", "a photo of a blouse"), ("a jacket", "a photo of a jacket"),
+        ("a sweater", "a photo of a sweater"), ("a hoodie", "a photo of a hoodie"),
+        ("a cardigan", "a photo of a cardigan"), ("a coat", "a photo of a coat"),
     ],
     "bottoms": [
-        "a photo of a skirt", "a photo of trousers", "a photo of jeans",
-        "a photo of shorts", "a photo of leggings",
-        "a photo of a pair of trousers laid flat",
+        ("a skirt", "a photo of a skirt"), ("trousers", "a photo of trousers"),
+        ("jeans", "a photo of jeans"), ("shorts", "a photo of shorts"),
+        ("leggings", "a photo of leggings"),
+        ("trousers", "a photo of a pair of trousers laid flat"),
     ],
     "one-pieces": [
-        "a photo of a dress", "a photo of a jumpsuit",
-        "a photo of a romper", "a photo of an evening gown",
+        ("a dress", "a photo of a dress"), ("a jumpsuit", "a photo of a jumpsuit"),
+        ("a romper", "a photo of a romper"),
+        ("an evening gown", "a photo of an evening gown"),
     ],
 }
 
-# What each class becomes in the instruction. Positive and specific, because
-# that is the form the model follows.
-SENTENCE = {
-    "tops": "This photograph shows an upper-body garment. The result must "
-            "still be that garment: nothing below the waist, no skirt, no "
-            "trousers.",
-    "bottoms": "This photograph shows a lower-body garment such as a skirt or "
-               "trousers. The result must still be that garment: nothing above "
+# What follows the noun. Positive and specific: the form the model follows.
+RULE = {
+    "tops": "The result must still be {noun} and nothing else: no skirt, no "
+            "trousers, nothing below the waist.",
+    "bottoms": "The result must still be {noun} and nothing else: nothing above "
                "the waistband, no straps, no bodice, no sleeves.",
-    "one-pieces": "This photograph shows a one-piece garment such as a dress. "
-                  "The result must still be one piece.",
+    "one-pieces": "The result must still be {noun}, one piece, the same length.",
 }
 
 _model = None
@@ -71,12 +75,13 @@ def _load():
     from transformers import CLIPModel, CLIPProcessor
     _model = CLIPModel.from_pretrained(MODEL).eval()
     _proc = CLIPProcessor.from_pretrained(MODEL)
-    flat = [(k, p) for k, ps in PHRASES.items() for p in ps]
+    flat = [(k, noun, phrase) for k, ps in PHRASES.items() for noun, phrase in ps]
     with torch.no_grad():
-        toks = _proc(text=[p for _, p in flat], return_tensors="pt", padding=True)
+        toks = _proc(text=[p for _, _, p in flat], return_tensors="pt",
+                     padding=True)
         emb = _model.get_text_features(**toks)
         emb = emb / emb.norm(dim=-1, keepdim=True)
-    _text = ([k for k, _ in flat], emb)
+    _text = ([(k, noun) for k, noun, _ in flat], emb)
 
 
 def classify(img):
@@ -96,13 +101,14 @@ def classify(img):
         sim = (emb @ temb.T)[0]
 
     best = {}
-    for label, score in zip(labels, sim.tolist()):
-        if score > best.get(label, -1e9):
-            best[label] = score
-    order = sorted(best.items(), key=lambda kv: -kv[1])
+    for (label, noun), score in zip(labels, sim.tolist()):
+        if score > best.get(label, (-1e9, ""))[0]:
+            best[label] = (score, noun)
+    order = sorted(best.items(), key=lambda kv: -kv[1][0])
     top, second = order[0], order[1]
-    return {"kind": top[0], "margin": round(top[1] - second[1], 4),
-            "scores": {k: round(v, 4) for k, v in best.items()}}
+    return {"kind": top[0], "noun": top[1][1],
+            "margin": round(top[1][0] - second[1][0], 4),
+            "scores": {k: round(v[0], 4) for k, v in best.items()}}
 
 
 def sentence_for(img, min_margin=0.01):
@@ -114,4 +120,6 @@ def sentence_for(img, min_margin=0.01):
     got = classify(img)
     if got["margin"] < min_margin:
         return "", got
-    return SENTENCE[got["kind"]], got
+    noun = got["noun"]
+    return (f"This photograph shows {noun}. "
+            + RULE[got["kind"]].format(noun=noun)), got
