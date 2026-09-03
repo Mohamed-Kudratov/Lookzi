@@ -239,12 +239,35 @@ def claim_batch(conn, size, tools=None, worker_id=WORKER_ID):
 # finishing
 
 def finish(conn, job_id, object_key, kind="image", width=None, height=None,
-           seconds=None):
+           seconds=None, variant=None, notes=None, extras=()):
+    """Store what the job produced and mark it done.
+
+    `extras` is for a tool that produces more than one picture and lets the
+    customer choose. The packshot is the case: a generative pass and the plain
+    cut-out of the same garment, both kept, because a gate that silently
+    swapped one for the other would hide the choice from the person who has
+    the garment in their hand.
+
+    The first one is the primary and is what older clients see as the result;
+    the rest are labelled and returned beside it.
+    """
+    import json as _json
     with conn.transaction():
-        conn.execute(
-            """INSERT INTO results (job_id, object_key, kind, width, height, seconds)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (job_id, object_key, kind, width, height, seconds))
+        rows = [(object_key, kind, width, height, seconds, variant, notes)]
+        rows += [(e["object_key"], e.get("kind", "image"), e.get("width"),
+                  e.get("height"), e.get("seconds"), e.get("variant"),
+                  e.get("notes")) for e in extras]
+        for key, k, w, h, secs, var, note in rows:
+            conn.execute(
+                """INSERT INTO results (job_id, object_key, kind, width, height,
+                                        seconds, variant, notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (job_id, COALESCE(variant, '')) DO UPDATE
+                       SET object_key = EXCLUDED.object_key,
+                           width = EXCLUDED.width, height = EXCLUDED.height,
+                           seconds = EXCLUDED.seconds, notes = EXCLUDED.notes""",
+                (job_id, key, k, w, h, secs, var,
+                 _json.dumps(note) if note is not None else None))
         conn.execute(
             "UPDATE jobs SET status = 'done', finished_at = now() WHERE id = %s",
             (job_id,))
@@ -394,10 +417,20 @@ def release_stale(conn):
 # reading, by the app
 
 def status(conn, job_id):
+    # The primary result is the one with no variant, or the earliest if every
+    # row is labelled -- so a tool that produces two pictures still has one
+    # answer for a client that only knows how to show one.
     job = conn.execute(
         """SELECT j.*, r.object_key, r.kind, r.seconds
-             FROM jobs j LEFT JOIN results r ON r.job_id = j.id
+             FROM jobs j LEFT JOIN LATERAL (
+                    SELECT * FROM results WHERE job_id = j.id
+                     ORDER BY (variant IS NOT NULL), id LIMIT 1) r ON true
             WHERE j.id = %s""", (job_id,)).fetchone()
+    if job is not None:
+        job["results"] = conn.execute(
+            """SELECT object_key, kind, width, height, seconds, variant, notes
+                 FROM results WHERE job_id = %s
+                ORDER BY (variant IS NOT NULL), id""", (job_id,)).fetchall()
     if job and job["status"] == "queued":
         job["position"] = conn.execute(
             """SELECT count(*) AS n FROM jobs

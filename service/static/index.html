@@ -276,6 +276,17 @@ button,input,textarea{font:inherit;color:inherit}
   .big{max-height:none}
   .bar{position:sticky;bottom:0;z-index:20}
 }
+/* two results, one job. The packshot makes a generative version and a plain
+   cut-out and the seller picks; a gate that swapped one for the other quietly
+   would hide the choice from the person holding the garment. */
+.pick{display:flex;gap:6px;justify-content:center;margin-bottom:9px;flex-wrap:wrap}
+.pick button{cursor:pointer;font:inherit;font-size:12.5px;padding:5px 13px;
+  border-radius:99px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink-2)}
+.pick button[aria-pressed="true"]{background:var(--ink);color:var(--bg);
+  border-color:var(--ink)}
+.pick .flag{align-self:center;font-size:11.5px;color:#F59E0B}
+
 /* the big view: same page, opens and closes. A result is not a document and
    a second browser tab is not a way to look at one. */
 #view{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
@@ -559,6 +570,29 @@ function drawBlank() {
     '</div>';
 }
 
+// Which of the job's pictures is on screen, and the buttons to change it.
+// One result draws no buttons: a control with a single option only takes room.
+function shown() {
+  var v = result.variants || [];
+  return (v.length > 1 && v[result.at]) ? v[result.at].url : result.url;
+}
+var VARIANT_NAME = {packshot: "Retouched", cutout: "Cut out only"};
+function variantPicker() {
+  var v = result.variants || [];
+  if (v.length < 2) return "";
+  var flag = "", note = v[result.at] && v[result.at].notes;
+  if (note && note.failed && note.failed.length) {
+    // The gate's opinion, said plainly and left as the seller's decision.
+    // They have the garment in their hand and we do not.
+    flag = '<span class="flag">check the ' + esc(note.failed.join(" and ")) +
+      ' — it may not match the real garment</span>';
+  }
+  return '<div class="pick">' + v.map(function (x, i) {
+    return '<button data-variant="' + i + '" aria-pressed="' + (i === result.at) +
+      '">' + esc(VARIANT_NAME[x.variant] || x.variant || "Result") + '</button>';
+  }).join("") + flag + '</div>';
+}
+
 function drawResult() {
   var ins = [];
   if (result.inputs.garment) ins.push(["Garment", result.inputs.garment]);
@@ -574,7 +608,8 @@ function drawResult() {
             '<img src="' + esc(p[1]) + '" alt=""></figure>';
         }).join("") +
       '</div>' +
-      '<div class="big"><img src="' + esc(result.url) + '" alt="The finished image">' +
+      '<div>' + variantPicker() +
+      '<div class="big"><img src="' + esc(shown()) + '" alt="The finished image">' +
         '<button class="btn save" id="save">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Save</button>' +
         // A model made to order was a picture in the history and nothing more.
@@ -585,7 +620,7 @@ function drawResult() {
             '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
             (result.kept ? "In your models" : "Keep as my model") + '</button>'
           : "") +
-      '</div>' +
+      '</div></div>' +
       '<div class="hist"><h3>History</h3><div class="rows">' +
         (recent.length ? recent.map(function (r, i) {
           return '<button data-hist="' + i + '" title="' + esc(r.tool || "") + '">' +
@@ -770,7 +805,9 @@ function watch(id) {
       if (j.status === "done") {
         clearInterval(poll); job = null;
         result = {url: j.result_url, seconds: j.seconds, inputs: inputs,
-                  tool: pick.tool, job_id: id, kept: false};
+                  tool: pick.tool, job_id: id, kept: false,
+                  variants: (j.results || []).filter(function (r) { return r.url; }),
+                  at: 0};
         toast("Done in " + (j.seconds != null ? j.seconds : secs.toFixed(1)) + "s");
         refresh(); drawStage(); drawBar();
         return;
@@ -860,7 +897,9 @@ document.addEventListener("click", function (e) {
     openView(f, f.length - 1);
     return;
   }
-  if (e.target.closest("#save") && result) { save(result.url); return; }
+  var pv = e.target.closest("[data-variant]");
+  if (pv && result) { result.at = Number(pv.dataset.variant); drawResult(); return; }
+  if (e.target.closest("#save") && result) { save(shown()); return; }
 
   if (e.target.closest("#keep") && result && result.job_id) {
     api("/models/keep", {method: "POST", body: {job_id: result.job_id}})

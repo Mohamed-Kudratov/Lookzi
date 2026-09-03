@@ -332,6 +332,15 @@ def job_status(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
         out["position"] = job.get("position")
     if job.get("object_key"):
         out["result_url"] = storage.presigned_get(job["object_key"])
+    # Everything the job produced, labelled. A tool that makes one picture
+    # sends a list of one; the packshot sends the generative version and the
+    # plain cut-out, and the studio lets the seller choose between them.
+    out["results"] = [
+        {"url": storage.presigned_get(r["object_key"]),
+         "variant": r.get("variant"), "width": r.get("width"),
+         "height": r.get("height"), "seconds": r.get("seconds"),
+         "notes": r.get("notes")}
+        for r in (job.get("results") or [])]
     return out
 
 
