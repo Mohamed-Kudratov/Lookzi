@@ -268,6 +268,9 @@ def _correct(img, mask=None):
 # this model deaf to instructions.
 
 RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
+# Four, with Lightning. Eight was the adapter's design point and four was
+# indistinguishable on five garments while taking half as long.
+RETOUCH_FAST_STEPS = int(os.environ.get("RETOUCH_FAST_STEPS", "4"))
 RETOUCH_SIDE = int(os.environ.get("RETOUCH_SIDE", "768"))
 RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
 # "Keep the garment exactly as it is" was read as keeping the creases too, and
@@ -446,7 +449,13 @@ def retouch(garment: UploadFile = File(...),
         # measured through the try-on pipeline and with the adapter that makes
         # this model a garment compositor. Lightning alone, in the plain
         # editor, has never been tried.
-        want_fast = str(fast).lower() in ("1", "true", "yes")
+        # Fast by default, and that is a measurement rather than a preference.
+        # On the same two dresses the Lightning path came back as good and on
+        # the flowered one better -- colour 0.35 at four steps against 0.60 at
+        # twelve with guidance -- in a quarter of the time. Checked again on a
+        # white tee, a lace shirt and a skirt: no visible loss. The undistilled
+        # path is still there behind fast=0.
+        want_fast = str(fast).lower() not in ("0", "false", "no")
         scale = getattr(_pipe, "lightning_scale", 1.0)
         toggled = None
         if want_fast and getattr(_pipe, "lightning", 0) and                 hasattr(pipe.transformer, "set_adapters"):
@@ -465,7 +474,8 @@ def retouch(garment: UploadFile = File(...),
             out = pipe(image=[img],
                        prompt=(instruction or "").strip() or RETOUCH_PROMPT,
                        num_inference_steps=(int(steps) or
-                                            (8 if want_fast else RETOUCH_STEPS)),
+                                            (RETOUCH_FAST_STEPS if want_fast
+                                             else RETOUCH_STEPS)),
                        true_cfg_scale=1.0 if want_fast else RETOUCH_CFG,
                        negative_prompt=" ",
                        generator=torch.Generator("cuda").manual_seed(int(seed))
