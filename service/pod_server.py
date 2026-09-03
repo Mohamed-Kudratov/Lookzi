@@ -446,7 +446,14 @@ def inspect(before: UploadFile = File(...), after: UploadFile = File(...),
         except Exception as exc:                              # noqa: BLE001
             raise HTTPException(500, f"{type(exc).__name__}: {exc}")
     return {"answer": answer.strip(),
-            "seconds": round(time.time() - started, 2)}
+            "seconds": round(time.time() - started, 2),
+            # Whether the pictures actually reached the model. The first
+            # version answered identically whatever it was shown, in under a
+            # second, which is what a model reasoning from the text alone
+            # looks like.
+            "saw": {"keys": sorted(inputs.keys()),
+                    "pixels": bool(inputs.get("pixel_values") is not None),
+                    "tokens": int(inputs["input_ids"].shape[1])}}
 
 
 @app.post("/packshot")
