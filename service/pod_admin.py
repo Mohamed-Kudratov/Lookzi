@@ -881,6 +881,14 @@ def step_zimage(ssh, st):
             "pgrep -f setup_pod.sh >/dev/null && echo ALIVE || echo GONE",
             timeout=180)
         if "GONE" in alive:
+            # Asked again, because these are two questions asked one after the
+            # other and the answer can change in between. It did: the venv was
+            # probed a moment before the script had finished writing it, the
+            # script then exited, and the panel failed a step that had in fact
+            # just succeeded. Check-then-check needs the second check.
+            ok, _ = usable()
+            if ok:
+                break
             rc, tail = ssh.run("tail -15 /workspace/zimage_setup.log",
                                timeout=180)
             raise PodError("the z-image venv did not build:\n" + tail[-700:])
