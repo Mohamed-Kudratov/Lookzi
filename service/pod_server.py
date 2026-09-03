@@ -451,7 +451,11 @@ def retouch(garment: UploadFile = File(...),
         hint, got = sentence_for(img, min_margin=GARMENT_MARGIN)
         kind = f"{got['kind']}:{got['margin']}" if hint else f"unsure:{got['margin']}"
         if hint:
-            prompt = hint + " " + prompt
+            # At the end, not the front, and the difference is not subtle. The
+            # same sentence in front of the instruction left a skirt with
+            # shoulder straps; after it, the skirt came back a skirt. The last
+            # thing said is the thing that sticks.
+            prompt = prompt + " " + hint
     except Exception as exc:                                  # noqa: BLE001
         print(f"[pod] garment type skipped: {type(exc).__name__}: {exc}",
               flush=True)
