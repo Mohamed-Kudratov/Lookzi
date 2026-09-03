@@ -317,8 +317,16 @@ def retouch(garment: UploadFile = File(...),
     import torch
 
     img = _read(garment, "garment")
+    # Resized, not thumbnailed. thumbnail() only ever shrinks, so a seller's
+    # 400x711 listing thumbnail stayed 400x711 and the edit ran at whatever the
+    # model chose -- and the print came back muddy because there was nothing to
+    # work from. Small inputs are the common case here, so they are enlarged to
+    # the working size first and the model reconstructs the detail.
     long_edge = max(int(side) or RETOUCH_SIDE, 512)
-    img.thumbnail((long_edge, long_edge * 4 // 3), Image.LANCZOS)
+    scale = long_edge / max(img.size)
+    if abs(scale - 1.0) > 0.02:
+        img = img.resize((max(64, int(img.width * scale)),
+                          max(64, int(img.height * scale))), Image.LANCZOS)
     pipe = editor()
     started = time.time()
     with _gpu:
