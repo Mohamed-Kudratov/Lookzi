@@ -366,3 +366,110 @@ def cut_quality(cutout):
         "width": round(float(above.mean() / widest), 3) if len(above) else 0.0,
         "kept": round(float(mask.mean()), 3),
     }
+
+
+# ---------------------------------------------------------------------------
+# the top of the garment, judged separately
+#
+# A blue dress came back with a sweetheart neckline straightened into a
+# bandeau, two shoulder straps merged into one and the hem lengthened, and
+# every number above stayed inside its limit. Colour and print were right --
+# it was the same blue, the same plain weave -- and the silhouette is not
+# checked at all for a packshot, on the reasoning that pressing a crumpled
+# dress is supposed to change its shape.
+#
+# That reasoning was half right. Pressing changes the *drape*: how the skirt
+# falls, where the creases were. It does not change the neckline, the straps,
+# or where the hem sits. So the outline is split: the top third is the part a
+# retouch must not touch, and below it may.
+#
+# The neckline number does not work, and the reason is worth writing down
+# rather than tuning around.
+#
+# Two constructions were tried. Comparing the filled area of the top third
+# could not tell a sweetheart from a bandeau -- 0.228 against 0.229 -- because
+# both fill almost the same silhouette and only the boundary differs. So the
+# boundary itself was measured, column by column. That ranked the *rejected*
+# picture better than the accepted one: 0.074 against 0.088.
+#
+# The fault is in the reference, not the measure. It is a cut-out of the
+# garment as photographed -- hanging crooked on a wardrobe door, seen at an
+# angle, its neckline foreshortened. A straightened dress cannot match that
+# outline, and the one that matches it best is the one that stayed crooked.
+# Comparing geometry against a distorted reference cannot answer a question
+# about geometry, and no threshold repairs that.
+#
+# What could: ask a model that understands garments rather than pixels. The
+# text encoder already loaded on the pod is Qwen2.5-VL, a vision-language
+# model -- it can be shown both pictures and asked whether the neckline, the
+# strap count and the hem length still agree. That costs no extra VRAM and it
+# is the honest next attempt. It is not built.
+
+def outline(reference, candidate, upper=0.34):
+    """How much the top of the garment moved, and how much the bottom did.
+
+    Read the note above before trusting the neckline number: on the one case
+    it was built for it ranked the wrong picture first, and it is kept for the
+    bodice and skirt figures rather than for that.
+    """
+    a_rgb, a_alpha = _load(reference)
+    b_rgb, b_alpha = _load(candidate)
+    a_m, b_m = _mask(a_rgb, a_alpha), _mask(b_rgb, b_alpha)
+    sa, sb = _silhouette(a_m), _silhouette(b_m)
+    if sa is None or sb is None:
+        return {"neckline": None, "skirt": None, "proportion": None}
+
+    cut = max(1, int(sa.shape[0] * upper))
+    def iou(x, y):
+        union = (x | y).sum()
+        return round(1.0 - float((x & y).sum()) / float(union), 3) if union else None
+
+    # And the proportions, which is where a lengthened hem shows: the outline
+    # is normalised to a square before it is compared, so a longer dress has
+    # the same silhouette and a different aspect ratio.
+    def ratio(m):
+        ys, xs = np.nonzero(m)
+        return (ys.max() - ys.min() + 1) / max(xs.max() - xs.min() + 1, 1)
+    ra, rb = ratio(a_m), ratio(b_m)
+
+    return {"neckline": _top_edge(a_m, b_m),
+            # The filled area of the top third, which catches a bodice that
+            # changed width but not one whose neckline was redrawn: a
+            # sweetheart and a bandeau fill almost the same silhouette and
+            # scored 0.228 against 0.229. The edge itself is what moved.
+            "bodice": iou(sa[:cut], sb[:cut]),
+            "skirt": iou(sa[cut:], sb[cut:]),
+            "proportion": round(abs(rb - ra) / max(ra, 1e-6), 3)}
+
+
+def _top_edge(a_m, b_m, cols=96):
+    """Where the fabric starts, column by column, across the garment.
+
+    This is the neckline and the straps, and it is a line rather than an area.
+    A sweetheart dips in the middle and rises at the straps; a bandeau is flat
+    across. Both fill the same silhouette, so only the line tells them apart.
+
+    Each is normalised into its own bounding box first, so the comparison is of
+    shape and not of where the garment happened to sit in the frame.
+    """
+    def curve(m):
+        ys, xs = np.nonzero(m)
+        if len(ys) < 50:
+            return None
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        box = m[y0:y1, x0:x1]
+        h, w = box.shape
+        out = np.empty(cols, dtype=np.float32)
+        for i in range(cols):
+            lo, hi = int(i * w / cols), max(int((i + 1) * w / cols), int(i * w / cols) + 1)
+            strip = box[:, lo:hi]
+            rows = np.nonzero(strip.any(axis=1))[0]
+            # An empty column is the ground beside the garment, not the top of
+            # it; treated as 1.0 so a narrower garment does not read as a
+            # lower neckline.
+            out[i] = (rows[0] / h) if len(rows) else 1.0
+        return out
+    ca, cb = curve(a_m), curve(b_m)
+    if ca is None or cb is None:
+        return None
+    return round(float(np.abs(ca - cb).mean()), 3)
