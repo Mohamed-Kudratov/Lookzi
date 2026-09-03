@@ -268,6 +268,7 @@ def _correct(img, mask=None):
 # this model deaf to instructions.
 
 RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
+RETOUCH_SIDE = int(os.environ.get("RETOUCH_SIDE", "768"))
 RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
 RETOUCH_PROMPT = (
     "Remove the coat hanger and the background completely. Show the garment "
@@ -303,13 +304,21 @@ def editor():
 @app.post("/retouch")
 def retouch(garment: UploadFile = File(...),
             instruction: str = Form(""),
-            steps: int = Form(0), seed: int = Form(11)):
+            steps: int = Form(0), seed: int = Form(11),
+            side: int = Form(0)):
+    """`side` is the long edge the edit runs at.
+
+    It is a parameter because it is a trade and the trade is not settled: a
+    seller's listing wants detail, and every pixel is time and VRAM on a card
+    that already holds two models.
+    """
     if _error:
         raise HTTPException(503, f"the model did not load: {_error}")
     import torch
 
     img = _read(garment, "garment")
-    img.thumbnail((768, 1024), Image.LANCZOS)
+    long_edge = max(int(side) or RETOUCH_SIDE, 512)
+    img.thumbnail((long_edge, long_edge * 4 // 3), Image.LANCZOS)
     pipe = editor()
     started = time.time()
     with _gpu:
