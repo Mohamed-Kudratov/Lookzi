@@ -40,9 +40,11 @@ What is measured, and why these three
 -------------------------------------
 
 **colour** catches the loudest failure and the commonest: navy coming back
-grey, a print's palette shifting. Compared as a distribution, so a garment
-photographed under a yellow bulb and corrected is not punished for the
-correction.
+grey, a print's palette shifting. Compared by hue, and that is the second
+version -- an RGB histogram scored a correctly retouched blue dress at 0.963
+and rejected it, because the retouch had fixed the white balance and the blue
+came back the blue it actually is. Hue survives a correction and still moves
+when a print turns pink.
 
 **print** catches the failure that is easy to miss and expensive to ship: a
 dense pattern that has been *redrawn* instead of copied. It looks right in a
@@ -109,14 +111,49 @@ def _mask(rgb, given):
     return np.linalg.norm(rgb - ground, axis=2) > GROUND_DISTANCE
 
 
-def _colour_hist(rgb, mask, bins=6):
+def _colour_hist(rgb, mask, bins=24):
+    """Which colours the garment is made of, by hue.
+
+    Hue and not RGB, and this was got wrong first. An RGB histogram treats a
+    correction as a change: the retouch fixed the white balance on a blue dress
+    photographed under a bedroom bulb, the blue came back as the blue it
+    actually is, and the gate scored 0.963 and rejected the best result the
+    tool had produced. The docstring at the top of this file claimed the
+    comparison survived exactly that. It did not.
+
+    Hue survives it. A navy that came back grey, or a print that came back
+    pink, still moves; a dull blue that came back a brighter blue does not.
+    Weighted by how colourful and how bright each pixel is, so the near-grey
+    pixels -- shadow, fold, sheer overlay -- do not vote on the hue of a
+    garment they barely have one of.
+    """
     px = rgb[mask]
     if len(px) < 50:
         return None
-    idx = np.clip((px / 256.0 * bins).astype(int), 0, bins - 1)
-    flat = idx[:, 0] * bins * bins + idx[:, 1] * bins + idx[:, 2]
-    h = np.bincount(flat, minlength=bins ** 3).astype(np.float32)
-    return h / h.sum()
+    mx = px.max(axis=1)
+    mn = px.min(axis=1)
+    chroma = mx - mn
+    weight = (chroma / 255.0) * (mx / 255.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r, g, b = px[:, 0], px[:, 1], px[:, 2]
+        hue = np.zeros(len(px), dtype=np.float32)
+        safe = chroma > 1e-6
+        idx = safe & (mx == r)
+        hue[idx] = ((g[idx] - b[idx]) / chroma[idx]) % 6
+        idx = safe & (mx == g)
+        hue[idx] = (b[idx] - r[idx]) / chroma[idx] + 2
+        idx = safe & (mx == b)
+        hue[idx] = (r[idx] - g[idx]) / chroma[idx] + 4
+    slot = np.clip((hue / 6.0 * bins).astype(int), 0, bins - 1)
+    h = np.bincount(slot, weights=weight, minlength=bins).astype(np.float32)
+    total = h.sum()
+    if total < 1e-6:
+        # A garment with no colour at all -- white, black, grey. Hue says
+        # nothing about it, so fall back to how light it is.
+        light = np.clip((mx / 256.0 * bins).astype(int), 0, bins - 1)
+        h = np.bincount(light, minlength=bins).astype(np.float32)
+        total = h.sum()
+    return h / total
 
 
 def _detail(rgb, mask, step=4):
