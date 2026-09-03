@@ -8,14 +8,21 @@ back a *different* dress: sleeves a little shorter, a print regenerated rather
 than reproduced, a button quietly gone. In a catalogue that is not a cosmetic
 problem. It is a return, and a seller who stops trusting the tool.
 
-So nothing generative ships without this in front of it. The rule the product
-follows is not "retry with another seed and hope"; it is:
+What this decides: nothing. That changed and the reason is worth keeping.
 
-    generate -> measure -> if it drifted, retry once
-                        -> if it drifted again, hand back the plain cut-out
+It was built to gate the packshot -- retry a drifted generation, fall back to
+the cut-out if the retry drifted too. The seller ruled that out, and was right
+to. A packshot cannot work miracles; what comes back is what the photograph
+allowed. The person able to judge whether a garment is still the garment is the
+one holding it, and a tool that silently retries, or attaches a warning to
+every picture, puts itself between them and the result and teaches them to
+trust none of it. If the packshot is not good enough they can photograph the
+garment again, which is a real option and a faster one than anything here.
 
-The customer's worst case is then today's output, which is honest, rather than
-a garment that does not exist.
+So these numbers are ours, not theirs. They go in the job record, where the
+gallery and the benchmark can read them, and they answer one question: did a
+change to the prompt, the model or the pipeline make things better or worse.
+That question needs an answer and the eye cannot hold twenty of them at once.
 
 What it is compared against
 ---------------------------

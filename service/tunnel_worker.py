@@ -293,6 +293,20 @@ def handle_packshot(job, p):
     key = storage.key_for("results", job["user_id"])
     storage.put_bytes(key, png)
 
+    # Scored, and the score decides nothing.
+    #
+    # The gate was going to reject a bad generation and retry it, and that is
+    # the wrong shape for this tool. A packshot cannot work miracles: what it
+    # gives back is what the photograph allowed, and the person who can judge
+    # that is the one holding the garment. A machine that quietly retries, or
+    # hands over a warning with every picture, puts itself between the seller
+    # and the result and teaches them to distrust all of it.
+    #
+    # So the numbers are recorded and nothing acts on them. They are for us --
+    # the gallery, the benchmark, knowing whether a change helped -- and the
+    # seller sees the packshot. If it is not good enough they take a better
+    # photograph, which is a real option and a faster one than anything here.
+    #
     # Judged against the cut-out, which carries the garment's own pixels and
     # its own outline. Judging against the raw photograph does not work: the
     # outline there is the thing segmentation is for. See service/fidelity.py.
