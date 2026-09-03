@@ -317,6 +317,78 @@ def editor():
     return _editor
 
 
+# ---------------------------------------------------------------------------
+# presentation
+#
+# The last step of every packshot, and none of it is generative. Three things
+# a seller asked for, and each was a real fault in what shipped before.
+#
+# **One size.** A garment photographed from across the room came back small in
+# the frame and one photographed close came back filling it, so a catalogue was
+# a jumble. The old code refused to enlarge -- "blowing a small photograph up
+# turns a usable image into a soft one" -- which is true and was the wrong
+# call. Consistency is worth more than the last of the sharpness, and the
+# honest fix for sharpness is an upscaler, which is a separate job.
+#
+# **A shadow.** A white t-shirt on a white ground has no edge at all. Every
+# catalogue photograph has a contact shadow and this is why. Computed from the
+# mask rather than asked of the model: the model puts it in odd places, a
+# blurred offset copy of the mask cannot.
+#
+# **A soft edge.** Tulle, chiffon and mesh are genuinely half-transparent, so
+# the alpha ramps rather than switching. Cut hard, a tulle hem loses its shape.
+
+PRESENT_SIZE = (int(os.environ.get("PRESENT_W", "1024")),
+                int(os.environ.get("PRESENT_H", "1365")))
+PRESENT_FILL = float(os.environ.get("PRESENT_FILL", "0.88"))
+PRESENT_SHADOW = float(os.environ.get("PRESENT_SHADOW", "0.30"))
+
+
+def _ground_alpha(img, slack=20.0):
+    """Where the garment is, on a picture that already has a clean ground."""
+    import numpy as np
+    a = np.asarray(img.convert("RGB")).astype(np.float32)
+    h, w = a.shape[:2]
+    m = max(2, int(min(h, w) * 0.04))
+    edge = np.concatenate([a[:m].reshape(-1, 3), a[-m:].reshape(-1, 3),
+                           a[:, :m].reshape(-1, 3), a[:, -m:].reshape(-1, 3)])
+    ground = edge.mean(axis=0)
+    dist = np.linalg.norm(a - ground, axis=2)
+    return np.clip((dist - slack) / slack, 0.0, 1.0)
+
+
+def _present(img, alpha=None, shadow=PRESENT_SHADOW, size=None, fill=None):
+    import numpy as np
+    from PIL import ImageFilter
+
+    size = size or PRESENT_SIZE
+    fill = PRESENT_FILL if fill is None else fill
+    a = _ground_alpha(img) if alpha is None else alpha
+    ys, xs = np.nonzero(a > 0.25)
+    if len(ys) < 50:
+        return img.convert("RGB")
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+
+    rgb = img.convert("RGB").crop((int(x0), int(y0), int(x1), int(y1)))
+    mask = Image.fromarray((a[y0:y1, x0:x1] * 255).astype("uint8"))
+    scale = min(size[0] * fill / rgb.width, size[1] * fill / rgb.height)
+    wide = (max(8, int(rgb.width * scale)), max(8, int(rgb.height * scale)))
+    rgb = rgb.resize(wide, Image.LANCZOS)
+    mask = mask.resize(wide, Image.LANCZOS)
+
+    out = Image.new("RGB", size, (255, 255, 255))
+    left, top = (size[0] - wide[0]) // 2, (size[1] - wide[1]) // 2
+    if shadow > 0:
+        blur = max(6, int(min(wide) * 0.045))
+        soft = mask.filter(ImageFilter.GaussianBlur(blur))
+        soft = Image.fromarray(
+            (np.asarray(soft).astype(np.float32) * shadow).astype("uint8"))
+        out.paste(Image.new("RGB", wide, (120, 120, 125)),
+                  (left + int(blur * 0.35), top + int(blur * 0.9)), soft)
+    out.paste(rgb, (left, top), mask)
+    return out
+
+
 @app.post("/retouch")
 def retouch(garment: UploadFile = File(...),
             instruction: str = Form(""),
@@ -376,84 +448,12 @@ def retouch(garment: UploadFile = File(...),
     _stats["served"] += 1
     _stats["seconds"] += elapsed
 
+    out = _present(out)
     buf = io.BytesIO()
     out.save(buf, "PNG")
     return Response(content=buf.getvalue(), media_type="image/png",
                     headers={"X-Seconds": str(elapsed), "X-Width": str(out.width),
                              "X-Height": str(out.height)})
-
-
-# ---------------------------------------------------------------------------
-# inspect
-#
-# The question the numbers cannot answer: is this the same garment?
-#
-# Colour and texture are comparable arithmetically and a neckline is not. Two
-# attempts at measuring it geometrically failed, and the second failed in an
-# instructive way -- it ranked the rejected picture above the accepted one,
-# because the reference it compares against is a cut-out of a dress hanging
-# crooked, and the picture that matches a crooked reference best is the one
-# that stayed crooked. See service/fidelity.py.
-#
-# So the question goes to something that understands garments. The text
-# encoder this model already loads is Qwen2.5-VL -- a vision-language model,
-# sitting on the card, doing nothing between generations. It can be shown both
-# pictures and asked.
-
-INSPECT_QUESTION = (
-    "The first picture is a photograph of a garment. The second is meant to be "
-    "the same garment, retouched for a catalogue: background removed, fabric "
-    "pressed. Compare them as a shop assistant would, and answer in this form "
-    "and nothing else. "
-    "Line one: VERDICT: SAME or VERDICT: CHANGED. "
-    "Line two: CHANGED: a short comma-separated list of what differs, from "
-    "this set only -- neckline, straps, sleeves, length, colour, print, "
-    "buttons, collar -- or the word none. "
-    "Ignore how the garment hangs, creases, folds, lighting and background: "
-    "those are meant to change.")
-
-
-@app.post("/inspect")
-def inspect(before: UploadFile = File(...), after: UploadFile = File(...),
-            question: str = Form("")):
-    if _pipe is None:
-        raise HTTPException(503, "the model is still loading")
-    import torch
-
-    a = _read(before, "before")
-    b = _read(after, "after")
-    for im in (a, b):
-        im.thumbnail((512, 512), Image.LANCZOS)
-
-    _pipe._load_text_encoder()
-    proc = _pipe.processor
-    messages = [{"role": "user", "content": [
-        {"type": "image"}, {"type": "image"},
-        {"type": "text", "text": (question or "").strip() or INSPECT_QUESTION}]}]
-    text = proc.apply_chat_template(messages, tokenize=False,
-                                    add_generation_prompt=True)
-    started = time.time()
-    with _gpu:
-        try:
-            inputs = proc(text=[text], images=[a, b], return_tensors="pt")
-            inputs = {k: (v.to(_pipe.device) if hasattr(v, "to") else v)
-                      for k, v in inputs.items()}
-            with torch.no_grad():
-                ids = _pipe.text_encoder.generate(**inputs, max_new_tokens=80,
-                                                  do_sample=False)
-            trimmed = ids[0][inputs["input_ids"].shape[1]:]
-            answer = proc.batch_decode([trimmed], skip_special_tokens=True)[0]
-        except Exception as exc:                              # noqa: BLE001
-            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
-    return {"answer": answer.strip(),
-            "seconds": round(time.time() - started, 2),
-            # Whether the pictures actually reached the model. The first
-            # version answered identically whatever it was shown, in under a
-            # second, which is what a model reasoning from the text alone
-            # looks like.
-            "saw": {"keys": sorted(inputs.keys()),
-                    "pixels": bool(inputs.get("pixel_values") is not None),
-                    "tokens": int(inputs["input_ids"].shape[1])}}
 
 
 @app.post("/packshot")
@@ -490,16 +490,15 @@ def packshot(garment: UploadFile = File(...),
         rgb.putalpha(alpha)
         cut = rgb
 
-    canvas = Image.new("RGB", size, background)
-    margin = 1 - 2 * PACKSHOT_MARGIN
-    scale = min(size[0] * margin / cut.width, size[1] * margin / cut.height)
-    # Never enlarge: blowing a small photograph up to fill the frame turns a
-    # usable image into a soft one, and a seller can see the difference.
-    scale = min(scale, 1.0)
-    fitted = cut.resize((max(1, round(cut.width * scale)),
-                         max(1, round(cut.height * scale))), Image.LANCZOS)
-    canvas.paste(fitted, ((size[0] - fitted.width) // 2,
-                          (size[1] - fitted.height) // 2), fitted)
+    # The cut-out carries its own alpha, which beats anything read back off a
+    # rendered ground. The rest -- one size for every garment, and a shadow so
+    # a white shirt on white has an edge -- is the same presentation the
+    # retouched version gets, so the two are never a different shape.
+    import numpy as np
+    canvas = _present(
+        cut.convert("RGB"),
+        alpha=np.asarray(cut.getchannel("A")).astype(np.float32) / 255.0,
+        size=size)
 
     elapsed = round(time.time() - started, 2)
     _stats["served"] += 1

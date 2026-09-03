@@ -307,15 +307,16 @@ def handle_packshot(job, p):
     except Exception as exc:                                  # noqa: BLE001
         print(f"[bridge] {job['id']} could not score it: {exc}", flush=True)
 
+    # One result. The cut-out was offered beside it for a while and is not any
+    # more: a seller asked for the packshot, and being handed two pictures and
+    # a decision is not the same as being handed a packshot. It is still made,
+    # because the gate needs something faithful to judge against and because a
+    # retouch that cannot run has to leave something behind.
     return {"object_key": key, "kind": "image", "variant": "packshot",
             "notes": notes,
             "width": int(headers.get("X-Width") or 0) or None,
             "height": int(headers.get("X-Height") or 0) or None,
-            "seconds": float(headers.get("X-Seconds") or 0) or None,
-            "extras": [{"object_key": cut_key, "variant": "cutout",
-                        "width": int(cut_headers.get("X-Width") or 0) or None,
-                        "height": int(cut_headers.get("X-Height") or 0) or None,
-                        "seconds": float(cut_headers.get("X-Seconds") or 0) or None}]}
+            "seconds": float(headers.get("X-Seconds") or 0) or None}
 
 
 def handle(job):
