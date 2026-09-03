@@ -402,7 +402,7 @@ def _present(img, alpha=None, shadow=PRESENT_SHADOW, size=None, fill=None):
 def retouch(garment: UploadFile = File(...),
             instruction: str = Form(""),
             steps: int = Form(0), seed: int = Form(11),
-            side: int = Form(0)):
+            side: int = Form(0), fast: str = Form("")):
     """`side` is the long edge the edit runs at.
 
     It is a parameter because it is a trade and the trade is not settled: a
@@ -431,9 +431,30 @@ def retouch(garment: UploadFile = File(...),
         # the opposite of what is wanted here. Lightning goes too: it is
         # distilled for guidance 1.0, and with no negative branch nothing pulls
         # the picture toward the instruction.
-        toggled = hasattr(pipe.transformer, "disable_adapters")
-        if toggled:
+        # Two ways to take the try-on adapter off, and they cost very
+        # differently.
+        #
+        # The slow one turns everything off, including Lightning, and pays for
+        # guidance: twelve steps, each run twice -- once with the instruction
+        # and once without -- because the difference between those two passes
+        # is what pulls the picture toward the words. Fifty-two seconds.
+        #
+        # The fast one keeps Lightning, which is distilled to work in eight
+        # steps with no second pass at all. A sixth of the arithmetic. Whether
+        # the instruction still lands is the open question: with the try-on
+        # adapter *and* Lightning the model ignored text entirely, but that was
+        # measured through the try-on pipeline and with the adapter that makes
+        # this model a garment compositor. Lightning alone, in the plain
+        # editor, has never been tried.
+        want_fast = str(fast).lower() in ("1", "true", "yes")
+        scale = getattr(_pipe, "lightning_scale", 1.0)
+        toggled = None
+        if want_fast and getattr(_pipe, "lightning", 0) and                 hasattr(pipe.transformer, "set_adapters"):
+            pipe.transformer.set_adapters(["lightning"], [scale])
+            toggled = "lightning"
+        elif hasattr(pipe.transformer, "disable_adapters"):
             pipe.transformer.disable_adapters()
+            toggled = "all"
         try:
             # The size is *not* asked for, and that was measured the hard
             # way. Forcing it made the picture worse: at 704x1280 and 576x1024
@@ -443,15 +464,20 @@ def retouch(garment: UploadFile = File(...),
             # on, and a different one is off the distribution.
             out = pipe(image=[img],
                        prompt=(instruction or "").strip() or RETOUCH_PROMPT,
-                       num_inference_steps=int(steps) or RETOUCH_STEPS,
-                       true_cfg_scale=RETOUCH_CFG, negative_prompt=" ",
+                       num_inference_steps=(int(steps) or
+                                            (8 if want_fast else RETOUCH_STEPS)),
+                       true_cfg_scale=1.0 if want_fast else RETOUCH_CFG,
+                       negative_prompt=" ",
                        generator=torch.Generator("cuda").manual_seed(int(seed))
                        ).images[0]
         except Exception as exc:                              # noqa: BLE001
             _stats["failed"] += 1
             raise HTTPException(500, f"{type(exc).__name__}: {exc}")
         finally:
-            if toggled:
+            if toggled == "lightning":
+                pipe.transformer.set_adapters(["default", "lightning"],
+                                              [1.0, scale])
+            elif toggled == "all":
                 pipe.transformer.enable_adapters()
     elapsed = round(time.time() - started, 2)
     _stats["served"] += 1
