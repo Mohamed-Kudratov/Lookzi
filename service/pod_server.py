@@ -163,26 +163,44 @@ def generate(person: UploadFile = File(...),
 # buttons survive. It is also a hundred times cheaper and it cannot hallucinate
 # a different collar.
 
-_cutter = None
+_cutters = {}
 _cutter_lock = threading.Lock()
+DEFAULT_CUTTER = os.environ.get("PACKSHOT_MODEL", "u2net")
+
+# What rembg will build a session for. Named here so a caller cannot ask the
+# pod to fetch something arbitrary, and so the list of what is worth comparing
+# is written down rather than remembered.
+#
+# u2net is what has shipped so far: 2020, trained for salient object detection
+# in general, not for product photography. On a hundred real listing
+# photographs it cut the background cleanly and kept the coat hanger about a
+# third of the time, because a hanger is a salient object.
+#
+# The birefnet family is the current state of the art for this and rembg
+# already carries it, so trying them costs a download and no new code.
+CUTTERS = ("u2net", "u2netp", "isnet-general-use", "u2net_cloth_seg",
+           "birefnet-general", "birefnet-general-lite", "birefnet-dis",
+           "birefnet-massive", "birefnet-hrsod")
 
 
-def cutter():
-    """The segmentation session, made once and reused.
+def cutter(name=None):
+    """A segmentation session, made once per model and reused.
 
     Built on first use rather than at start-up: the try-on model is what this
     machine is for, and a pod should not spend its first two minutes fetching
-    a 176 MB matting model it may never be asked to run.
+    a matting model it may never be asked to run.
     """
-    global _cutter
+    name = name or DEFAULT_CUTTER
+    if name not in CUTTERS:
+        raise HTTPException(400, f"unknown cutter {name}; one of {CUTTERS}")
     with _cutter_lock:
-        if _cutter is None:
+        if name not in _cutters:
             from rembg import new_session
             t = time.time()
-            print("[pod] loading the cutout model", flush=True)
-            _cutter = new_session(os.environ.get("PACKSHOT_MODEL", "u2net"))
-            print(f"[pod] cutout ready in {time.time() - t:.1f}s", flush=True)
-    return _cutter
+            print(f"[pod] loading the cutout model {name}", flush=True)
+            _cutters[name] = new_session(name)
+            print(f"[pod] {name} ready in {time.time() - t:.1f}s", flush=True)
+    return _cutters[name]
 
 
 def _correct(img, mask=None):
@@ -232,14 +250,15 @@ def _correct(img, mask=None):
 def packshot(garment: UploadFile = File(...),
              background: str = Form("#FFFFFF"),
              correct: str = Form("1"),
-             width: int = Form(0), height: int = Form(0)):
+             width: int = Form(0), height: int = Form(0),
+             model: str = Form("")):
     from rembg import remove
 
     img = _read(garment, "garment")
     size = (width or PACKSHOT_SIZE[0], height or PACKSHOT_SIZE[1])
     started = time.time()
     try:
-        cut = remove(img, session=cutter())
+        cut = remove(img, session=cutter(model or None))
     except Exception as exc:                                  # noqa: BLE001
         _stats["failed"] += 1
         raise HTTPException(500, f"could not separate the garment: "

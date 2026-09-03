@@ -291,3 +291,78 @@ def looks_like_a_packshot(candidate, ground_limit=12.0):
     return {"ok": ground_sd <= ground_limit, "ground_sd": round(ground_sd, 1),
             "why": "" if ground_sd <= ground_limit else
                    f"ground {ground_sd:.1f} -- the background is not clean"}
+
+
+# ---------------------------------------------------------------------------
+# did the hanger come with it
+#
+# The commonest fault in the cut-outs we ship, and the one a seller notices
+# first: the background goes and the coat hanger stays, because a hanger is a
+# salient object and the model was trained to find salient objects.
+#
+# It has a shape, and the shape is what makes it measurable without another
+# model. A hanger is a narrow thing sitting above a wide thing: a few rows of
+# hook and bar, maybe a tenth of the garment's width, directly over shoulders
+# that are the widest part of the picture. So: find the shoulders, look above
+# them, and measure how much is up there.
+
+
+def cut_quality(cutout):
+    """What is above the shoulders, and how clean the edge is."""
+    rgb, alpha = _load(cutout)
+    mask = _mask(rgb, alpha)
+    rows = mask.sum(axis=1)
+    if rows.max() < 5:
+        return {"hanger": None, "why": "nothing was kept"}
+    top = np.argmax(rows > 0)
+    bottom = len(rows) - np.argmax(rows[::-1] > 0)
+    height = max(bottom - top, 1)
+    widest = float(rows.max())
+
+    # The shoulders: the first row, coming down, that is a real fraction of
+    # the widest part. Everything between the top of the mask and there is
+    # either a hanger or a collar, and a collar does not reach the top of the
+    # frame on its own.
+    shoulder = top
+    for y in range(top, bottom):
+        if rows[y] >= 0.35 * widest:
+            shoulder = y
+            break
+    above = rows[top:shoulder]
+
+    # Narrow-above-the-shoulders is not the same as a hanger, and looking at
+    # the six highest scores showed it: three were hangers and three were a
+    # turtleneck collar and two camisoles with spaghetti straps. All narrow,
+    # all above the shoulders, and two of those three are the garment.
+    #
+    # What separates them is colour. A strap is cut from the same cloth; a
+    # hanger is wood, wire or plastic and belongs to nobody. So the region
+    # above the shoulders is compared with the body of the garment, and a
+    # score only counts as a hanger when what is up there is a different
+    # colour from what is below.
+    foreign = 0.0
+    if len(above) and shoulder > top:
+        body = mask.copy()
+        body[:shoulder] = False
+        head = mask.copy()
+        head[shoulder:] = False
+        hb, hh = _colour_hist(rgb, body), _colour_hist(rgb, head)
+        if hb is not None and hh is not None:
+            foreign = float(np.abs(hb - hh).sum() / 2)
+
+    tall = float(len(above)) / height
+    return {
+        # The one to read. Height above the shoulders multiplied by how
+        # foreign the colour up there is, because either alone is wrong:
+        # height alone ranks a turtleneck and a camisole's straps as hangers,
+        # and colour alone fires on any garment with a contrast collar.
+        #
+        # Checked by eye at the top of the ranking: the six highest are two
+        # metal hooks, a green plastic hanger, a white one, a wooden one and a
+        # polo hung by its collar. Six for six.
+        "hanger": round(tall * foreign, 3),
+        "above": round(tall, 3),
+        "foreign": round(foreign, 3),
+        "width": round(float(above.mean() / widest), 3) if len(above) else 0.0,
+        "kept": round(float(mask.mean()), 3),
+    }
