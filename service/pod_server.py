@@ -383,6 +383,75 @@ def retouch(garment: UploadFile = File(...),
                              "X-Height": str(out.height)})
 
 
+# ---------------------------------------------------------------------------
+# inspect
+#
+# The question the numbers cannot answer: is this the same garment?
+#
+# Colour and texture are comparable arithmetically and a neckline is not. Two
+# attempts at measuring it geometrically failed, and the second failed in an
+# instructive way -- it ranked the rejected picture above the accepted one,
+# because the reference it compares against is a cut-out of a dress hanging
+# crooked, and the picture that matches a crooked reference best is the one
+# that stayed crooked. See service/fidelity.py.
+#
+# So the question goes to something that understands garments. The text
+# encoder this model already loads is Qwen2.5-VL -- a vision-language model,
+# sitting on the card, doing nothing between generations. It can be shown both
+# pictures and asked.
+
+INSPECT_QUESTION = (
+    "The first picture is a photograph of a garment. The second is meant to be "
+    "the same garment, retouched for a catalogue: background removed, fabric "
+    "pressed. Compare them as a shop assistant would. Answer in this form and "
+    "nothing else:
+"
+    "VERDICT: SAME or CHANGED
+"
+    "CHANGED: a short comma-separated list of what differs, from this set only "
+    "-- neckline, straps, sleeves, length, colour, print, buttons, collar. "
+    "Write none if nothing differs.
+"
+    "Ignore how the garment hangs, creases, folds, lighting and background: "
+    "those are meant to change.")
+
+
+@app.post("/inspect")
+def inspect(before: UploadFile = File(...), after: UploadFile = File(...),
+            question: str = Form("")):
+    if _pipe is None:
+        raise HTTPException(503, "the model is still loading")
+    import torch
+
+    a = _read(before, "before")
+    b = _read(after, "after")
+    for im in (a, b):
+        im.thumbnail((512, 512), Image.LANCZOS)
+
+    _pipe._load_text_encoder()
+    proc = _pipe.processor
+    messages = [{"role": "user", "content": [
+        {"type": "image"}, {"type": "image"},
+        {"type": "text", "text": (question or "").strip() or INSPECT_QUESTION}]}]
+    text = proc.apply_chat_template(messages, tokenize=False,
+                                    add_generation_prompt=True)
+    started = time.time()
+    with _gpu:
+        try:
+            inputs = proc(text=[text], images=[a, b], return_tensors="pt")
+            inputs = {k: (v.to(_pipe.device) if hasattr(v, "to") else v)
+                      for k, v in inputs.items()}
+            with torch.no_grad():
+                ids = _pipe.text_encoder.generate(**inputs, max_new_tokens=80,
+                                                  do_sample=False)
+            trimmed = ids[0][inputs["input_ids"].shape[1]:]
+            answer = proc.batch_decode([trimmed], skip_special_tokens=True)[0]
+        except Exception as exc:                              # noqa: BLE001
+            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+    return {"answer": answer.strip(),
+            "seconds": round(time.time() - started, 2)}
+
+
 @app.post("/packshot")
 def packshot(garment: UploadFile = File(...),
              background: str = Form("#FFFFFF"),
