@@ -338,8 +338,17 @@ def editor():
 # **A soft edge.** Tulle, chiffon and mesh are genuinely half-transparent, so
 # the alpha ramps rather than switching. Cut hard, a tulle hem loses its shape.
 
-PRESENT_SIZE = (int(os.environ.get("PRESENT_W", "1024")),
-                int(os.environ.get("PRESENT_H", "1365")))
+# 1536x2048. Every marketplace a seller here uses wants at least a thousand on
+# the short side -- Ozon a thousand square, Wildberries nine hundred by twelve
+# and asks for 1200x1600 -- and this clears all of them with room. It is only
+# worth asking for because the detail is now really there: without the
+# super-resolution step below this would be a megapixel generation stretched
+# over three, which is a bigger file and not a better picture.
+PRESENT_SIZE = (int(os.environ.get("PRESENT_W", "1536")),
+                int(os.environ.get("PRESENT_H", "2048")))
+# Off by an env var rather than by editing, because it costs time and the
+# trade may look different on a busy day.
+UPSCALE = os.environ.get("PACKSHOT_UPSCALE", "1") not in ("", "0", "false")
 PRESENT_FILL = float(os.environ.get("PRESENT_FILL", "0.88"))
 PRESENT_SHADOW = float(os.environ.get("PRESENT_SHADOW", "0.30"))
 
@@ -448,6 +457,19 @@ def retouch(garment: UploadFile = File(...),
     _stats["served"] += 1
     _stats["seconds"] += elapsed
 
+    # Twice the size before it is framed, so the garment is built from real
+    # detail rather than from a megapixel stretched over three.
+    if UPSCALE:
+        try:
+            from .upscale import upscale as _up
+            t = time.time()
+            out = _up(out)
+            print(f"[pod] upscaled to {out.size} in {time.time() - t:.1f}s",
+                  flush=True)
+        except Exception as exc:                              # noqa: BLE001
+            # A packshot without the extra detail is still a packshot.
+            print(f"[pod] upscale skipped: {type(exc).__name__}: {exc}",
+                  flush=True)
     out = _present(out)
     buf = io.BytesIO()
     out.save(buf, "PNG")
