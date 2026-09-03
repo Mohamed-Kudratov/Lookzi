@@ -403,15 +403,12 @@ def retouch(garment: UploadFile = File(...),
 INSPECT_QUESTION = (
     "The first picture is a photograph of a garment. The second is meant to be "
     "the same garment, retouched for a catalogue: background removed, fabric "
-    "pressed. Compare them as a shop assistant would. Answer in this form and "
-    "nothing else:
-"
-    "VERDICT: SAME or CHANGED
-"
-    "CHANGED: a short comma-separated list of what differs, from this set only "
-    "-- neckline, straps, sleeves, length, colour, print, buttons, collar. "
-    "Write none if nothing differs.
-"
+    "pressed. Compare them as a shop assistant would, and answer in this form "
+    "and nothing else. "
+    "Line one: VERDICT: SAME or VERDICT: CHANGED. "
+    "Line two: CHANGED: a short comma-separated list of what differs, from "
+    "this set only -- neckline, straps, sleeves, length, colour, print, "
+    "buttons, collar -- or the word none. "
     "Ignore how the garment hangs, creases, folds, lighting and background: "
     "those are meant to change.")
 
