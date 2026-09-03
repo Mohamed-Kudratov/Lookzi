@@ -271,6 +271,11 @@ RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
 # Four, with Lightning. Eight was the adapter's design point and four was
 # indistinguishable on five garments while taking half as long.
 RETOUCH_FAST_STEPS = int(os.environ.get("RETOUCH_FAST_STEPS", "4"))
+# How sure the garment classifier has to be before it puts a sentence in front
+# of the instruction. At 0.03 it speaks for two thirds of garments and is right
+# on 99% of those; at 0.00 it speaks for all of them and is right on 94%. The
+# quiet third is no worse off than before this existed.
+GARMENT_MARGIN = float(os.environ.get("GARMENT_MARGIN", "0.03"))
 RETOUCH_SIDE = int(os.environ.get("RETOUCH_SIDE", "768"))
 RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
 # "Keep the garment exactly as it is" was read as keeping the creases too, and
@@ -427,6 +432,30 @@ def retouch(garment: UploadFile = File(...),
     if abs(scale - 1.0) > 0.02:
         img = img.resize((max(64, int(img.width * scale)),
                           max(64, int(img.height * scale))), Image.LANCZOS)
+    # What kind of garment this is, said out loud to the model.
+    #
+    # A skirt photographed spread on the floor came back a sundress with
+    # shoulder straps. Forbidding that -- "do not add straps" -- made it worse,
+    # because a generative model reads the noun and skips the negation. Naming
+    # the category fixed it on the first attempt.
+    #
+    # Worked out rather than asked, and only when the classifier is sure: on
+    # the hundred labelled garments it is right 94% of the time overall and 99%
+    # of the time on the two thirds it is confident about. A wrong sentence is
+    # worse than none -- it would tell the model to turn a dress into a skirt --
+    # so an uncertain one says nothing and the instruction goes in as it was.
+    prompt = (instruction or "").strip() or RETOUCH_PROMPT
+    kind = ""
+    try:
+        from .garment_type import sentence_for
+        hint, got = sentence_for(img, min_margin=GARMENT_MARGIN)
+        kind = f"{got['kind']}:{got['margin']}" if hint else f"unsure:{got['margin']}"
+        if hint:
+            prompt = hint + " " + prompt
+    except Exception as exc:                                  # noqa: BLE001
+        print(f"[pod] garment type skipped: {type(exc).__name__}: {exc}",
+              flush=True)
+
     pipe = editor()
     started = time.time()
     with _gpu:
@@ -472,7 +501,7 @@ def retouch(garment: UploadFile = File(...),
             # with every motif separate. It picks a shape the model was trained
             # on, and a different one is off the distribution.
             out = pipe(image=[img],
-                       prompt=(instruction or "").strip() or RETOUCH_PROMPT,
+                       prompt=prompt,
                        num_inference_steps=(int(steps) or
                                             (RETOUCH_FAST_STEPS if want_fast
                                              else RETOUCH_STEPS)),
@@ -511,7 +540,7 @@ def retouch(garment: UploadFile = File(...),
     out.save(buf, "PNG")
     return Response(content=buf.getvalue(), media_type="image/png",
                     headers={"X-Seconds": str(elapsed), "X-Width": str(out.width),
-                             "X-Height": str(out.height)})
+                             "X-Height": str(out.height), "X-Garment": kind})
 
 
 @app.post("/packshot")
