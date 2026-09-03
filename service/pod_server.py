@@ -246,6 +246,104 @@ def _correct(img, mask=None):
     return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))
 
 
+# ---------------------------------------------------------------------------
+# retouch
+#
+# The packshot a seller actually wants: the garment alone, straight, on white,
+# with the hanger and the room gone. A cut-out cannot do it -- a crooked dress
+# cut out is a crooked dress on white -- and everything generative tried before
+# this went through the try-on pipeline, which takes three image slots and was
+# trained to put a garment on a person. Asked for a product photograph it gave
+# back a woman; asked again it turned a multicoloured print flat pink.
+#
+# The model was never the problem. Qwen-Image-Edit is an instruction editor and
+# this is exactly an instruction edit; it was being called the wrong way. Given
+# one image and one sentence it removes the hanger, drops the wall, straightens
+# the garment and keeps the print. Measured against the cut-out of the same
+# dress: colour 0.31, print 0.20, well inside the gate.
+#
+# It costs no extra VRAM. The editor is assembled from the components the
+# try-on model already has loaded -- same weights, same 16 GB -- and the
+# adapters come off for the duration, because the try-on LoRA is what makes
+# this model deaf to instructions.
+
+RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
+RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
+RETOUCH_PROMPT = (
+    "Remove the coat hanger and the background completely. Show the garment "
+    "alone on a plain pure white background. No person, no mannequin, no "
+    "hanger, no wall. Keep the garment exactly as it is: the same shape, "
+    "length, sleeves, neckline, colours and print.")
+
+_editor = None
+_editor_lock = threading.Lock()
+
+
+def editor():
+    """The plain image editor, built from the try-on model's own parts."""
+    global _editor
+    if _pipe is None:
+        raise HTTPException(503, "the model is still loading")
+    with _editor_lock:
+        if _editor is None:
+            from diffusers import QwenImageEditPlusPipeline
+            t = time.time()
+            print("[pod] assembling the editor from the loaded components",
+                  flush=True)
+            _pipe._load_text_encoder()
+            _editor = QwenImageEditPlusPipeline(
+                scheduler=_pipe.noise_scheduler, vae=_pipe.vae,
+                text_encoder=_pipe.text_encoder,
+                tokenizer=_pipe.processor.tokenizer,
+                processor=_pipe.processor, transformer=_pipe.transformer)
+            print(f"[pod] editor ready in {time.time() - t:.1f}s", flush=True)
+    return _editor
+
+
+@app.post("/retouch")
+def retouch(garment: UploadFile = File(...),
+            instruction: str = Form(""),
+            steps: int = Form(0), seed: int = Form(11)):
+    if _error:
+        raise HTTPException(503, f"the model did not load: {_error}")
+    import torch
+
+    img = _read(garment, "garment")
+    img.thumbnail((768, 1024), Image.LANCZOS)
+    pipe = editor()
+    started = time.time()
+    with _gpu:
+        # The try-on adapter reads the garment image and ignores text, which is
+        # the opposite of what is wanted here. Lightning goes too: it is
+        # distilled for guidance 1.0, and with no negative branch nothing pulls
+        # the picture toward the instruction.
+        toggled = hasattr(pipe.transformer, "disable_adapters")
+        if toggled:
+            pipe.transformer.disable_adapters()
+        try:
+            out = pipe(image=[img],
+                       prompt=(instruction or "").strip() or RETOUCH_PROMPT,
+                       num_inference_steps=int(steps) or RETOUCH_STEPS,
+                       true_cfg_scale=RETOUCH_CFG, negative_prompt=" ",
+                       generator=torch.Generator("cuda").manual_seed(int(seed))
+                       ).images[0]
+        except Exception as exc:                              # noqa: BLE001
+            _stats["failed"] += 1
+            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+        finally:
+            if toggled:
+                pipe.transformer.enable_adapters()
+    elapsed = round(time.time() - started, 2)
+    _stats["served"] += 1
+    _stats["seconds"] += elapsed
+
+    buf = io.BytesIO()
+    out.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"X-Seconds": str(elapsed), "X-Width": str(out.width),
+                             "X-Height": str(out.height)})
+
+
 @app.post("/packshot")
 def packshot(garment: UploadFile = File(...),
              background: str = Form("#FFFFFF"),
