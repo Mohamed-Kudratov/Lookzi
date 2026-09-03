@@ -270,11 +270,19 @@ def _correct(img, mask=None):
 RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
 RETOUCH_SIDE = int(os.environ.get("RETOUCH_SIDE", "768"))
 RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
+# "Keep the garment exactly as it is" was read as keeping the creases too, and
+# it did: the dress came back straight and still crumpled off the hanger. What
+# a seller needs is the garment pressed -- that is what a catalogue photograph
+# is -- with its design untouched. Asking for both gives a fuller, evener skirt
+# and scores slightly better on fidelity as well.
 RETOUCH_PROMPT = (
-    "Remove the coat hanger and the background completely. Show the garment "
-    "alone on a plain pure white background. No person, no mannequin, no "
-    "hanger, no wall. Keep the garment exactly as it is: the same shape, "
-    "length, sleeves, neckline, colours and print.")
+    "Turn this into a professional e-commerce product photograph of the garment "
+    "on its own. Remove the hanger, the wall and everything else; plain pure "
+    "white background. Press the fabric so it hangs smooth and even, with the "
+    "creases from hanging gone and the skirt falling evenly. Keep the garment's "
+    "own design exactly: the same cut, length, sleeves, neckline, seams, colours "
+    "and print. Soft even studio lighting, sharp focus, fine detail. No person, "
+    "no mannequin, no hanger.")
 
 _editor = None
 _editor_lock = threading.Lock()
@@ -338,13 +346,13 @@ def retouch(garment: UploadFile = File(...),
         if toggled:
             pipe.transformer.disable_adapters()
         try:
-            # The size is asked for. Left to itself the pipeline normalises
-            # every edit to about a megapixel -- 768x1376 whatever went in --
-            # so enlarging the input alone changed nothing, and a listing
-            # photograph wants more than that.
+            # The size is *not* asked for, and that was measured the hard
+            # way. Forcing it made the picture worse: at 704x1280 and 576x1024
+            # the print smeared, the leaf motifs ran together, while the
+            # pipeline's own choice -- 768x1376, about a megapixel -- came back
+            # with every motif separate. It picks a shape the model was trained
+            # on, and a different one is off the distribution.
             out = pipe(image=[img],
-                       height=img.height - img.height % 32,
-                       width=img.width - img.width % 32,
                        prompt=(instruction or "").strip() or RETOUCH_PROMPT,
                        num_inference_steps=int(steps) or RETOUCH_STEPS,
                        true_cfg_scale=RETOUCH_CFG, negative_prompt=" ",
