@@ -201,7 +201,8 @@ def _multipart(fields, files):
 # Which endpoint each tool wants, and what it needs sent. Kept here rather than
 # branched inside handle(), so a new tool is an entry rather than another if.
 ROUTES = {
-    "packshot": ("/packshot", ("garment",)),
+    # packshot has its own handler: it makes two pictures and judges one
+    # against the other, which a single route cannot express.
     "model-creation": (ZBASE + "/create", ()),
 }
 DEFAULT_ROUTE = ("/generate", ("person", "garment"))
@@ -253,9 +254,76 @@ def handle_scene(job, p):
     return png, headers, round(total, 2)
 
 
+def handle_packshot(job, p):
+    """Two pictures and a verdict, because the seller has the garment.
+
+    The cut-out first: it is two tenths of a second and it is the floor. Then
+    the retouched version, which is the one a seller actually wants -- garment
+    alone, straight, on white -- and which can also come back with sleeves that
+    are not the sleeves in their hand.
+
+    Both are kept. The gate's opinion travels with them as a label rather than
+    as a decision: swapping silently to the cut-out would hide the choice from
+    the only person who can tell whether the garment is right.
+    """
+    from . import fidelity
+
+    if not p.get("garment_key"):
+        raise RunPodInput("a packshot needs a photograph of the garment")
+    garment = storage.get_bytes(p["garment_key"])
+
+    cut, cut_headers = _post(f"{BASE}/packshot", {},
+                             {"garment": ("garment.png", garment)})
+    cut_key = storage.key_for("results", job["user_id"])
+    storage.put_bytes(cut_key, cut)
+
+    try:
+        png, headers = _post(f"{BASE}/retouch",
+                             {"seed": int(p.get("seed", 11))},
+                             {"garment": ("garment.png", garment)})
+    except PodDown as exc:
+        # The cut-out already exists and is worth handing over. A retouch that
+        # could not run is not a failed job when the floor is in place.
+        print(f"[bridge] {job['id']} retouch unavailable: {exc}", flush=True)
+        return {"object_key": cut_key, "kind": "image", "variant": "cutout",
+                "width": int(cut_headers.get("X-Width") or 0) or None,
+                "height": int(cut_headers.get("X-Height") or 0) or None,
+                "seconds": float(cut_headers.get("X-Seconds") or 0) or None}
+
+    key = storage.key_for("results", job["user_id"])
+    storage.put_bytes(key, png)
+
+    # Judged against the cut-out, which carries the garment's own pixels and
+    # its own outline. Judging against the raw photograph does not work: the
+    # outline there is the thing segmentation is for. See service/fidelity.py.
+    notes = None
+    try:
+        import io as _io
+        from PIL import Image as _Image
+        scores = fidelity.compare(_Image.open(_io.BytesIO(cut)),
+                                  _Image.open(_io.BytesIO(png)))
+        v = fidelity.verdict(scores, "packshot")
+        notes = {**scores, "failed": v["failed"], "why": v["why"]}
+    except Exception as exc:                                  # noqa: BLE001
+        print(f"[bridge] {job['id']} could not score it: {exc}", flush=True)
+
+    return {"object_key": key, "kind": "image", "variant": "packshot",
+            "notes": notes,
+            "width": int(headers.get("X-Width") or 0) or None,
+            "height": int(headers.get("X-Height") or 0) or None,
+            "seconds": float(headers.get("X-Seconds") or 0) or None,
+            "extras": [{"object_key": cut_key, "variant": "cutout",
+                        "width": int(cut_headers.get("X-Width") or 0) or None,
+                        "height": int(cut_headers.get("X-Height") or 0) or None,
+                        "seconds": float(cut_headers.get("X-Seconds") or 0) or None}]}
+
+
 def handle(job):
     p = job["params"] or {}
     _tunnel.up()
+
+    if job["tool"] == "packshot":
+        return handle_packshot(job, p)
 
     if job["tool"] == "product-in-scene":
         png, headers, seconds = handle_scene(job, p)
