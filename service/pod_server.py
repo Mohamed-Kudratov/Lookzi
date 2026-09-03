@@ -275,14 +275,22 @@ RETOUCH_CFG = float(os.environ.get("RETOUCH_CFG", "4.0"))
 # a seller needs is the garment pressed -- that is what a catalogue photograph
 # is -- with its design untouched. Asking for both gives a fuller, evener skirt
 # and scores slightly better on fidelity as well.
+# Every detail this names was one the model changed when it was not named.
+# "Keep the garment's own design exactly" is not enough: on a blue dress it
+# straightened a sweetheart neckline into a bandeau, turned two straps into
+# one and lengthened the hem, and every fidelity number stayed inside the
+# limits, because those measure colour and texture and a neckline is neither.
+#
+# Naming them fixed it. The instruction is long and it is long on purpose.
 RETOUCH_PROMPT = (
     "Turn this into a professional e-commerce product photograph of the garment "
     "on its own. Remove the hanger, the wall and everything else; plain pure "
-    "white background. Press the fabric so it hangs smooth and even, with the "
-    "creases from hanging gone and the skirt falling evenly. Keep the garment's "
-    "own design exactly: the same cut, length, sleeves, neckline, seams, colours "
-    "and print. Soft even studio lighting, sharp focus, fine detail. No person, "
-    "no mannequin, no hanger.")
+    "white background. Press the fabric so it hangs smooth and even. Do not "
+    "redesign anything: keep the neckline shape exactly, keep every strap "
+    "exactly as many and as wide as they are, keep the hem at exactly the same "
+    "length, keep every seam, band and panel where it is, keep the colours and "
+    "the fabric including any sheer or mesh layer. Soft even studio lighting, "
+    "sharp focus. No person, no mannequin, no hanger.")
 
 _editor = None
 _editor_lock = threading.Lock()
