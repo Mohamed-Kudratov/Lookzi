@@ -338,7 +338,13 @@ def retouch(garment: UploadFile = File(...),
         if toggled:
             pipe.transformer.disable_adapters()
         try:
+            # The size is asked for. Left to itself the pipeline normalises
+            # every edit to about a megapixel -- 768x1376 whatever went in --
+            # so enlarging the input alone changed nothing, and a listing
+            # photograph wants more than that.
             out = pipe(image=[img],
+                       height=img.height - img.height % 32,
+                       width=img.width - img.width % 32,
                        prompt=(instruction or "").strip() or RETOUCH_PROMPT,
                        num_inference_steps=int(steps) or RETOUCH_STEPS,
                        true_cfg_scale=RETOUCH_CFG, negative_prompt=" ",
