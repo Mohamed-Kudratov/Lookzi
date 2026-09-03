@@ -1,0 +1,304 @@
+{
+ "rows": [
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "image": "u2net\\00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "seconds": 69.6
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "image": "u2net\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "seconds": 3.79
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "image": "u2net\\03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "seconds": 2.55
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "image": "u2net\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "seconds": 2.98
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "image": "u2net\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "seconds": 0.95
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "image": "u2net\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "seconds": 0.89
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "image": "u2net\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "seconds": 0.83
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "image": "u2net\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "seconds": 0.86
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "image": "u2net\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "seconds": 0.87
+  },
+  {
+   "model": "u2net",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "image": "u2net\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "seconds": 0.93
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "image": "birefnet-general\\00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "seconds": 173.62
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "image": "birefnet-general\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "seconds": 13.01
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "image": "birefnet-general\\03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "seconds": 11.02
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "image": "birefnet-general\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "seconds": 11.27
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "image": "birefnet-general\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "seconds": 8.8
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "image": "birefnet-general\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "seconds": 8.38
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "image": "birefnet-general\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "seconds": 8.93
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "image": "birefnet-general\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "seconds": 8.74
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "image": "birefnet-general\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "seconds": 8.64
+  },
+  {
+   "model": "birefnet-general",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "image": "birefnet-general\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "seconds": 8.79
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "image": "u2net_cloth_seg\\00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "seconds": 28.06
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "image": "u2net_cloth_seg\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "seconds": 5.46
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "image": "u2net_cloth_seg\\03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "seconds": 3.8
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "image": "u2net_cloth_seg\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "seconds": 4.84
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "image": "u2net_cloth_seg\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "seconds": 1.65
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "image": "u2net_cloth_seg\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "seconds": 1.71
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "image": "u2net_cloth_seg\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "seconds": 1.59
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "image": "u2net_cloth_seg\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "seconds": 1.54
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "image": "u2net_cloth_seg\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "seconds": 1.61
+  },
+  {
+   "model": "u2net_cloth_seg",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "image": "u2net_cloth_seg\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "seconds": 1.6
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "image": "birefnet-dis\\00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "seconds": 183.95
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "image": "birefnet-dis\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "seconds": 11.99
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "image": "birefnet-dis\\03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "seconds": 10.28
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "image": "birefnet-dis\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "seconds": 11.49
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "image": "birefnet-dis\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "seconds": 9.01
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "image": "birefnet-dis\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "seconds": 8.91
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "image": "birefnet-dis\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "seconds": 9.07
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "image": "birefnet-dis\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "seconds": 8.43
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "image": "birefnet-dis\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "seconds": 8.49
+  },
+  {
+   "model": "birefnet-dis",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "image": "birefnet-dis\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "seconds": 8.76
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\00b8048d-635e-4e56-b182-071fb24eea32.jpg",
+   "image": "isnet-general-use\\00b8048d-635e-4e56-b182-071fb24eea32.jpg.png",
+   "seconds": 26.28
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\man/upper\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg",
+   "image": "isnet-general-use\\03a59318-7ada-46a4-910f-da7cf4e2713b.jpg.png",
+   "seconds": 4.01
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03a43dea-405e-4a11-9716-2f790a95f699.jpg",
+   "image": "isnet-general-use\\03a43dea-405e-4a11-9716-2f790a95f699.jpg.png",
+   "seconds": 2.81
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\man/lower\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg",
+   "image": "isnet-general-use\\03b5fa92-c65d-4b45-820b-967e85f41ee2.jpg.png",
+   "seconds": 3.44
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg",
+   "image": "isnet-general-use\\03a33083-e7bf-414d-bd35-c56273ae779c.jpg.png",
+   "seconds": 1.25
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/Upper\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg",
+   "image": "isnet-general-use\\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg.png",
+   "seconds": 1.16
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg",
+   "image": "isnet-general-use\\0558b2c5-be00-49de-b27f-8c88114ac36f.jpg.png",
+   "seconds": 1.15
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/lower\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg",
+   "image": "isnet-general-use\\0ab26941-211e-44d7-a62a-20207fa7a3e0.jpg.png",
+   "seconds": 1.16
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg",
+   "image": "isnet-general-use\\04f0b07f-4b9f-4c55-bc5d-b693658fb32c.jpg.png",
+   "seconds": 1.19
+  },
+  {
+   "model": "isnet-general-use",
+   "source": "D:\\projects\\lvton\\test products\\Woman/overall\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg",
+   "image": "isnet-general-use\\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg.png",
+   "seconds": 1.18
+  }
+ ]
+}

@@ -112,7 +112,12 @@ class Worker:
             q.finish(conn, job["id"], out["object_key"],
                      kind=out.get("kind", "image"),
                      width=out.get("width"), height=out.get("height"),
-                     seconds=out.get("seconds", elapsed))
+                     seconds=out.get("seconds", elapsed),
+                     variant=out.get("variant"), notes=out.get("notes"),
+                     # A tool that makes more than one picture and lets the
+                     # customer choose. The packshot is the case: a retouched
+                     # version and the plain cut-out of the same garment.
+                     extras=out.get("extras", ()))
             self.done += 1
             print(f"[{self.name}] {job['id']} done in {elapsed}s", flush=True)
         except Exception as exc:

@@ -921,7 +921,12 @@ def step_serve(ssh, st):
     # later in somebody else's error message.
     WANT = [("tryon", "", 20000, "the try-on model"),
             ("zimage", "/opt/zimage-venv/bin/python", 23000, "the model maker")]
-    PORTS = {"tryon": 8000, "zimage": 8001}
+    PORTS = {"tryon": 8000, "zimage": 8011}
+    # And who is expected to answer there. A port that replies is not the same
+    # as our server replying: RunPod's nginx sits on 8001 on this image and
+    # answered a health check by relaying the try-on server, so the panel read
+    # "ready" and skipped starting the model maker altogether.
+    WHOSE = {"tryon": "Qwen-Image-Edit", "zimage": "Z-Image"}
 
     def free_mb():
         rc, out = ssh.run(
@@ -944,7 +949,7 @@ def step_serve(ssh, st):
         # said so.
         rc, out = ssh.run(f"curl -s -m 5 localhost:{PORTS[name]}/health",
                           timeout=180)
-        if '"ready":true' in out:
+        if '"ready":true' in out and WHOSE[name] in out:
             st.log(f"{human} is already serving")
             continue
         if probe:
@@ -974,6 +979,8 @@ def step_serve(ssh, st):
             time.sleep(6)
             rc, h = ssh.run(f"curl -s -m 5 localhost:{PORTS[name]}/health",
                             timeout=180)
+            if WHOSE[name] not in h:
+                continue
             if '"ready":true' in h or '"error":"' in h and "null" not in h:
                 break
         st.log(f"{human}: {free_mb() // 1000} GB free after it loaded")

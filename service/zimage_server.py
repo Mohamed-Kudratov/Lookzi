@@ -13,6 +13,11 @@ try-on model, about 19 for this one.
 Bound to loopback for the same reason as pod_server: the pod has a public
 address, so a service on 0.0.0.0 here is a service on the internet.
 
+Port 8011, not 8001. RunPod's own nginx listens on 8001 on this image, and it
+answers /health by proxying somewhere -- so the panel asked "is the model maker
+up?", got a cheerful yes from nginx relaying the try-on server, and never
+started this one. Two tools were dead and everything said it was fine.
+
 This is the half of the product that listens to words. The try-on model reads
 the garment image and ignores the text entirely (docs/CONTROLS.md); this one is
 text to image and does nothing else, which is why "make a new model" can offer
@@ -266,7 +271,7 @@ def from_prompt(prompt: str = Form(...), seed: int = Form(0),
 
 def main():
     import uvicorn
-    port = int(os.environ.get("ZIMAGE_PORT", "8001"))
+    port = int(os.environ.get("ZIMAGE_PORT", "8011"))
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 

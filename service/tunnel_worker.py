@@ -50,7 +50,7 @@ REMOTE_PORT = int(os.environ.get("POD_SERVER_PORT", "8000"))
 # diffusers from source and the try-on stack cannot have it. One ssh connection
 # carries both.
 ZIMAGE_LOCAL = int(os.environ.get("ZIMAGE_LOCAL_PORT", "18001"))
-ZIMAGE_REMOTE = int(os.environ.get("ZIMAGE_PORT", "8001"))
+ZIMAGE_REMOTE = int(os.environ.get("ZIMAGE_PORT", "8011"))
 # Generous, because it covers the model still loading on a pod that has just
 # started. The queue's own lease is fifteen minutes and this must end first.
 REQUEST_TIMEOUT = int(os.environ.get("POD_REQUEST_TIMEOUT", "600"))

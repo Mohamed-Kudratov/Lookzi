@@ -22,7 +22,7 @@ REPO="${REPO:-/opt/lookzi}"
 # machine, same card, two interpreters.
 WHICH="${2:-tryon}"
 if [ "$WHICH" = "zimage" ]; then
-    PORT="${ZIMAGE_PORT:-8001}"
+    PORT="${ZIMAGE_PORT:-8011}"
     LOG="${ZIMAGE_LOG:-/workspace/zimage_server.log}"
     PYTHON="${ZIMAGE_PYTHON:-/opt/zimage-venv/bin/python}"
     MODULE="service.zimage_server"
