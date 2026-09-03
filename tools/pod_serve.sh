@@ -53,6 +53,23 @@ start|restart)
         [ -n "$(pid_on_port)" ] && { kill -9 "$(pid_on_port)" 2>/dev/null; sleep 1; }
     fi
 
+    # And wait for the card, not only for the port. A killed process gives its
+    # socket back before it gives its VRAM back, so the replacement started
+    # while sixteen gigabytes were still held and died loading its text
+    # encoder -- reporting "0.0 GB free" on a card that had twenty-three free a
+    # few seconds later.
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        for _ in $(seq 1 30); do
+            used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
+            mine=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l)
+            [ -z "$used" ] && break
+            prev="${prev:-}"
+            [ "$used" = "$prev" ] && break
+            prev="$used"
+            sleep 2
+        done
+    fi
+
     cd "$REPO" || exit 1
     # The same environment every process on this pod needs. The thread caps are
     # a correctness fix: the container gets 13.6 CPUs while /proc advertises the
