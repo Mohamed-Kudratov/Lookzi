@@ -298,6 +298,25 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "build": req.build or "average", "look": req.look or "uzbek",
               "modest": "true" if req.modest else "false",
               "prompt": (req.prompt or "").strip()}
+
+    # What the seller said this garment is, remembered against the photograph.
+    #
+    # It is asked on the button press rather than on the upload, because that
+    # is the moment the tool is known and so the moment we can also say "this
+    # one wears garments on the torso, a skirt will come out as a top". Asked
+    # at upload we would know the category and not yet the tool, and the
+    # warning would need a second interruption.
+    #
+    # Stored so it is asked once. A packshot's result goes on to be a try-on's
+    # input, and a question repeated at every hop is one the seller learns to
+    # click through without reading.
+    if req.mode in ("upper", "lower", "overall") and params["garment_key"]:
+        conn.execute(
+            """INSERT INTO garment_kinds (object_key, kind, source, user_id)
+               VALUES (%s, %s, 'seller', %s)
+               ON CONFLICT (object_key) DO UPDATE
+                   SET kind = EXCLUDED.kind, source = 'seller'""",
+            (params["garment_key"], req.mode, user["id"]))
     try:
         job, charged = q.submit(
             conn, user["id"], req.tool, params, model_id=req.model_id,
@@ -335,8 +354,21 @@ def job_status(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
     # Everything the job produced, labelled. A tool that makes one picture
     # sends a list of one; the packshot sends the generative version and the
     # plain cut-out, and the studio lets the seller choose between them.
+    # A result is made of its job's garment, so it is the same garment: a
+    # packshot of a skirt is a skirt. Looked up through the job rather than
+    # copied onto every result row, so there is one answer and it cannot drift
+    # from the one the seller gave.
+    # Named `garment_kind` and not `kind`: a result row already has a `kind`
+    # and it means image-or-video.
+    garment_kind = None
+    if (job["params"] or {}).get("garment_key"):
+        row = conn.execute("SELECT kind FROM garment_kinds WHERE object_key = %s",
+                           (job["params"]["garment_key"],)).fetchone()
+        garment_kind = row["kind"] if row else None
     out["results"] = [
         {"url": storage.presigned_get(r["object_key"]),
+         # Carried so the studio does not ask again at the next hop.
+         "garment_kind": garment_kind,
          # The key as well as the link. A finished picture is the input to the
          # next tool -- a packshot into a try-on, a try-on into a model swap --
          # and the studio can only ask for that if it can name the object.

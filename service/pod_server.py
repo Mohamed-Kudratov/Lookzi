@@ -410,7 +410,8 @@ def _present(img, alpha=None, shadow=PRESENT_SHADOW, size=None, fill=None):
 def retouch(garment: UploadFile = File(...),
             instruction: str = Form(""),
             steps: int = Form(0), seed: int = Form(11),
-            side: int = Form(0), fast: str = Form("")):
+            side: int = Form(0), fast: str = Form(""),
+            kind: str = Form("")):
     """`side` is the long edge the edit runs at.
 
     It is a parameter because it is a trade and the trade is not settled: a
@@ -439,17 +440,29 @@ def retouch(garment: UploadFile = File(...),
     # because a generative model reads the noun and skips the negation. Naming
     # the category fixed it on the first attempt.
     #
-    # Worked out rather than asked, and only when the classifier is sure: on
-    # the hundred labelled garments it is right 94% of the time overall and 99%
-    # of the time on the two thirds it is confident about. A wrong sentence is
-    # worse than none -- it would tell the model to turn a dress into a skirt --
-    # so an uncertain one says nothing and the instruction goes in as it was.
+    # Asked when the seller has answered, worked out when they have not.
+    #
+    # The studio asks once per garment, on the button press rather than on the
+    # upload, and remembers it -- so the common case here is `kind` arriving
+    # filled in and no guessing happening at all. The classifier stays for the
+    # jobs that come from elsewhere: it is right 94% of the time overall and
+    # 99% of the time on the two thirds it is confident about, and a wrong
+    # sentence is worse than none -- it would tell the model to turn a dress
+    # into a skirt -- so an uncertain one says nothing.
     prompt = (instruction or "").strip() or RETOUCH_PROMPT
-    kind = ""
+    said = ""
     try:
-        from .garment_type import sentence_for
-        hint, got = sentence_for(img, min_margin=GARMENT_MARGIN)
-        kind = f"{got['kind']}:{got['margin']}" if hint else f"unsure:{got['margin']}"
+        from .garment_type import sentence_for, sentence_for_kind
+        if kind:
+            # The seller answered, so nothing here is guessed. They are asked
+            # once per garment, at the moment they press the button, and the
+            # answer travels with the picture through the rest of the studio.
+            hint, got = sentence_for_kind(kind, img)
+            said = f"{got['kind']}:said"
+        else:
+            hint, got = sentence_for(img, min_margin=GARMENT_MARGIN)
+            said = (f"{got['kind']}:{got['margin']}" if hint
+                    else f"unsure:{got['margin']}")
         if hint:
             # At the end, not the front, and the difference is not subtle. The
             # same sentence in front of the instruction left a skirt with
@@ -544,7 +557,7 @@ def retouch(garment: UploadFile = File(...),
     out.save(buf, "PNG")
     return Response(content=buf.getvalue(), media_type="image/png",
                     headers={"X-Seconds": str(elapsed), "X-Width": str(out.width),
-                             "X-Height": str(out.height), "X-Garment": kind})
+                             "X-Height": str(out.height), "X-Garment": said})
 
 
 @app.post("/packshot")

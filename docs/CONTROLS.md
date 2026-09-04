@@ -171,3 +171,45 @@ What stands with it gone, and what does not:
 - **The card fits two models, not three.** All three came to 45.4 GB of 46 and
   a benchmark failed halfway through with allocation errors. With this gone
   there is room again.
+
+## The seller says what the garment is (2026-09-04)
+
+Asked on the button press, not on the upload. Two reasons, and the second is
+the one that decided it: at the moment the button is pressed the tool is known,
+so the same single interruption can carry both the question and the warning
+that belongs to that tool. Asked at upload we would have the category and not
+yet the tool, and the warning would need an interruption of its own.
+
+Remembered against the object key, so it is asked once per photograph and a
+packshot carried into a try-on arrives already answered.
+
+**What it does not do.** It does not tell the try-on model anything. That model
+reads the garment image and ignores text -- measured five ways, above -- and
+the category changes nothing about where the garment lands. Two channels have
+now been tested and both are shut:
+
+| channel | result |
+|---|---|
+| text (`mode`, description, instruction) | ignored, five measurements |
+| the garment's position in its own frame | ignored; pushing a skirt into the lower third of the canvas turned a sleeveless top into a strapless dress, still on the torso |
+
+So a bottom worn on the torso is not a bug to be fixed by wording. It is the
+scope of a model whose name is Layering VTON and whose job is to composite a
+garment onto a body's upper half. Roughly 40% of `test products/` is bottoms,
+so it is not a corner.
+
+What the category buys, in order of worth:
+
+1. **The warning.** Try-on, product-to-model and product-in-scene say up front
+   that a bottom comes back worn on top, and offer Packshot instead. It does
+   not block -- the seller spends their own credit -- but they decide before
+   the thirty seconds, not after.
+2. **The packshot's naming sentence**, which the model does read. The
+   classifier is right 94% of the time and abstains on a third; the seller is
+   right always and never abstains.
+3. It travels, so a three-tool job asks once.
+
+The warning lives in `run()` and not inside the question. It was inside the
+question first, and that was wrong in the exact case that matters: carrying a
+packshot forward answers the question from the server, so nothing is asked --
+and the one path a seller actually takes was the one path with no warning.

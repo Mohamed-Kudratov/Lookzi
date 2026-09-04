@@ -278,8 +278,15 @@ def handle_packshot(job, p):
     storage.put_bytes(cut_key, cut)
 
     try:
-        png, headers = _post(f"{BASE}/retouch",
-                             {"seed": int(p.get("seed", 11))},
+        # The seller's own answer to what this garment is, when the studio
+        # asked them. It beats the classifier by definition and, unlike the
+        # classifier, it never abstains -- so the naming sentence gets written
+        # for every job that came through the studio rather than for the two
+        # thirds CLIP is confident about.
+        fields = {"seed": int(p.get("seed", 11))}
+        if p.get("mode") in ("upper", "lower", "overall"):
+            fields["kind"] = p["mode"]
+        png, headers = _post(f"{BASE}/retouch", fields,
                              {"garment": ("garment.png", garment)})
     except PodDown as exc:
         # The cut-out already exists and is worth handing over. A retouch that

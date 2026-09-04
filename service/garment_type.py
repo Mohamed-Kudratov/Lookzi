@@ -123,3 +123,62 @@ def sentence_for(img, min_margin=0.01):
     noun = got["noun"]
     return (f"This photograph shows {noun}. "
             + RULE[got["kind"]].format(noun=noun)), got
+
+
+# What the seller said, in the model's words.
+#
+# The classifier is 94% right and the person holding the garment is always
+# right, so when they have answered, their answer wins and this file's guessing
+# is skipped. But the class alone is not what the model responds to: told "a
+# lower-body garment", it still returned a sundress; told "a skirt", it
+# returned a skirt. A generative model answers a concrete noun and shrugs at a
+# category.
+#
+# So the work is split at the seam where each side is strong. The seller gives
+# the category, which is the part a classifier gets wrong across categories --
+# a skirt read as a dress. The classifier picks the noun inside that category,
+# which is the part it is good at and where a mistake is survivable: a pair of
+# jeans called trousers still comes back as trousers.
+KINDS = {"upper": "tops", "lower": "bottoms", "overall": "one-pieces"}
+
+
+def noun_within(img, kind):
+    """The best-fitting noun from one category, never leaving it.
+
+    Falls back to the category's first noun if CLIP cannot be loaded, because a
+    plain "a skirt" is worth far more than no sentence at all -- and the whole
+    point of the seller answering is that the sentence gets written.
+    """
+    cls = KINDS.get(kind, kind)
+    if cls not in PHRASES:
+        return None
+    try:
+        import torch
+        _load()
+        labels, temb = _text
+        with torch.no_grad():
+            inp = _proc(images=img.convert("RGB"), return_tensors="pt")
+            emb = _model.get_image_features(**inp)
+            emb = emb / emb.norm(dim=-1, keepdim=True)
+            sim = (emb @ temb.T)[0]
+        best, noun = -1e9, None
+        for (label, n), score in zip(labels, sim.tolist()):
+            if label == cls and score > best:
+                best, noun = score, n
+        return noun
+    except Exception:                                         # noqa: BLE001
+        return PHRASES[cls][0][0]
+
+
+def sentence_for_kind(kind, img):
+    """The line for a category the seller chose. No margin, no abstaining.
+
+    `sentence_for` abstains when it is unsure, because a confident wrong guess
+    would turn a dress into a skirt. There is nothing to be unsure about here.
+    """
+    cls = KINDS.get(kind, kind)
+    if cls not in RULE:
+        return "", {"kind": cls, "noun": None, "margin": None}
+    noun = noun_within(img, cls) or PHRASES[cls][0][0]
+    return (f"This photograph shows {noun}. " + RULE[cls].format(noun=noun),
+            {"kind": cls, "noun": noun, "margin": None})

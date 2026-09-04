@@ -1,395 +1,4 @@
-<!doctype html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lookzi Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-/* ---------------------------------------------------------------------------
-   The shape is the competitor's, deliberately.
 
-   One stage that changes, and one bar underneath that does not: the tools are a
-   row you switch, not pages you navigate between, and the prompt and Run button
-   stay where your hand left them. Our previous layout put the tools down the
-   left and the inputs down the right, so changing tool felt like arriving
-   somewhere else with half the screen missing -- which is exactly how it was
-   reported.
-
-   What is not copied is their row of Ratio / Resolution / Mode controls. We do
-   not have those, and a control that does nothing is the precise mistake we
-   just spent a day removing.
---------------------------------------------------------------------------- */
-:root{
-  --bg:#0B0C0E; --panel:#131519; --panel-2:#1A1D22; --raised:#22262D;
-  --line:#23272E; --line-2:#333943;
-  --ink:#F1F0EC; --ink-2:#A2A8B0; --ink-3:#6C737C;
-  --brand:#7B8AF0; --brand-soft:#1D2340; --on-brand:#0B0C0E;
-  --wait:#D9B65E; --run:#5BB8C9; --done:#63BE87; --bad:#D4785D;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 18px 44px -24px rgba(0,0,0,.9);
-  --ease:cubic-bezier(.2,.7,.3,1);
-  --rail:92px;
-  --sans:"Inter",system-ui,-apple-system,sans-serif;
-  --serif:"Fraunces",Georgia,serif;
-  --mono:"JetBrains Mono",ui-monospace,monospace;
-}
-:root[data-theme="light"]{
-  --bg:#F5F5F2; --panel:#FFFFFF; --panel-2:#EFEEE9; --raised:#E6E5DF;
-  --line:#E2E0D9; --line-2:#CDCAC1;
-  --ink:#14161A; --ink-2:#575D65; --ink-3:#878D95;
-  --brand:#3B4BA0; --brand-soft:#E6E9F8; --on-brand:#FFFFFF;
-  --wait:#8A6A1C; --run:#1F6B7A; --done:#2F6B45; --bad:#A9472F;
-  --shadow:0 1px 2px rgba(20,22,26,.06), 0 18px 40px -26px rgba(20,22,26,.30);
-}
-*{box-sizing:border-box}
-/* The hidden attribute is only display:none at the browser's own specificity,
-   so any rule that sets display outranks it and the element stays on screen. */
-[hidden]{display:none !important}
-html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;
-  -webkit-font-smoothing:antialiased;overflow:hidden}
-button,input,textarea{font:inherit;color:inherit}
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:10px}
-::-webkit-scrollbar-track{background:transparent}
-
-.app{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);height:100dvh}
-
-/* ---------- rail ---------- */
-.rail{border-inline-end:1px solid var(--line);background:var(--panel);
-  display:grid;grid-template-rows:auto 1fr auto;padding:12px 8px;gap:10px}
-.mark{width:38px;height:38px;border-radius:11px;background:var(--ink);
-  color:var(--bg);display:grid;place-items:center;margin:0 auto}
-.mark svg{width:20px;height:20px}
-.rail nav{display:grid;gap:3px;align-content:start}
-.rail a{display:grid;justify-items:center;gap:4px;padding:9px 4px;border-radius:10px;
-  color:var(--ink-3);text-decoration:none;font-size:11px;cursor:pointer;
-  transition:background .15s var(--ease),color .15s var(--ease)}
-.rail a:hover{background:var(--panel-2);color:var(--ink-2)}
-.rail a[aria-current="page"]{background:var(--raised);color:var(--ink)}
-.rail a svg{width:19px;height:19px}
-.rail .foot{display:grid;gap:6px;justify-items:center}
-
-/* ---------- main ---------- */
-.main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0}
-.top{display:flex;align-items:center;gap:12px;padding:12px 20px;
-  border-bottom:1px solid var(--line)}
-.top .who{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
-.top .sp{flex:1}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;
-  border:1px solid var(--line);background:var(--panel);font-size:12.5px;color:var(--ink-2)}
-.chip b{color:var(--ink);font-weight:500;font-family:var(--mono)}
-.chip i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);font-style:normal}
-.chip[data-s="ok"] i{background:var(--done)}
-.chip[data-s="none"] i{background:var(--bad)}
-.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
-  background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--ink-2)}
-.icon-btn:hover{background:var(--panel-2);color:var(--ink)}
-.icon-btn svg{width:16px;height:16px}
-
-/* ---------- stage ---------- */
-.stage{overflow:auto;display:grid;place-items:center;padding:24px}
-.stage > *{width:100%;max-width:1180px}
-
-.blank{display:grid;justify-items:center;gap:14px;text-align:center;padding:30px 0}
-.blank .art{display:flex;gap:6px}
-.blank .art span{width:92px;height:116px;border-radius:14px;border:1px solid var(--line);
-  background:var(--panel-2);display:grid;place-items:center;box-shadow:var(--shadow)}
-.blank .art span:nth-child(1){transform:rotate(-7deg) translateX(16px)}
-.blank .art span:nth-child(3){transform:rotate(7deg) translateX(-16px)}
-.blank .art svg{width:32px;height:32px;color:var(--ink-3)}
-.blank h2{margin:8px 0 0;font-family:var(--serif);font-weight:400;font-size:26px;
-  letter-spacing:-.01em}
-.blank p{margin:0;color:var(--ink-3);font-size:13px;max-width:44ch}
-.blank .acts{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:4px}
-
-.btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;
-  border:1px solid var(--line);background:var(--panel);color:var(--ink);
-  padding:10px 16px;border-radius:11px;font-size:13px;font-weight:500;
-  text-decoration:none;box-shadow:var(--shadow);
-  transition:background .15s var(--ease),border-color .15s var(--ease)}
-.btn:hover{background:var(--panel-2);border-color:var(--line-2)}
-.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.btn svg{width:16px;height:16px;flex:none}
-
-/* the input cards, side by side, the way the competitor lays them out */
-.cards{display:flex;gap:16px;justify-content:center;align-items:stretch;flex-wrap:wrap}
-.card{position:relative;width:min(330px,42vw);aspect-ratio:3/4;border-radius:16px;
-  border:1px solid var(--line);background:var(--panel);overflow:hidden;
-  box-shadow:var(--shadow);display:grid;place-items:center;cursor:pointer;
-  transition:border-color .15s var(--ease)}
-.card:hover{border-color:var(--line-2)}
-.card.want{border-style:dashed}
-.card.over{border-color:var(--brand);border-style:solid}
-.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  background:var(--panel-2)}
-.card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
-.card .label{position:absolute;top:10px;inset-inline-start:10px;z-index:3;
-  font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
-  padding:4px 8px;border-radius:7px;background:var(--bg);border:1px solid var(--line);
-  color:var(--ink-2)}
-.card .drop{display:grid;gap:5px;justify-items:center;color:var(--ink-3);padding:20px;
-  text-align:center;z-index:1}
-.card .drop b{color:var(--ink-2);font-weight:500;font-size:13px}
-.card .drop span{font-size:11.5px}
-.card .drop svg{width:26px;height:26px;margin-bottom:2px}
-.card .kill{position:absolute;top:9px;inset-inline-end:9px;z-index:4;width:26px;height:26px;
-  border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);
-  display:grid;place-items:center;cursor:pointer}
-.card .kill:hover{color:var(--ink);border-color:var(--line-2)}
-.card .kill svg{width:12px;height:12px}
-
-/* the result: inputs small on the left, result large, history on the right */
-/* The history strip is gone. It sat down the right of every result, showed
-   twelve thumbnails of things already made, and answered a question nobody was
-   asking -- the gallery is where past work belongs. What replaced it is worth
-   the room: the finished picture, and what to do with it next. */
-.done{display:grid;grid-template-columns:118px minmax(0,1fr);gap:18px;
-  align-items:start}
-/* Hand the result to the next tool. A packshot is the input to a try-on; a
-   try-on is the input to a model swap. Doing that by downloading the picture
-   and uploading it again is three steps to say "this one". */
-.onward{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;
-  justify-content:center}
-.onward span{align-self:center;font-size:11.5px;color:var(--ink-3);
-  margin-inline-end:2px}
-.onward button{cursor:pointer;font:inherit;font-size:12.5px;padding:6px 13px;
-  border-radius:99px;border:1px solid var(--line);background:var(--panel);
-  color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
-.onward button:hover{background:var(--panel-2);color:var(--ink)}
-.onward svg{width:14px;height:14px}
-.done .ins{display:grid;gap:12px}
-.done .ins figure{margin:0;display:grid;gap:5px}
-.done .ins figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--ink-3)}
-.done .ins img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:11px;
-  border:1px solid var(--line);background:var(--panel-2)}
-/* The width is stated. An auto margin on a grid item switches off stretch,
-   and everything inside this box is absolutely positioned, so with the width
-   left to itself it shrank to fit nothing at all -- 1.6px, and the finished
-   picture was invisible on the screen that exists to show it. */
-.big{position:relative;border-radius:18px;border:1px solid var(--line);
-  background:var(--panel);overflow:hidden;box-shadow:var(--shadow);
-  aspect-ratio:3/4;max-height:calc(100dvh - 290px);
-  width:min(100%,calc((100dvh - 290px) * 0.75));margin-inline:auto}
-.big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  background:var(--panel-2);cursor:zoom-in}
-.big .save{position:absolute;bottom:12px;inset-inline-end:12px;z-index:3}
-.big .keep{position:absolute;bottom:12px;inset-inline-start:12px;z-index:3}
-
-/* while it runs */
-.veil{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
-  background:color-mix(in srgb,var(--bg) 80%,transparent)}
-.veil > div{display:grid;gap:9px;justify-items:center;text-align:center;padding:16px}
-.veil .n{font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:-.02em}
-.veil .s{font-family:var(--mono);font-size:11.5px;color:var(--ink-2)}
-.veil .h{font-size:11.5px;color:var(--ink-3);min-height:16px}
-.track{width:190px;height:4px;border-radius:99px;background:var(--raised);overflow:hidden}
-.track i{display:block;height:100%;width:0;background:var(--run);
-  transition:width .45s var(--ease)}
-
-/* ---------- the bar that never moves ---------- */
-.bar{border-top:1px solid var(--line);background:var(--panel);padding:12px 20px 16px;
-  display:grid;gap:11px}
-.pills{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
-.pill{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;
-  border:1px solid var(--line);background:var(--panel);color:var(--ink-2);
-  padding:8px 14px;border-radius:99px;font-size:13px;font-weight:500;
-  transition:background .15s var(--ease),color .15s var(--ease)}
-.pill:hover{background:var(--panel-2);color:var(--ink)}
-.pill[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.pill[disabled]{opacity:.4;cursor:not-allowed}
-.pill svg{width:15px;height:15px}
-.pill small{font-size:10px;opacity:.7}
-
-.compose{border:1px solid var(--line);border-radius:16px;background:var(--panel-2);
-  padding:12px 14px;display:grid;gap:10px}
-.compose:focus-within{border-color:var(--line-2)}
-.compose textarea{width:100%;border:0;background:transparent;resize:none;
-  font-size:14px;line-height:1.5;min-height:24px;max-height:120px;outline:none}
-.compose textarea::placeholder{color:var(--ink-3)}
-.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.row .sp{flex:1}
-.mini{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;
-  padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);
-  color:var(--ink-2)}
-.mini:hover{background:var(--raised);color:var(--ink)}
-.mini[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);
-  border-color:var(--brand)}
-.mini svg{width:14px;height:14px}
-.run{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;
-  font-weight:600;padding:10px 20px;border-radius:11px;border:1px solid var(--brand);
-  background:var(--brand);color:var(--on-brand)}
-.run:hover{filter:brightness(1.08)}
-.run[disabled]{opacity:.4;cursor:not-allowed;filter:none}
-.run svg{width:15px;height:15px}
-.hint{font-size:11.5px;color:var(--ink-3)}
-
-/* popovers: the roster, and the look */
-.pop{position:fixed;z-index:40;inset:auto 0 0 0;margin:0 auto;width:min(780px,94vw);
-  max-height:72dvh;overflow:auto;background:var(--panel);border:1px solid var(--line);
-  border-radius:18px 18px 0 0;box-shadow:var(--shadow);padding:18px}
-.pop h3{margin:0 0 12px;font-size:14px;font-weight:600}
-.pop .close{position:absolute;top:14px;inset-inline-end:14px}
-.grid-models{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px}
-.grid-models button{padding:0;border:1px solid var(--line);border-radius:11px;
-  overflow:hidden;background:var(--panel-2);cursor:pointer;text-align:start}
-.grid-models button:hover{border-color:var(--line-2)}
-.grid-models button[disabled]{opacity:.45;cursor:not-allowed}
-.grid-models button[aria-pressed="true"]{border:2px solid var(--brand)}
-.grid-models .ph{aspect-ratio:3/4;background:var(--raised);display:block}
-.grid-models img{width:100%;height:100%;object-fit:cover;display:block}
-.grid-models .meta{padding:6px 8px;display:block}
-.grid-models b{display:block;font-size:12px;font-weight:500}
-.grid-models .age{display:block;font-size:10.5px;color:var(--ink-3)}
-.look{display:grid;gap:12px}
-.look-row{display:grid;gap:6px}
-.look-row > span{font-size:11.5px;color:var(--ink-3)}
-.seg{display:flex;flex-wrap:wrap;gap:6px}
-.seg button{cursor:pointer;font-size:12.5px;padding:7px 13px;border-radius:9px;
-  border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2)}
-.seg button:hover{background:var(--raised);color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);
-  border-color:var(--brand)}
-.pop-sub{margin:-2px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-3);
-  max-width:44ch}
-.kinds{display:grid;gap:8px}
-.kinds button{cursor:pointer;text-align:left;padding:11px 13px;border-radius:11px;
-  border:1px solid var(--line);background:var(--surface);color:var(--ink);
-  display:grid;gap:2px}
-.kinds button:hover{border-color:var(--line-2);background:var(--raised)}
-.kinds button[aria-pressed="true"]{border:2px solid var(--brand);padding:10px 12px}
-.kinds b{font-size:13.5px;font-weight:600}
-.kinds span{font-size:11.5px;color:var(--ink-3)}
-.warn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.scrim{position:fixed;inset:0;z-index:39;background:rgba(0,0,0,.55)}
-
-.toast{position:fixed;left:50%;bottom:22px;translate:-50% 0;z-index:60;
-  padding:11px 18px;border-radius:11px;background:var(--ink);color:var(--bg);
-  font-size:13px;font-weight:500;box-shadow:var(--shadow);opacity:0;
-  transition:opacity .2s var(--ease),translate .2s var(--ease);pointer-events:none}
-.toast.on{opacity:1;translate:-50% -6px}
-.toast.bad{background:var(--bad);color:#fff}
-
-@media (max-width:900px){
-  body{overflow:auto}
-  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:auto;
-    min-height:100dvh}
-  .rail{grid-template-rows:auto;border-inline-end:0;border-bottom:1px solid var(--line);
-    padding:8px}
-  .rail nav{grid-auto-flow:column;justify-content:start;overflow-x:auto}
-  .rail a{padding:8px 14px}
-  .mark,.rail .foot{display:none}
-  .main{grid-template-rows:auto auto auto}
-  .stage{padding:16px}
-  .card{width:min(320px,86vw)}
-  .done{grid-template-columns:1fr}
-  .done .ins{grid-auto-flow:column;justify-content:start;align-items:start}
-  .done .ins figure{width:92px}
-    .big{max-height:none}
-  .bar{position:sticky;bottom:0;z-index:20}
-}
-/* two results, one job. The packshot makes a generative version and a plain
-   cut-out and the seller picks; a gate that swapped one for the other quietly
-   would hide the choice from the person holding the garment. */
-.pick{display:flex;gap:6px;justify-content:center;margin-bottom:9px;flex-wrap:wrap}
-.pick button{cursor:pointer;font:inherit;font-size:12.5px;padding:5px 13px;
-  border-radius:99px;border:1px solid var(--line);background:var(--panel);
-  color:var(--ink-2)}
-.pick button[aria-pressed="true"]{background:var(--ink);color:var(--bg);
-  border-color:var(--ink)}
-.pick .flag{align-self:center;font-size:11.5px;color:#F59E0B}
-
-/* the big view: same page, opens and closes. A result is not a document and
-   a second browser tab is not a way to look at one. */
-#view{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
-#view::backdrop{background:color-mix(in srgb,var(--bg) 92%,transparent)}
-#view .inner{position:relative;display:grid;place-items:center}
-#view img{max-width:88vw;max-height:84vh;display:block;border-radius:12px}
-#view .cap{position:fixed;bottom:20px;left:0;right:0;text-align:center;
-  font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-#view .cap b{color:var(--ink);font-weight:500}
-#view button{position:fixed;cursor:pointer;font:inherit;color:var(--ink);
-  border:1px solid var(--line);background:var(--panel);border-radius:10px}
-#view .x{top:16px;inset-inline-end:18px;padding:7px 14px}
-#view .go{top:50%;transform:translateY(-50%);width:44px;height:64px;font-size:20px;
-  display:grid;place-items:center}
-#view .go[disabled]{opacity:.25;cursor:default}
-#view .prev{inset-inline-start:18px} #view .next{inset-inline-end:18px}
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{transition-duration:.01ms !important}
-}
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="rail">
-    <div class="mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8l4 4-3 2v12H7V9L4 7z"/></svg>
-    </div>
-    <nav aria-label="Sections">
-      <a id="nav-studio" aria-current="page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-        Studio</a>
-      <a id="nav-gallery" href="/review" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>
-        Gallery</a>
-      <a id="nav-models">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>
-        Models</a>
-    </nav>
-    <div class="foot">
-      <button class="icon-btn" id="theme" title="Light or dark" aria-label="Light or dark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
-      </button>
-    </div>
-  </div>
-
-  <div class="main">
-    <header class="top">
-      <span class="who" id="tool-name">Studio</span>
-      <span class="sp"></span>
-      <span class="chip" id="gpu" data-s="idle"><i></i><span id="gpu-text">checking…</span></span>
-      <span class="chip"><b id="credits">—</b>&nbsp;credits</span>
-    </header>
-
-    <section class="stage" id="stage"></section>
-
-    <footer class="bar">
-      <div class="pills" id="pills" role="tablist" aria-label="Tools"></div>
-      <div class="compose">
-        <textarea id="prompt" rows="1" placeholder="Describe anything you want to create…"></textarea>
-        <div class="row">
-          <span id="extras" class="row" style="gap:8px"></span>
-          <span class="sp"></span>
-          <span class="hint" id="hint"></span>
-          <button class="run" id="run" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-            <span id="run-label">Run</span>
-          </button>
-        </div>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<div class="scrim" id="scrim" hidden></div>
-<div class="pop" id="pop" hidden role="dialog" aria-modal="true"></div>
-
-<dialog id="view">
-  <div class="inner">
-    <button class="x" id="view-close">Close</button>
-    <button class="go prev" id="view-prev" aria-label="Previous">&lsaquo;</button>
-    <img id="view-img" alt="">
-    <button class="go next" id="view-next" aria-label="Next">&rsaquo;</button>
-    <div class="cap" id="view-cap"></div>
-  </div>
-</dialog>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script>
 (function () {
 "use strict";
 var $ = function (id) { return document.getElementById(id); };
@@ -439,10 +48,6 @@ function toast(msg, bad) {
 var TOOLS = [], MODELS = [], job = null, poll = null, result = null, recent = [];
 var pick = {tool: null, prompt: "",
             garment_key: null, garment_url: null, garment_kind: null,
-            // Which tool the seller has already been warned about and chose to
-            // run anyway. Scoped to the tool, so carrying the same garment on
-            // to a different one warns again -- that is a new decision.
-            bottom_ok: null,
             person_key: null, person_url: null,
             model_id: null,
             gender: "woman", age: "20s", build: "average", look: "uzbek",
@@ -568,13 +173,7 @@ function card(need) {
       (m && m.preview
         ? '<img src="' + esc(m.preview) + '" alt="' + esc(m.display_name) + '">' + killer
         : '<span class="drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
-          // A model whose photograph is missing used to render exactly like no
-          // model at all -- so the seller saw "choose a model", chose one, and
-          // watched nothing change. Run then failed with a 503 about a
-          // photograph they were never told was gone.
-          (m ? '<b>' + esc(m.display_name) + '</b><span>photo missing — pick another</span>'
-             : '<b>Choose a model</b><span>' + esc(spec.hint) + '</span>') +
-          '</span>') +
+          '<b>Choose a model</b><span>' + esc(spec.hint) + '</span></span>') +
       '</div>';
   }
   var url = pick[need + "_url"];
@@ -780,12 +379,10 @@ function openPop(which) {
   if (which === "models") {
     html = '<h3>Who wears it</h3><div class="grid-models">' + MODELS.map(function (m) {
       return '<button data-model="' + esc(m.id) + '" aria-pressed="' +
-        (m.id === pick.model_id) + '"' + (m.preview ? '' : ' disabled') + '>' +
+        (m.id === pick.model_id) + '">' +
         '<span class="ph">' + (m.preview ? '<img src="' + esc(m.preview) + '" alt="">' : '') + '</span>' +
         '<span class="meta"><b>' + esc(m.display_name) + '</b>' +
-        '<span class="age">' + (!m.preview ? "photo missing"
-                                : m.mine ? "yours" : esc(m.age)) +
-        '</span></span></button>';
+        '<span class="age">' + (m.mine ? "yours" : esc(m.age)) + '</span></span></button>';
     }).join("") + '</div>';
   } else {
     html = '<h3>The look</h3><div class="look">' + LOOK.map(function (r) {
@@ -810,7 +407,7 @@ function upload(need, file) {
   // Shown from the local file immediately: waiting for object storage before
   // anything appears makes a good connection feel slow and a poor one broken.
   pick[need + "_url"] = URL.createObjectURL(file);
-  if (need === "garment") { pick.garment_kind = null; pick.bottom_ok = null; }
+  if (need === "garment") pick.garment_kind = null;
   result = null;
   drawStage(); drawBar();
   api("/uploads", {method: "POST", body: {kind: need, content_type: type}})
@@ -909,16 +506,10 @@ function run() {
   if (!t) return;
   // The one question, and only when it has not been answered for this photo.
   if (ASKS_KIND[t.id] && pick.garment_key && !pick.garment_kind) {
-    askKind(run);
-    return;
-  }
-  // The warning is checked here rather than inside the question, because the
-  // common way to reach a tool with a bottom is not to answer the question --
-  // it is to carry a packshot forward, where the answer is already known and
-  // nothing is asked. Warning only on the way through the question meant the
-  // one path the seller actually takes was the one path with no warning.
-  if (TORSO_ONLY[t.id] && pick.garment_kind === "lower" && pick.bottom_ok !== t.id) {
-    warnBottom();
+    askKind(function () {
+      if (TORSO_ONLY[t.id] && pick.garment_kind === "lower") return warnBottom();
+      run();
+    });
     return;
   }
   job = "pending";
@@ -1018,7 +609,7 @@ document.addEventListener("click", function (e) {
       // A different photograph is a different garment. Carrying the last
       // answer over would silently label it, which is the one thing asking
       // was meant to prevent.
-      if (n === "garment") { pick.garment_kind = null; pick.bottom_ok = null; }
+      if (n === "garment") pick.garment_kind = null;
     }
     drawStage(); drawBar();
     return;
@@ -1033,7 +624,6 @@ document.addEventListener("click", function (e) {
   var kd = e.target.closest("[data-kind]");
   if (kd) {
     pick.garment_kind = kd.dataset.kind;
-    pick.bottom_ok = null;
     closePop(); drawBar();
     var then = afterKind; afterKind = null;
     if (then) then();
@@ -1043,17 +633,13 @@ document.addEventListener("click", function (e) {
   var kg = e.target.closest("[data-kindgo]");
   if (kg) {
     closePop();
-    if (kg.dataset.kindgo === "1") {
-      pick.bottom_ok = pick.tool;
-      run();
-      return;
-    }
     if (kg.dataset.kindgo === "packshot") {
       pick.tool = "packshot";
       drawStage(); drawBar();
       toast("Switched to Packshot — press Generate when you are ready.");
       return;
     }
+    run();
     return;
   }
 
@@ -1101,7 +687,6 @@ document.addEventListener("click", function (e) {
       // hop of a three-tool job.
       var v = (result.variants || [])[result.at || 0] || (result.variants || [])[0];
       pick.garment_kind = (v && v.garment_kind) || null;
-      pick.bottom_ok = null;
     }
     pick.tool = on.dataset.onward;
     result = null;
@@ -1223,6 +808,3 @@ Promise.all([api("/tools"), api("/models")])
       '<p>' + esc(e.message) + '</p></div>';
   });
 })();
-</script>
-</body>
-</html>
