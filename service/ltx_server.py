@@ -32,7 +32,25 @@ import time
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 
-MODELS = os.environ.get("LTX_MODELS", "/workspace/models/ltx-2.5")
+# The RAM disk, not the network volume, and this is the single most important
+# line in the file.
+#
+# The pipeline does not hold weights between clips: DistilledPipeline builds in
+# three seconds and loads nothing, and each stage builds its transformer, uses
+# it, and frees it -- the source calls this "the manual build-transformer /
+# del transformer pattern" and it is deliberate, because two stages and a text
+# encoder do not fit on one card at once. So the weights are read on every
+# clip, several times, and where they are read from is the whole cost.
+#
+# The volume reads at 861 MB/s, measured. The 42 GB transformer is 49 seconds
+# of that, per read, and one clip reads it more than once -- which is where a
+# five-second clip's 645 seconds went, against 8 seconds of actual sampling.
+# /dev/shm on this pod is 110 GB of the machine's 1889 GB of memory, which is
+# room for all 71 GB with space to spare, and it reads at memory speed.
+#
+# It is memory, so it does not survive a restart. The panel copies it back;
+# see step_ltx_shm. Point LTX_MODELS at the volume to fall back.
+MODELS = os.environ.get("LTX_MODELS", "/dev/shm/ltx-2.5")
 PORT = int(os.environ.get("LTX_PORT", "8021"))
 
 # bf16 weights with fp8-cast, not the `comfy-int8-convrot` files in the same
@@ -54,12 +72,18 @@ UPSAMPLER = os.environ.get(
     "LTX_UPSAMPLER",
     f"{MODELS}/latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors")
 
-# The card already holds the try-on model and Z-Image -- about 38 GB of 80 --
-# so the text encoder is offloaded rather than resident. It runs once per clip,
-# to turn a sentence into embeddings, and the pod has 1889 GB of system memory
-# and 252 cores to do it with. Keeping 26 GB on the card for that would cost
-# more than it saves.
-OFFLOAD = os.environ.get("LTX_OFFLOAD", "cpu")
+# NONE, and not "cpu" as this first said.
+#
+# The flag does not mean what its name suggests. Asking for any offloading
+# selects StreamingModelBuilder, which streams the transformer block by block
+# for the whole run -- so requesting that the text encoder live on the
+# processor quietly put the entire pipeline on the slow path. NONE takes what
+# the source calls the standard, all-on-GPU path.
+#
+# It fits beside the other two models because the stages are sequential: the
+# text encoder loads, encodes the prompt and is freed before the transformer
+# is built. Peak is one of them, not their sum, against 42.5 GB free.
+OFFLOAD = os.environ.get("LTX_OFFLOAD", "none")
 QUANT = os.environ.get("LTX_QUANT", "fp8-cast")
 
 # Portrait, because these are clothes. Stage one samples at half of this and
@@ -246,6 +270,12 @@ def video(image: UploadFile = File(...),
                 )
             except Exception as exc:                          # noqa: BLE001
                 _stats["failed"] += 1
+                # Printed in full, because the one-line message is not enough
+                # to act on: "Inference tensors cannot be saved for backward"
+                # says what happened and nothing about where, and where is the
+                # entire question when a pipeline has five stages.
+                import traceback
+                traceback.print_exc()
                 raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
 
         data = open(out_path, "rb").read()

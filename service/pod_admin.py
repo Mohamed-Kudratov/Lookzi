@@ -1191,6 +1191,112 @@ def _mb(ssh, path):
     return int(lines[-1]) if lines else 0
 
 
+def step_ltx_shm(ssh, st):
+    """Copy the video weights into memory, because they are read on every clip.
+
+    LTX does not hold its weights between clips. DistilledPipeline builds in
+    three seconds and loads nothing; each stage builds its transformer, uses it
+    and frees it, which is deliberate -- two stages and a 26 GB text encoder do
+    not fit on one card at once. So every clip reads tens of gigabytes, more
+    than once, and where it reads from is the whole cost of the feature.
+
+    The volume reads at 861 MB/s. The transformer alone is 49 seconds of that
+    per read, which is how a five-second clip came to take 645 seconds against
+    8 seconds of sampling. /dev/shm is 110 GB of this machine's 1889 GB of
+    memory and reads at memory speed; the copy takes under two minutes.
+
+    It is memory, so it is gone after every restart -- which is exactly why it
+    is a step here rather than a command somebody remembers to run.
+    """
+    rc, out = ssh.run("df -m /dev/shm | tail -1 | awk '{print $2}'", timeout=120)
+    lines = [ln for ln in out.strip().splitlines() if ln.strip().isdigit()]
+    shm_mb = int(lines[-1]) if lines else 0
+    want_mb = sum(mb for _, mb in LTX_FILES if "comfy" not in _)
+    if shm_mb < want_mb * 1.05:
+        # Said plainly rather than half-done: a partial copy would leave some
+        # weights fast and some slow, and the clip would still be slow.
+        raise PodError(
+            f"/dev/shm holds {shm_mb} MB and the video weights need "
+            f"{want_mb} MB. Give the pod more shared memory, or set "
+            "LTX_MODELS=/workspace/models/ltx-2.5 to read from the volume "
+            "and accept that every clip takes minutes.")
+
+    script = ["set -e", "SRC=" + LTX_MODELS, "DST=/dev/shm/ltx-2.5",
+              "mkdir -p $DST/diffusion_models $DST/text_encoders $DST/vae "
+              "$DST/latent_upscale_models"]
+    for name, _ in LTX_FILES:
+        script.append(
+            f'if [ "$(stat -c%s "$DST/{name}" 2>/dev/null)" != '
+            f'"$(stat -c%s "$SRC/{name}")" ]; then '
+            f'cp "$SRC/{name}" "$DST/{name}"; echo "copied {name}"; '
+            f'else echo "already in ram: {name}"; fi')
+    script.append("echo SHM_DONE")
+    ssh.run("cat > /workspace/to_shm.sh <<'EOF'\n" + "\n".join(script) + "\nEOF\n"
+            "setsid nohup bash /workspace/to_shm.sh > /workspace/to_shm.log "
+            "2>&1 < /dev/null &\necho started\n", timeout=180)
+
+    started = time.time()
+    while not st.cancelled:
+        time.sleep(8)
+        rc, out = ssh.run("cat /workspace/to_shm.log", timeout=120)
+        if "SHM_DONE" in out:
+            break
+        rc, alive = ssh.run("pgrep -f to_shm.sh >/dev/null && echo ALIVE "
+                            "|| echo GONE", timeout=120)
+        if "GONE" in alive:
+            rc, out = ssh.run("cat /workspace/to_shm.log", timeout=120)
+            if "SHM_DONE" in out:
+                break
+            raise PodError("copying the video weights into memory failed:\n"
+                           + out[-500:])
+        st.step_progress("ltx_shm", min(0.95, (time.time() - started) / 150))
+
+    rc, out = ssh.run("du -sh /dev/shm/ltx-2.5 | cut -f1", timeout=180)
+    lines = [ln for ln in out.strip().splitlines() if ln.strip()]
+    st.note("ltx_shm", ("in memory: " + lines[-1]) if lines else "")
+
+
+def step_ltx_serve(ssh, st):
+    """Leave the video server running, and prove it is the video server.
+
+    Named in /health for the same reason the other two are: the pod image runs
+    nginx on 8001, it answered a health check that only asked whether something
+    was listening, and Z-Image silently never started.
+    """
+    rc, out = ssh.run(
+        "curl -s -m 5 http://127.0.0.1:8021/health || true", timeout=120)
+    if "LTX-2.5" in out and '"ready":true' in out:
+        st.log("the video server is already up")
+        st.note("ltx_serve", "already serving")
+        return
+
+    ssh.run("pkill -f service.ltx_server || true\nsleep 2\n"
+            f"cd {POD_REPO}\n"
+            "setsid nohup /opt/ltx/.venv/bin/python -m service.ltx_server "
+            "  > /workspace/ltx_server.log 2>&1 < /dev/null &\n"
+            "echo started\n", timeout=180)
+
+    started = time.time()
+    while not st.cancelled and time.time() - started < 300:
+        time.sleep(6)
+        rc, out = ssh.run("curl -s -m 5 http://127.0.0.1:8021/health || true",
+                          timeout=120)
+        if '"ready":true' in out:
+            if "LTX-2.5" not in out:
+                raise PodError(
+                    "something is listening on 8021 and it is not the video "
+                    "server:\n" + out[-300:])
+            st.log(out.strip().splitlines()[-1][:200])
+            st.note("ltx_serve", "serving on 8021")
+            return
+        if '"error":"' in out and '"error":null' not in out:
+            raise PodError("the video model did not load:\n" + out[-400:])
+        st.step_progress("ltx_serve", min(0.9, (time.time() - started) / 60))
+
+    rc, tail = ssh.run("tail -12 /workspace/ltx_server.log", timeout=120)
+    raise PodError("the video server did not come up:\n" + tail[-600:])
+
+
 STEPS = [
     Step("connect", "Connect", 5, step_connect, "ssh, and which pod this is"),
     Step("inspect", "Inspect", 8, step_inspect, "GPU, disk, CPU quota"),
@@ -1219,6 +1325,10 @@ STEPS = [
          "a third interpreter; LTX pins its own torch"),
     Step("ltx_weights", "Get LTX-2.5", 700, step_ltx_weights,
          "71 GB on the volume, skipped when already there"),
+    Step("ltx_shm", "Put the video weights in memory", 90, step_ltx_shm,
+         "they are read on every clip; the volume is too slow for that"),
+    Step("ltx_serve", "Start the video server", 60, step_ltx_serve,
+         "port 8021, and /health says which model it is"),
 ]
 TOTAL_WEIGHT = sum(s.weight for s in STEPS)
 
