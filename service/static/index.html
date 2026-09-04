@@ -142,8 +142,24 @@ button,input,textarea{font:inherit;color:inherit}
 .card .kill svg{width:12px;height:12px}
 
 /* the result: inputs small on the left, result large, history on the right */
-.done{display:grid;grid-template-columns:118px minmax(0,1fr) 232px;gap:18px;
+/* The history strip is gone. It sat down the right of every result, showed
+   twelve thumbnails of things already made, and answered a question nobody was
+   asking -- the gallery is where past work belongs. What replaced it is worth
+   the room: the finished picture, and what to do with it next. */
+.done{display:grid;grid-template-columns:118px minmax(0,1fr);gap:18px;
   align-items:start}
+/* Hand the result to the next tool. A packshot is the input to a try-on; a
+   try-on is the input to a model swap. Doing that by downloading the picture
+   and uploading it again is three steps to say "this one". */
+.onward{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;
+  justify-content:center}
+.onward span{align-self:center;font-size:11.5px;color:var(--ink-3);
+  margin-inline-end:2px}
+.onward button{cursor:pointer;font:inherit;font-size:12.5px;padding:6px 13px;
+  border-radius:99px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+.onward button:hover{background:var(--panel-2);color:var(--ink)}
+.onward svg{width:14px;height:14px}
 .done .ins{display:grid;gap:12px}
 .done .ins figure{margin:0;display:grid;gap:5px}
 .done .ins figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.04em;
@@ -162,18 +178,6 @@ button,input,textarea{font:inherit;color:inherit}
   background:var(--panel-2);cursor:zoom-in}
 .big .save{position:absolute;bottom:12px;inset-inline-end:12px;z-index:3}
 .big .keep{position:absolute;bottom:12px;inset-inline-start:12px;z-index:3}
-.hist h3{margin:0 0 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
-  text-transform:uppercase;color:var(--ink-3);font-weight:400}
-.hist .rows{display:grid;gap:9px;max-height:calc(100dvh - 320px);overflow:auto;
-  padding-inline-end:4px}
-.hist button{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
-  background:var(--panel-2);cursor:zoom-in;aspect-ratio:3/4;position:relative}
-.hist button:hover{border-color:var(--line-2)}
-/* contain, not cover: cropped to a square these were twelve pictures of a
-   chin, and every one of them looked like the same picture. */
-.hist img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  display:block}
-.hist .none{color:var(--ink-3);font-size:12px}
 
 /* while it runs */
 .veil{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
@@ -272,8 +276,7 @@ button,input,textarea{font:inherit;color:inherit}
   .done{grid-template-columns:1fr}
   .done .ins{grid-auto-flow:column;justify-content:start;align-items:start}
   .done .ins figure{width:92px}
-  .hist .rows{grid-auto-flow:column;grid-auto-columns:92px;overflow-x:auto;max-height:none}
-  .big{max-height:none}
+    .big{max-height:none}
   .bar{position:sticky;bottom:0;z-index:20}
 }
 /* two results, one job. The packshot makes a generative version and a plain
@@ -593,6 +596,43 @@ function variantPicker() {
   }).join("") + flag + '</div>';
 }
 
+// What a finished picture is good for. A packshot is a garment, so it feeds
+// anything that wants a garment; a try-on or a product shot is a dressed
+// person, which is what "change the model" reads the clothes from; a model
+// made to order is a person to dress.
+//
+// The slot matters as much as the tool. "Change the model" takes the customer's
+// photograph in the garment slot -- the clothes on the person are the point of
+// it -- and sending it as a person would silently do nothing.
+var ONWARD = {
+  "packshot": [["virtual-try-on", "garment"], ["product-to-model", "garment"],
+               ["product-in-scene", "garment"]],
+  "product-to-model": [["model-swap", "garment"]],
+  "virtual-try-on": [["model-swap", "garment"]],
+  "product-in-scene": [["model-swap", "garment"]],
+  "model-swap": [["virtual-try-on", "person"]],
+  "model-creation": [["virtual-try-on", "person"]]
+};
+
+function onwardRow() {
+  var next = ONWARD[result.tool] || [];
+  next = next.filter(function (n) {
+    return TOOLS.filter(function (t) { return t.id === n[0] && t.ready; }).length;
+  });
+  if (!next.length || !shownKey()) return "";
+  return '<div class="onward"><span>Use this in</span>' + next.map(function (n) {
+    var t = TOOLS.filter(function (x) { return x.id === n[0]; })[0];
+    return '<button data-onward="' + esc(n[0]) + '" data-slot="' + esc(n[1]) + '">' +
+      svg(n[0]) + esc(t.label) + '</button>';
+  }).join("") + '</div>';
+}
+
+function shownKey() {
+  var v = result.variants || [];
+  return (v.length && v[result.at || 0] && v[result.at || 0].key) ||
+         (v[0] && v[0].key) || null;
+}
+
 function drawResult() {
   var ins = [];
   if (result.inputs.garment) ins.push(["Garment", result.inputs.garment]);
@@ -621,12 +661,7 @@ function drawResult() {
             (result.kept ? "In your models" : "Keep as my model") + '</button>'
           : "") +
       '</div></div>' +
-      '<div class="hist"><h3>History</h3><div class="rows">' +
-        (recent.length ? recent.map(function (r, i) {
-          return '<button data-hist="' + i + '" title="' + esc(r.tool || "") + '">' +
-            '<img src="' + esc(r.result_url) + '" alt="" loading="lazy"></button>';
-        }).join("") : '<span class="none">nothing yet</span>') +
-      '</div></div>' +
+      onwardRow() +
     '</div>';
 }
 
@@ -878,15 +913,6 @@ document.addEventListener("click", function (e) {
   }
   if (e.target.closest("#back")) { result = null; drawStage(); drawBar(); return; }
 
-  var h = e.target.closest("[data-hist]");
-  if (h) {
-    // Arrows walk the strip from wherever you opened it, so looking through
-    // what you have made is one keypress rather than twelve clicks.
-    openView(recent.map(function (r) {
-      return {url: r.result_url, label: r.tool || "result"};
-    }), Number(h.dataset.hist));
-    return;
-  }
   if (e.target.closest(".big img") && result) {
     // Everything that made this picture, in the order it happened.
     var f = [];
@@ -899,6 +925,20 @@ document.addEventListener("click", function (e) {
   }
   var pv = e.target.closest("[data-variant]");
   if (pv && result) { result.at = Number(pv.dataset.variant); drawResult(); return; }
+  var on = e.target.closest("[data-onward]");
+  if (on && result) {
+    var slot = on.dataset.slot;
+    // The result becomes the input. No download, no second upload: the object
+    // is already in storage and the next job can name it.
+    pick[slot + "_key"] = shownKey();
+    pick[slot + "_url"] = shown();
+    if (slot === "garment") { pick.person_key = null; pick.person_url = null; }
+    pick.tool = on.dataset.onward;
+    result = null;
+    drawStage(); drawBar();
+    toast("Carried over — add whatever else it needs and run.");
+    return;
+  }
   if (e.target.closest("#save") && result) { save(shown()); return; }
 
   if (e.target.closest("#keep") && result && result.job_id) {

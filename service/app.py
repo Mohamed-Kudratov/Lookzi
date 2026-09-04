@@ -337,6 +337,10 @@ def job_status(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
     # plain cut-out, and the studio lets the seller choose between them.
     out["results"] = [
         {"url": storage.presigned_get(r["object_key"]),
+         # The key as well as the link. A finished picture is the input to the
+         # next tool -- a packshot into a try-on, a try-on into a model swap --
+         # and the studio can only ask for that if it can name the object.
+         "key": r["object_key"],
          "variant": r.get("variant"), "width": r.get("width"),
          "height": r.get("height"), "seconds": r.get("seconds"),
          "notes": r.get("notes")}
