@@ -1,7 +1,0 @@
-bridge -> root@185.216.21.214 -p 24118
-python  -> D:\Python312\python.exe
-[tunnel] 18000 -> pod 8000
-[tunnel] pod ready: ovedrive/Qwen-Image-Edit-2509-4bit (loaded in 11.7s)
-[tunnel:Mohamed:16756] polling for ['product-to-model', 'virtual-try-on', 'model-swap', 'packshot', 'model-creation', 'product-in-scene', 'short-video']
-[tunnel:Mohamed:16756] 932197c7-51a9-43aa-9b54-0dbdc4b165e9 short-video start
-[tunnel:Mohamed:16756] 932197c7-51a9-43aa-9b54-0dbdc4b165e9 done in 68.95s

@@ -31,3 +31,9 @@ made_*.png
 model_swap.png
 simple_flow.png
 logo_check.png
+
+# Launcher output, written every time the bridge or the panel starts here.
+bridge.out
+bridge.err
+admin.out
+admin.err
