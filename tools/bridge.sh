@@ -39,7 +39,21 @@ export S3_SECRET="${S3_SECRET:-lookzi-dev-secret}"
 export S3_BUCKET="${S3_BUCKET:-lookzi}"
 # Every tool the product offers. A tool missing from this list is a tool whose
 # jobs sit in the queue for ever while the studio says a worker is ready.
-export WORKER_TOOLS="${WORKER_TOOLS:-product-to-model,virtual-try-on,model-swap,packshot,model-creation,product-in-scene}"
+export WORKER_TOOLS="${WORKER_TOOLS:-product-to-model,virtual-try-on,model-swap,packshot,model-creation,product-in-scene,short-video}"
+
+# Found rather than assumed. On Windows the interpreter is installed outside
+# Git Bash's PATH, so plain `python` here failed with "command not found" on a
+# machine that has Python -- and the message sends you looking for a missing
+# install rather than a missing path.
+PY=""
+for cand in "${PYTHON:-}" python python3 /d/Python312/python.exe             /c/Python312/python.exe py; do
+    [ -n "$cand" ] || continue
+    if command -v "$cand" >/dev/null 2>&1; then PY="$cand"; break; fi
+done
+if [ -z "$PY" ]; then
+    echo "no python found. Set PYTHON=/path/to/python.exe and run this again." >&2
+    exit 1
+fi
 
 echo "bridge -> ${POD_SSH}"
-exec python -m service.tunnel_worker
+exec "$PY" -m service.tunnel_worker

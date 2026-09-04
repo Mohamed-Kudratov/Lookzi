@@ -115,6 +115,12 @@ class Ssh:
 
     def __init__(self, host, key=None):
         self.host = host
+        # Split, because RunPod's direct address carries its port: the whole
+        # string "root@1.2.3.4 -p 24118" handed to ssh as one argument is a
+        # hostname with a space in it, and ssh says so -- "hostname contains
+        # invalid characters" -- which reads like a typo in the address rather
+        # than a quoting mistake here. tunnel_worker has always done this.
+        self.target = shlex.split(host)
         self.key = key or SSH_KEY
 
     def run(self, script, timeout=600, attempts=3):
@@ -151,7 +157,7 @@ class Ssh:
         cmd = ["ssh", "-tt", "-q",
                "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=25",
                "-o", "ServerAliveInterval=20", "-o", "ServerAliveCountMax=30",
-               "-o", "IdentitiesOnly=yes", "-i", self.key, self.host]
+               "-o", "IdentitiesOnly=yes", "-i", self.key] + self.target
         try:
             proc = subprocess.run(cmd, input=stdin, capture_output=True,
                                   text=True, timeout=timeout,
@@ -1030,13 +1036,19 @@ LTX_MODELS = "/workspace/models/ltx-2.5"
 # cores and runs on an A100. Thirty-seven gigabytes were downloaded before that
 # was understood; the file name says int8 and says comfy, and only one of those
 # two words mattered.
+# No sizes here on purpose. They were written down once, in the megabytes
+# Hugging Face reports, and compared against `du -sm`, which counts mebibytes:
+# a 42,018,190,584-byte file is 42,018 by one and 40,072 by the other, a 4.4%
+# gap against a 3% tolerance. The panel decided the largest file it had was
+# missing and started downloading it again. Sizes now come from the repository
+# and are compared exactly, in bytes, so there is nothing to keep in step.
 LTX_FILES = [
-    ("diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors", 42_020),
-    ("text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors", 26_260),
-    ("vae/ltx-2.5-video-vae-bf16.safetensors", 1_470),
-    ("vae/ltx-2.5-audio-vae-bf16.safetensors", 365),
-    ("latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors", 1_000),
-    ("latent_upscale_models/ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors", 260),
+    "diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors",
+    "text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+    "vae/ltx-2.5-video-vae-bf16.safetensors",
+    "vae/ltx-2.5-audio-vae-bf16.safetensors",
+    "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+    "latent_upscale_models/ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors",
 ]
 
 
@@ -1128,18 +1140,20 @@ def step_ltx_weights(ssh, st):
     if "CODE 200" not in out:
         raise PodError("could not reach the LTX weights:\n" + out[-300:])
 
-    total = sum(mb for _, mb in LTX_FILES)
-    done_mb = 0
-    for name, size_mb in LTX_FILES:
+    want = _ltx_sizes(ssh)
+    total = sum(want.values())
+    done = 0
+    for name in LTX_FILES:
         short = name.split("/")[-1]
-        got = _mb(ssh, LTX_MODELS + "/" + name)
-        if got >= size_mb * 0.97:
-            st.log(short + ": already here (" + str(got) + " MB)")
-            done_mb += size_mb
-            st.step_progress("ltx_weights", done_mb / total)
+        size = want[name]
+        got = _bytes(ssh, LTX_MODELS + "/" + name)
+        if got == size:
+            st.log(f"{short}: already here ({got / 1e9:.1f} GB)")
+            done += size
+            st.step_progress("ltx_weights", done / total)
             continue
 
-        st.log(short + ": " + str(got) + " of " + str(size_mb) + " MB")
+        st.log(f"{short}: {got / 1e9:.1f} of {size / 1e9:.1f} GB")
         ssh.run(
             "setsid nohup python -c \"import os; "
             "from huggingface_hub import hf_hub_download; "
@@ -1151,43 +1165,74 @@ def step_ltx_weights(ssh, st):
         started = time.time()
         while not st.cancelled:
             time.sleep(10)
-            got = _mb(ssh, LTX_MODELS + "/" + name)
-            if got >= size_mb * 0.97:
+            if _bytes(ssh, LTX_MODELS + "/" + name) == size:
                 break
             rc, alive = ssh.run(
                 "pgrep -f hf_hub_download >/dev/null && echo ALIVE || echo GONE",
                 timeout=180)
             if "GONE" in alive:
                 # Asked again, and it matters more here than anywhere: what
-                # grows during the download is the .incomplete file, and the
-                # final path only appears when the move happens at the end. So
-                # the size is zero right up until it is complete, and the
-                # process exits in the same moment.
-                got = _mb(ssh, LTX_MODELS + "/" + name)
-                if got >= size_mb * 0.97:
+                # grows during the download is a file under .cache, and the
+                # real path only appears when the move happens at the very
+                # end. So the size is zero right up until it is complete, and
+                # the process exits in that same moment.
+                if _bytes(ssh, LTX_MODELS + "/" + name) == size:
                     break
                 rc, tail = ssh.run("tail -12 /workspace/ltx_dl.log", timeout=180)
                 raise PodError(short + " did not download:\n" + tail[-600:])
-            # Progress from the .incomplete file, for the same reason.
-            part = _mb(ssh, LTX_MODELS + "/.cache/huggingface/download/"
-                       + name.rsplit("/", 1)[0])
-            st.step_progress("ltx_weights",
-                             (done_mb + min(part, size_mb)) / total)
+            # Progress off the partial file, for the same reason.
+            part = _bytes(ssh, LTX_MODELS + "/.cache/huggingface/download/"
+                          + name + ".incomplete")
+            st.step_progress("ltx_weights", (done + min(part, size)) / total)
             if time.time() - started > 2400:
                 raise PodError(short + " is still not down after forty minutes")
-        done_mb += size_mb
+        done += size
 
     rc, out = ssh.run("du -sh " + LTX_MODELS + " | cut -f1", timeout=240)
     lines = [ln for ln in out.strip().splitlines() if ln.strip()]
     st.note("ltx_weights", lines[-1] if lines else "")
 
 
-def _mb(ssh, path):
-    """Megabytes at a path, or zero. Used for both the finished file and the
-    partial one, so the loop can report progress and completion the same way."""
-    rc, out = ssh.run("du -sm " + path + " 2>/dev/null | cut -f1 || echo 0",
+def _ltx_sizes(ssh):
+    """What the repository says each file weighs, in bytes.
+
+    Asked rather than written down. The sizes were hardcoded once, in the
+    megabytes Hugging Face displays, and compared against `du -sm`, which
+    counts mebibytes -- so a complete 42 GB file measured 4.4% short of a
+    figure with a 3% tolerance and the panel downloaded it a second time.
+    Bytes from the same source as the file, compared exactly, cannot drift.
+    """
+    rc, out = ssh.run(
+        'python -c "'
+        "import json, os, urllib.request; "
+        "r = urllib.request.Request("
+        "'https://huggingface.co/api/models/Lightricks/LTX-2.5?blobs=true', "
+        "headers={'Authorization': 'Bearer ' + os.environ['HF_TOKEN']}); "
+        "d = json.loads(urllib.request.urlopen(r, timeout=30).read()); "
+        "print(json.dumps({f['rfilename']: f.get('size') or 0 "
+        "for f in d.get('siblings') or []}))"
+        '"', timeout=240)
+    line = ""
+    for ln in out.splitlines():
+        if ln.strip().startswith("{") and ln.strip().endswith("}"):
+            line = ln.strip()
+    if not line:
+        raise PodError("could not read the file sizes from Hugging Face:\n"
+                       + out[-400:])
+    sizes = json.loads(line)
+    missing = [n for n in LTX_FILES if not sizes.get(n)]
+    if missing:
+        raise PodError("the repository does not list these files any more, so "
+                       "their names have changed:\n  " + "\n  ".join(missing))
+    return {n: int(sizes[n]) for n in LTX_FILES}
+
+
+def _bytes(ssh, path):
+    """The exact size of a file, or zero. Never `du`: it reports blocks."""
+    rc, out = ssh.run("stat -c%s " + path + " 2>/dev/null || echo 0",
                       timeout=180)
-    lines = [ln for ln in out.strip().splitlines() if ln.strip().isdigit()]
+    lines = [ln.strip() for ln in out.strip().splitlines()
+             if ln.strip().isdigit()]
     return int(lines[-1]) if lines else 0
 
 
@@ -1211,7 +1256,7 @@ def step_ltx_shm(ssh, st):
     rc, out = ssh.run("df -m /dev/shm | tail -1 | awk '{print $2}'", timeout=120)
     lines = [ln for ln in out.strip().splitlines() if ln.strip().isdigit()]
     shm_mb = int(lines[-1]) if lines else 0
-    want_mb = sum(mb for _, mb in LTX_FILES if "comfy" not in _)
+    want_mb = sum(_ltx_sizes(ssh).values()) // (1024 * 1024)
     if shm_mb < want_mb * 1.05:
         # Said plainly rather than half-done: a partial copy would leave some
         # weights fast and some slow, and the clip would still be slow.
@@ -1224,7 +1269,7 @@ def step_ltx_shm(ssh, st):
     script = ["set -e", "SRC=" + LTX_MODELS, "DST=/dev/shm/ltx-2.5",
               "mkdir -p $DST/diffusion_models $DST/text_encoders $DST/vae "
               "$DST/latent_upscale_models"]
-    for name, _ in LTX_FILES:
+    for name in LTX_FILES:
         script.append(
             f'if [ "$(stat -c%s "$DST/{name}" 2>/dev/null)" != '
             f'"$(stat -c%s "$SRC/{name}")" ]; then '
@@ -1478,12 +1523,22 @@ def parse_host(text):
     It gives `ssh abc-123@ssh.runpod.io -i ~/.ssh/id_ed25519`, and asking
     somebody to edit that down to the middle part is asking them to make a
     mistake at four in the morning.
+
+    The port comes with it. RunPod's direct address is `root@1.2.3.4 -p 24118`
+    and that is the form this panel writes into .env at the end of a run -- so
+    dropping `-p` here meant the panel could not read back the address it had
+    written itself, and every step failed at `connect` with "could not read the
+    pod's reply" while the address on screen looked perfectly correct. The
+    proxy address has no port, which is why this survived until a pod was set
+    up twice.
     """
     text = (text or "").strip()
     m = re.search(r"([A-Za-z0-9_.\-]+@[A-Za-z0-9_.\-]+)", text)
     if not m:
         raise HTTPException(400, "no user@host found in that line")
-    return m.group(1)
+    host = m.group(1)
+    port = re.search(r"-p\s+([0-9]{1,5})(?![0-9])", text)
+    return f"{host} -p {port.group(1)}" if port else host
 
 
 @app.post("/api/start")
