@@ -76,6 +76,24 @@ def load():
         _pipe = LayeringVTONPipeline(MODEL_PATH, LORA_DIR, lightning=LIGHTNING)
         _load_seconds = round(time.time() - t, 1)
         print(f"[pod] ready in {_load_seconds}s", flush=True)
+        # The garment classifier, loaded here rather than on the first packshot
+        # that needs it. It is eight seconds of CLIP weights off the disk, and
+        # taking them lazily meant the first seller after every pod restart
+        # waited twenty-nine seconds for a fifteen-second job while everyone
+        # after them waited fifteen. It costs nothing to pay for it now: the
+        # weights are small, they sit on the processor, and this runs while the
+        # port is already open and nobody is waiting.
+        try:
+            from .garment_type import _load as _load_classifier
+            t = time.time()
+            _load_classifier()
+            print(f"[pod] garment classifier ready in {time.time() - t:.1f}s",
+                  flush=True)
+        except Exception as exc:                              # noqa: BLE001
+            # Not fatal. Without it the packshot falls back to running the
+            # classifier on demand, which is what it did before.
+            print(f"[pod] classifier not preloaded: {type(exc).__name__}: {exc}",
+                  flush=True)
     except Exception as exc:                                  # noqa: BLE001
         # Held rather than raised, so /health can say what went wrong. A worker
         # that dies at startup leaves whoever is waiting to guess between a
