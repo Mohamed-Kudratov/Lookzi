@@ -476,13 +476,22 @@ def review_delete(job_id: uuid.UUID, request: Request, conn=Depends(db),
     """
     if not _may_review(request, key):
         raise HTTPException(404, "not found")
-    row = conn.execute("SELECT object_key FROM results WHERE job_id = %s",
-                       (job_id,)).fetchone()
+    rows = conn.execute("SELECT object_key FROM results WHERE job_id = %s",
+                        (job_id,)).fetchall()
+    # A model kept from a job points at that job's picture rather than a copy
+    # of it -- /models/keep reuses the key on purpose, so that keeping a model
+    # costs nothing. The cost is here: deleting the job would take the model's
+    # photograph with it and leave a model that cannot be used. Found by using
+    # one: the job had been deleted days earlier while tidying the gallery, and
+    # every attempt to dress that model failed with NoSuchKey.
+    kept = {r["object_key"] for r in rows if r["object_key"] and conn.execute(
+        "SELECT 1 FROM models WHERE hero_key = %s", (r["object_key"],)).fetchone()}
     gone = conn.execute("DELETE FROM jobs WHERE id = %s RETURNING id",
                         (job_id,)).fetchone()
     if gone is None:
         raise HTTPException(404, "unknown job")
-    if row and row["object_key"]:
+    row = rows[0] if rows else None
+    if row and row["object_key"] and row["object_key"] not in kept:
         try:
             storage.delete(row["object_key"])
         except Exception as exc:                              # noqa: BLE001
