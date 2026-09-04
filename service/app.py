@@ -369,6 +369,9 @@ def job_status(job_id: uuid.UUID, conn=Depends(db), user=Depends(current_user)):
         {"url": storage.presigned_get(r["object_key"]),
          # Carried so the studio does not ask again at the next hop.
          "garment_kind": garment_kind,
+         # image or video. Without it the studio renders an mp4 through <img>
+         # and shows a broken icon with a Save button beside it.
+         "kind": r.get("kind") or "image",
          # The key as well as the link. A finished picture is the input to the
          # next tool -- a packshot into a try-on, a try-on into a model swap --
          # and the studio can only ask for that if it can name the object.

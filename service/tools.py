@@ -44,7 +44,11 @@ TOOLS = {
     "short-video": dict(
         label="Short video",
         blurb="Five or ten seconds of motion from a finished image.",
-        needs=[], cost=3, ready=False),
+        # A picture, and deliberately one the seller has already seen: the
+        # studio carries a packshot or a try-on forward by key. A video made
+        # from a photograph they have not looked at yet is a video they cannot
+        # judge, and it costs minutes of a card rather than seconds.
+        needs=["garment"], cost=3, ready=True),
 }
 
 # What each input is called when it is asked for.

@@ -52,6 +52,10 @@ REMOTE_PORT = int(os.environ.get("POD_SERVER_PORT", "8000"))
 # carries both.
 ZIMAGE_LOCAL = int(os.environ.get("ZIMAGE_LOCAL_PORT", "18001"))
 ZIMAGE_REMOTE = int(os.environ.get("ZIMAGE_PORT", "8011"))
+# And a third, for video. LTX pins its own torch and builds two local packages,
+# so it cannot share either of the other two interpreters. Same ssh connection.
+LTX_LOCAL = int(os.environ.get("LTX_LOCAL_PORT", "18002"))
+LTX_REMOTE = int(os.environ.get("LTX_PORT", "8021"))
 # Generous, because it covers the model still loading on a pod that has just
 # started. The queue's own lease is fifteen minutes and this must end first.
 REQUEST_TIMEOUT = int(os.environ.get("POD_REQUEST_TIMEOUT", "600"))
@@ -62,6 +66,7 @@ TUNNEL_BACKOFF = float(os.environ.get("POD_TUNNEL_BACKOFF", "4"))
 
 BASE = f"http://127.0.0.1:{LOCAL_PORT}"
 ZBASE = f"http://127.0.0.1:{ZIMAGE_LOCAL}"
+VBASE = f"http://127.0.0.1:{LTX_LOCAL}"
 
 
 class PodDown(RuntimeError):
@@ -102,7 +107,8 @@ class Tunnel:
                "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3",
                "-o", "IdentitiesOnly=yes", "-i", self.key,
                "-L", f"{self.local}:127.0.0.1:{self.remote}",
-               "-L", f"{ZIMAGE_LOCAL}:127.0.0.1:{ZIMAGE_REMOTE}"] + self.target
+               "-L", f"{ZIMAGE_LOCAL}:127.0.0.1:{ZIMAGE_REMOTE}",
+               "-L", f"{LTX_LOCAL}:127.0.0.1:{LTX_REMOTE}"] + self.target
         self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.PIPE)
 
@@ -356,12 +362,42 @@ def handle_packshot(job, p):
             "seconds": float(headers.get("X-Seconds") or 0) or None}
 
 
+def handle_video(job, p):
+    """A finished picture in, five or ten seconds of motion out.
+
+    The input is deliberately whatever the seller already has -- a packshot, a
+    try-on, a scene -- rather than a fresh upload, because a video of a
+    photograph they have not seen yet is a video they cannot judge. The studio
+    carries the result forward by key, so nothing is uploaded twice.
+    """
+    key = p.get("garment_key") or p.get("person_key")
+    if not key:
+        raise RunPodInput("a video needs a finished picture to move")
+
+    fields = {"seconds": float(p.get("seconds") or 5),
+              "seed": int(p.get("seed", 42))}
+    if (p.get("prompt") or "").strip():
+        fields["prompt"] = p["prompt"].strip()
+
+    mp4, headers = _post(f"{VBASE}/video", fields,
+                         {"image": ("still.png", storage.get_bytes(key))})
+    out_key = storage.key_for("results", job["user_id"])
+    storage.put_bytes(out_key, mp4)
+    return {"object_key": out_key, "kind": "video",
+            "width": int(headers.get("X-Width") or 0) or None,
+            "height": int(headers.get("X-Height") or 0) or None,
+            "seconds": float(headers.get("X-Seconds") or 0) or None}
+
+
 def handle(job):
     p = job["params"] or {}
     _tunnel.up()
 
     if job["tool"] == "packshot":
         return handle_packshot(job, p)
+
+    if job["tool"] == "short-video":
+        return handle_video(job, p)
 
     if job["tool"] == "product-in-scene":
         png, headers, seconds = handle_scene(job, p)

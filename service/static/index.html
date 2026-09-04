@@ -253,6 +253,7 @@ button,input,textarea{font:inherit;color:inherit}
 .seg button:hover{background:var(--raised);color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);
   border-color:var(--brand)}
+.big video{width:100%;height:auto;display:block;border-radius:12px;background:#000}
 .pop-sub{margin:-2px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-3);
   max-width:44ch}
 .kinds{display:grid;gap:8px}
@@ -633,12 +634,15 @@ function variantPicker() {
 // photograph in the garment slot -- the clothes on the person are the point of
 // it -- and sending it as a person would silently do nothing.
 var ONWARD = {
+  // Video is the last hop from everything: it moves a finished picture, and
+  // every tool here produces one.
   "packshot": [["virtual-try-on", "garment"], ["product-to-model", "garment"],
-               ["product-in-scene", "garment"]],
-  "product-to-model": [["model-swap", "garment"]],
-  "virtual-try-on": [["model-swap", "garment"]],
-  "product-in-scene": [["model-swap", "garment"]],
-  "model-swap": [["virtual-try-on", "person"]],
+               ["product-in-scene", "garment"],
+               ["short-video", "garment"]],
+  "product-to-model": [["model-swap", "garment"], ["short-video", "garment"]],
+  "virtual-try-on": [["model-swap", "garment"], ["short-video", "garment"]],
+  "product-in-scene": [["model-swap", "garment"], ["short-video", "garment"]],
+  "model-swap": [["virtual-try-on", "person"], ["short-video", "garment"]],
   "model-creation": [["virtual-try-on", "person"]]
 };
 
@@ -653,6 +657,11 @@ function onwardRow() {
     return '<button data-onward="' + esc(n[0]) + '" data-slot="' + esc(n[1]) + '">' +
       svg(n[0]) + esc(t.label) + '</button>';
   }).join("") + '</div>';
+}
+
+function isVideo() {
+  var v = (result.variants || [])[result.at || 0] || (result.variants || [])[0];
+  return (v && v.kind === "video") || result.tool === "short-video";
 }
 
 function shownKey() {
@@ -677,7 +686,12 @@ function drawResult() {
         }).join("") +
       '</div>' +
       '<div>' + variantPicker() +
-      '<div class="big"><img src="' + esc(shown()) + '" alt="The finished image">' +
+      // A video result is an mp4. Rendered through <img> it is a broken icon
+      // and a Save button that saves nothing anybody can open.
+      '<div class="big">' + (isVideo()
+        ? '<video src="' + esc(shown()) + '" controls autoplay loop muted ' +
+          'playsinline></video>'
+        : '<img src="' + esc(shown()) + '" alt="The finished image">') +
         '<button class="btn save" id="save">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Save</button>' +
         // A model made to order was a picture in the history and nothing more.
@@ -759,7 +773,10 @@ function save(url) {
   fetch(url).then(function (r) { return r.blob(); }).then(function (b) {
     var a = document.createElement("a");
     a.href = URL.createObjectURL(b);
-    a.download = "lookzi-" + Date.now() + ".png";
+    // The extension has to match what was actually made. A clip saved as
+    // .png is a file the seller's computer refuses to open and reads as a
+    // broken download rather than a wrong name.
+    a.download = "lookzi-" + Date.now() + (isVideo() ? ".mp4" : ".png");
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
   }).catch(function () { toast("Could not save that one.", true); });
@@ -850,6 +867,8 @@ var KINDS = [["upper", "Top", "shirt, jacket, blouse, sweater"],
 // somebody in an outfit is a top has no answer.
 var ASKS_KIND = {"packshot": 1, "product-to-model": 1, "virtual-try-on": 1,
                  "product-in-scene": 1};
+// Not "short video": what it takes is a finished picture the seller already
+// chose, so there is nothing to classify and nothing to warn about.
 
 // These three put the garment on a body, and the model that does it wears
 // everything on the torso -- a skirt comes back worn as a top. It reads the

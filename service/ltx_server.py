@@ -103,6 +103,10 @@ def load():
         from ltx_pipelines.utils.quantization_factory import QuantizationKind
         from ltx_pipelines.utils.types import OffloadMode
 
+        # Built under the same mode the requests will run in, so there is one
+        # kind of tensor in this process rather than two.
+        torch.set_grad_enabled(False)
+
         paths = ModelPaths.from_split(
             transformer_path=TRANSFORMER,
             text_encoder_path=TEXT_ENCODER,
@@ -206,7 +210,15 @@ def video(image: UploadFile = File(...),
                 from ltx_pipelines.utils.args import ImageConditioningInput
                 from ltx_pipelines.utils.media_io import encode_video
 
-                result = _pipe(
+                # inference_mode is thread-local, and that is the whole
+                # problem. The pipeline is built once, in the loading thread,
+                # and the tensors it makes there are inference tensors; the
+                # request arrives on one of the server's worker threads, where
+                # grad is on by default, and using them there fails with
+                # "Inference tensors cannot be saved for backward". The command
+                # line never sees this because it does both in one thread.
+                with torch.inference_mode():
+                  result = _pipe(
                     prompt=(prompt or "").strip() or DEFAULT_PROMPT,
                     seed=int(seed),
                     height=h, width=w,
@@ -221,7 +233,7 @@ def video(image: UploadFile = File(...),
                     images=[ImageConditioningInput(src, 0, 1.0, None)],
                     vae_dtype=torch.bfloat16,
                     tiling_config=AUTO_TILING,
-                )
+                  )
                 encode_video(
                     video=result.video, fps=FPS,
                     # No audio. LTX generates it, and a product listing does not
