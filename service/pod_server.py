@@ -268,9 +268,13 @@ def _correct(img, mask=None):
 # this model deaf to instructions.
 
 RETOUCH_STEPS = int(os.environ.get("RETOUCH_STEPS", "12"))
-# Four, with Lightning. Eight was the adapter's design point and four was
-# indistinguishable on five garments while taking half as long.
-RETOUCH_FAST_STEPS = int(os.environ.get("RETOUCH_FAST_STEPS", "4"))
+# Three, with Lightning. Eight was the adapter's design point; four was
+# indistinguishable from eight on five garments, and three is indistinguishable
+# from four -- checked at full resolution on a printed skirt, where a step too
+# few shows first. Two is not: the fabric goes grainy and the dots break up.
+# Each step is about 3.4 seconds, so this is the cheapest three seconds in the
+# whole packshot.
+RETOUCH_FAST_STEPS = int(os.environ.get("RETOUCH_FAST_STEPS", "3"))
 # How sure the garment classifier has to be before it puts a sentence in front
 # of the instruction. At 0.03 it speaks for two thirds of garments and is right
 # on 99% of those; at 0.00 it speaks for all of them and is right on 94%. The

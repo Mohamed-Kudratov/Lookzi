@@ -28,6 +28,7 @@ checked before every job, and reopened when it drops.
     POST them through the tunnel   ------>  one loaded model
     store the PNG that comes back  <------  answers with a PNG
 """
+import concurrent.futures
 import io
 import os
 import shlex
@@ -272,10 +273,23 @@ def handle_packshot(job, p):
         raise RunPodInput("a packshot needs a photograph of the garment")
     garment = storage.get_bytes(p["garment_key"])
 
-    cut, cut_headers = _post(f"{BASE}/packshot", {},
-                             {"garment": ("garment.png", garment)})
-    cut_key = storage.key_for("results", job["user_id"])
-    storage.put_bytes(cut_key, cut)
+    # The cut-out runs beside the retouch rather than in front of it. It is
+    # rembg on the processor and takes no GPU lock, so the second it costs was
+    # a second the card spent idle waiting for a background removal it does not
+    # need. Nothing downstream reads it until the retouch has returned.
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    cutting = pool.submit(_post, f"{BASE}/packshot", {},
+                          {"garment": ("garment.png", garment)})
+    # Released now rather than at the end: the thread finishes the job it was
+    # handed and then exits, so a long-running bridge does not accumulate one
+    # idle thread per packshot.
+    pool.shutdown(wait=False)
+
+    def cut_out():
+        cut, cut_headers = cutting.result()
+        cut_key = storage.key_for("results", job["user_id"])
+        storage.put_bytes(cut_key, cut)
+        return cut, cut_headers, cut_key
 
     try:
         # The seller's own answer to what this garment is, when the studio
@@ -289,9 +303,10 @@ def handle_packshot(job, p):
         png, headers = _post(f"{BASE}/retouch", fields,
                              {"garment": ("garment.png", garment)})
     except PodDown as exc:
-        # The cut-out already exists and is worth handing over. A retouch that
-        # could not run is not a failed job when the floor is in place.
+        # The cut-out is worth handing over. A retouch that could not run is
+        # not a failed job when the floor is in place.
         print(f"[bridge] {job['id']} retouch unavailable: {exc}", flush=True)
+        cut, cut_headers, cut_key = cut_out()
         return {"object_key": cut_key, "kind": "image", "variant": "cutout",
                 "width": int(cut_headers.get("X-Width") or 0) or None,
                 "height": int(cut_headers.get("X-Height") or 0) or None,
@@ -299,6 +314,7 @@ def handle_packshot(job, p):
 
     key = storage.key_for("results", job["user_id"])
     storage.put_bytes(key, png)
+    cut, cut_headers, cut_key = cut_out()
 
     # Scored, and the score decides nothing.
     #
