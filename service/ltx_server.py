@@ -258,16 +258,25 @@ def video(image: UploadFile = File(...),
                     vae_dtype=torch.bfloat16,
                     tiling_config=AUTO_TILING,
                   )
-                encode_video(
-                    video=result.video, fps=FPS,
-                    # No audio. LTX generates it, and a product listing does not
-                    # want a soundtrack the seller did not ask for and cannot
-                    # hear before they publish.
-                    audio=None,
-                    output_path=out_path,
-                    video_chunks_number=get_video_chunks_number(
-                        result.num_frames, result.tiling_config),
-                )
+                  # Encoded inside the same block, not after it.
+                  #
+                  # result.video is a generator: the decoder yields chunks and
+                  # the frames are computed while encode_video walks it. Called
+                  # outside, that walk happens with grad enabled again, and the
+                  # video VAE's first rms_norm fails with "Inference tensors
+                  # cannot be saved for backward" -- pointing at the decoder,
+                  # which is not where the mistake is. The mistake is the
+                  # generator outliving the context that made it.
+                  encode_video(
+                      video=result.video, fps=FPS,
+                      # No audio. LTX generates it, and a product listing does
+                      # not want a soundtrack the seller did not ask for and
+                      # cannot hear before they publish.
+                      audio=None,
+                      output_path=out_path,
+                      video_chunks_number=get_video_chunks_number(
+                          result.num_frames, result.tiling_config),
+                  )
             except Exception as exc:                          # noqa: BLE001
                 _stats["failed"] += 1
                 # Printed in full, because the one-line message is not enough
