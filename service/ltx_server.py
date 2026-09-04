@@ -98,9 +98,9 @@ def load():
     try:
         import torch
         from ltx_core.model.video_vae.transformer import DiffVAEMode
-        from ltx_core.quantization import QuantizationPolicy
         from ltx_pipelines.distilled import DistilledPipeline
         from ltx_pipelines.utils.model_paths import ModelPaths
+        from ltx_pipelines.utils.quantization_factory import QuantizationKind
         from ltx_pipelines.utils.types import OffloadMode
 
         paths = ModelPaths.from_split(
@@ -114,7 +114,15 @@ def load():
             model_paths=paths,
             spatial_upsampler_path=UPSAMPLER,
             loras=(),
-            quantization=QuantizationPolicy(QUANT),
+            # Through QuantizationKind, not by handing the string to
+            # QuantizationPolicy. That constructor takes the policy's fields,
+            # so passing "fp8-cast" to it builds a policy whose sd_ops happens
+            # to be that string and whose fuse rule is wrong -- the loader then
+            # refuses it with "only bf16 and fp8_cast are supported", naming
+            # the very thing that was asked for. to_policy reads the checkpoint
+            # to build the real one, which is what the CLI does.
+            quantization=QuantizationKind(QUANT).to_policy(
+                checkpoint_path=TRANSFORMER),
             offload_mode=OffloadMode(OFFLOAD),
             diffvae_optimization=DiffVAEMode.CHUNKED_EAGER,
         )
