@@ -1017,6 +1017,180 @@ def _remember_address(st, addr):
         st.warn(f"could not write the address to .env: {exc}")
 
 
+# ---------------------------------------------------------------------------
+# video
+
+LTX_REPO = "/opt/ltx"
+LTX_MODELS = "/workspace/models/ltx-2.5"
+# bf16, and not the `comfy-int8-convrot` pair the same repository offers.
+# Those are ComfyUI's own quantisation: ltx_pipelines dies loading them with
+# `KeyError: mlp.down_proj.comfy_quant`, a key only ComfyUI's quantiser writes.
+# The supported way to halve the weights is --quantization fp8-cast, which
+# stores in fp8 and upcasts to bf16 to compute -- so it needs no fp8 tensor
+# cores and runs on an A100. Thirty-seven gigabytes were downloaded before that
+# was understood; the file name says int8 and says comfy, and only one of those
+# two words mattered.
+LTX_FILES = [
+    ("diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors", 42_020),
+    ("text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors", 26_260),
+    ("vae/ltx-2.5-video-vae-bf16.safetensors", 1_470),
+    ("vae/ltx-2.5-audio-vae-bf16.safetensors", 365),
+    ("latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors", 1_000),
+    ("latent_upscale_models/ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors", 260),
+]
+
+
+def step_ltx_env(ssh, st):
+    """The third interpreter, for video.
+
+    Same reason as the second one: LTX pins its own torch and builds two local
+    packages, and it cannot share the try-on stack's pins. It lives on the
+    container disk, so it is gone after every migration -- and after every
+    environment variable saved in the RunPod console, which resets the
+    container. That happened once and left the panel reporting a green pod with
+    no video on it, which is exactly why this is a step and not four commands
+    typed by hand.
+    """
+    def usable():
+        rc, out = ssh.run(
+            LTX_REPO + "/.venv/bin/python -c \"import ltx_core, ltx_pipelines; "
+            "import torch; assert torch.cuda.is_available(); print('LTX_OK')\" "
+            "2>&1 | tail -2", timeout=300)
+        return "LTX_OK" in out, out
+
+    ok, out = usable()
+    if ok:
+        st.log("the ltx venv is already here and complete")
+        st.note("ltx_env", "already built")
+        return
+
+    st.log("cloning and building the ltx venv (about five minutes, once per pod)")
+    ssh.run("rm -rf " + LTX_REPO + "\n"
+            "git clone -q --depth 1 https://github.com/Lightricks/LTX-2.git "
+            + LTX_REPO + "\n"
+            "cd " + LTX_REPO + "\n"
+            "setsid nohup bash -c 'uv sync --extra natten' "
+            "  > /workspace/ltx_sync.log 2>&1 < /dev/null &\n"
+            "echo started\n", timeout=300)
+
+    started = time.time()
+    while not st.cancelled:
+        time.sleep(15)
+        ok, _ = usable()
+        if ok:
+            break
+        rc, alive = ssh.run(
+            "pgrep -f 'uv sync' >/dev/null && echo ALIVE || echo GONE",
+            timeout=180)
+        if "GONE" in alive:
+            # Asked again: these are two questions one after the other and the
+            # answer can change in between. See step_zimage.
+            ok, _ = usable()
+            if ok:
+                break
+            rc, tail = ssh.run("tail -15 /workspace/ltx_sync.log", timeout=180)
+            raise PodError("the ltx venv did not build:\n" + tail[-700:])
+        st.step_progress("ltx_env", min(0.95, (time.time() - started) / 300))
+
+    ok, out = usable()
+    st.log(out)
+    if not ok:
+        raise PodError("the ltx venv is incomplete after building:\n" + out[-400:])
+
+
+def step_ltx_weights(ssh, st):
+    """Seventy-one gigabytes, on the volume, downloaded only when missing.
+
+    These weights are gated: they need an accepted licence and HF_TOKEN in the
+    pod's environment. The two failures are reported as themselves rather than
+    as "download failed", because they are different jobs for whoever reads it
+    -- 401 means there is no token, 403 means the licence was never accepted --
+    and one message for both sends them to look in the wrong place. It did.
+    """
+    rc, out = ssh.run(
+        '[ -n "$HF_TOKEN" ] && echo HAVE_TOKEN || echo NO_TOKEN\n'
+        'curl -s -o /dev/null -w "CODE %{http_code}\\n" -L '
+        '-H "Authorization: Bearer $HF_TOKEN" '
+        'https://huggingface.co/Lightricks/LTX-2.5/resolve/main/'
+        'vae/ltx-2.5-audio-vae-bf16.safetensors\n', timeout=180)
+    if "NO_TOKEN" in out:
+        raise PodError(
+            "HF_TOKEN is not set on this pod, and LTX-2.5's weights are gated. "
+            "Add HF_TOKEN in the RunPod console as a Secret, or run "
+            "`hf auth login` on the pod. Saving an environment variable in the "
+            "console restarts the container, so expect to run this again.")
+    if "CODE 403" in out:
+        raise PodError(
+            "the token works but the licence has not been accepted. Open "
+            "https://huggingface.co/Lightricks/LTX-2.5 signed in as the account "
+            "that owns HF_TOKEN and press 'Agree and access repository'. It is "
+            "granted immediately, with nobody reviewing it.")
+    if "CODE 200" not in out:
+        raise PodError("could not reach the LTX weights:\n" + out[-300:])
+
+    total = sum(mb for _, mb in LTX_FILES)
+    done_mb = 0
+    for name, size_mb in LTX_FILES:
+        short = name.split("/")[-1]
+        got = _mb(ssh, LTX_MODELS + "/" + name)
+        if got >= size_mb * 0.97:
+            st.log(short + ": already here (" + str(got) + " MB)")
+            done_mb += size_mb
+            st.step_progress("ltx_weights", done_mb / total)
+            continue
+
+        st.log(short + ": " + str(got) + " of " + str(size_mb) + " MB")
+        ssh.run(
+            "setsid nohup python -c \"import os; "
+            "from huggingface_hub import hf_hub_download; "
+            "hf_hub_download('Lightricks/LTX-2.5', '" + name + "', "
+            "local_dir='" + LTX_MODELS + "', token=os.environ['HF_TOKEN'])\" "
+            "> /workspace/ltx_dl.log 2>&1 < /dev/null &\n"
+            "echo started\n", timeout=180)
+
+        started = time.time()
+        while not st.cancelled:
+            time.sleep(10)
+            got = _mb(ssh, LTX_MODELS + "/" + name)
+            if got >= size_mb * 0.97:
+                break
+            rc, alive = ssh.run(
+                "pgrep -f hf_hub_download >/dev/null && echo ALIVE || echo GONE",
+                timeout=180)
+            if "GONE" in alive:
+                # Asked again, and it matters more here than anywhere: what
+                # grows during the download is the .incomplete file, and the
+                # final path only appears when the move happens at the end. So
+                # the size is zero right up until it is complete, and the
+                # process exits in the same moment.
+                got = _mb(ssh, LTX_MODELS + "/" + name)
+                if got >= size_mb * 0.97:
+                    break
+                rc, tail = ssh.run("tail -12 /workspace/ltx_dl.log", timeout=180)
+                raise PodError(short + " did not download:\n" + tail[-600:])
+            # Progress from the .incomplete file, for the same reason.
+            part = _mb(ssh, LTX_MODELS + "/.cache/huggingface/download/"
+                       + name.rsplit("/", 1)[0])
+            st.step_progress("ltx_weights",
+                             (done_mb + min(part, size_mb)) / total)
+            if time.time() - started > 2400:
+                raise PodError(short + " is still not down after forty minutes")
+        done_mb += size_mb
+
+    rc, out = ssh.run("du -sh " + LTX_MODELS + " | cut -f1", timeout=240)
+    lines = [ln for ln in out.strip().splitlines() if ln.strip()]
+    st.note("ltx_weights", lines[-1] if lines else "")
+
+
+def _mb(ssh, path):
+    """Megabytes at a path, or zero. Used for both the finished file and the
+    partial one, so the loop can report progress and completion the same way."""
+    rc, out = ssh.run("du -sm " + path + " 2>/dev/null | cut -f1 || echo 0",
+                      timeout=180)
+    lines = [ln for ln in out.strip().splitlines() if ln.strip().isdigit()]
+    return int(lines[-1]) if lines else 0
+
+
 STEPS = [
     Step("connect", "Connect", 5, step_connect, "ssh, and which pod this is"),
     Step("inspect", "Inspect", 8, step_inspect, "GPU, disk, CPU quota"),
@@ -1038,6 +1212,13 @@ STEPS = [
          "one real image, so ready means ready"),
     Step("serve", "Start serving", 45, step_serve,
          "both servers, and the address the bridge needs"),
+    # Video last, because it is by far the biggest download and the only thing
+    # here that can be missing without the rest being useless: a pod that has
+    # finished the steps above already makes packshots and try-ons.
+    Step("ltx_env", "Build the video stack", 120, step_ltx_env,
+         "a third interpreter; LTX pins its own torch"),
+    Step("ltx_weights", "Get LTX-2.5", 700, step_ltx_weights,
+         "71 GB on the volume, skipped when already there"),
 ]
 TOTAL_WEIGHT = sum(s.weight for s in STEPS)
 
