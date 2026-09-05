@@ -375,7 +375,10 @@ def handle_video(job, p):
         raise RunPodInput("a video needs a finished picture to move")
 
     fields = {"seconds": float(p.get("seconds") or 5),
-              "seed": int(p.get("seed", 42))}
+              "seed": int(p.get("seed", 42)),
+              # Where the clip is going to be published: reels, the feed,
+              # a square catalogue tile, a banner.
+              "ratio": p.get("ratio") or "9:16"}
     if (p.get("prompt") or "").strip():
         fields["prompt"] = p["prompt"].strip()
 

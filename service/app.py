@@ -233,6 +233,11 @@ class JobRequest(BaseModel):
     build: str | None = Field(None, pattern="^(slim|average|fuller)$")
     look: str | None = Field(None, pattern="^(uzbek|kazakh|tajik|slavic)$")
     modest: bool = False
+    # The shape the clip is delivered in. A seller posting to reels and a
+    # seller filling a catalogue tile want different frames, and forcing one
+    # on both is how a garment ends up stretched.
+    ratio: str | None = Field(None, pattern="^(9:16|4:5|1:1|16:9)$")
+    seconds: float | None = Field(None, ge=1, le=10)
     # What the customer wants the picture to be. Only the scene tool reads it:
     # the try-on model ignores text entirely, so offering it elsewhere would be
     # a control that does nothing. See docs/CONTROLS.md.
@@ -297,6 +302,8 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "gender": req.gender or "woman", "age": req.age or "20s",
               "build": req.build or "average", "look": req.look or "uzbek",
               "modest": "true" if req.modest else "false",
+              "ratio": req.ratio or "9:16",
+              "seconds": req.seconds or 5,
               "prompt": (req.prompt or "").strip()}
 
     # What the seller said this garment is, remembered against the photograph.

@@ -446,6 +446,7 @@ var pick = {tool: null, prompt: "",
             bottom_ok: null,
             person_key: null, person_url: null,
             model_id: null,
+            ratio: "9:16", seconds: "5",
             gender: "woman", age: "20s", build: "average", look: "uzbek",
             modest: "false"};
 
@@ -521,6 +522,12 @@ function drawBar() {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
       '<path d="M20 6 9 17l-5-5"/></svg>' + esc(kindLabel(pick.garment_kind)) +
       '</button>');
+  }
+  if (t.id === "short-video") {
+    extras.push('<button class="mini" data-open="frame" aria-pressed="true">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+      '<rect x="4" y="3" width="16" height="18" rx="2"/></svg>' +
+      esc(ratioName(pick.ratio)) + ' · ' + esc(pick.seconds) + 's</button>');
   }
   if (t.id === "product-in-scene" || t.id === "model-creation") {
     extras.push('<button class="mini" data-example="1">' +
@@ -794,6 +801,29 @@ var LOOK = [
 function openPop(which) {
   var html;
   if (which === "kind") { askKind(null); return; }
+  if (which === "frame") {
+    $("pop").innerHTML =
+      '<h3>What is the clip for?</h3>' +
+      '<p class="pop-sub">The shape it is delivered in. Nothing is stretched ' +
+      'or cropped to fit — the picture is fitted whole and the rest is filled ' +
+      'in to match its own background.</p>' +
+      '<div class="kinds">' + RATIOS.map(function (r) {
+        return '<button data-ratio="' + esc(r[0]) + '"' +
+          (pick.ratio === r[0] ? ' aria-pressed="true"' : '') + '>' +
+          '<b>' + esc(r[2]) + '</b><span>' + esc(r[1]) + '</span></button>';
+      }).join("") + '</div>' +
+      '<div class="look-row" style="margin-top:12px"><span>Length</span>' +
+      '<div class="seg">' + LENGTHS.map(function (l) {
+        return '<button data-len="' + esc(l[0]) + '" aria-pressed="' +
+          (pick.seconds === l[0]) + '">' + esc(l[1]) + '</button>';
+      }).join("") + '</div></div>' +
+      '<button class="icon-btn close" data-close="1" aria-label="Close">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">' +
+      '<path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    $("pop").hidden = false;
+    $("scrim").hidden = false;
+    return;
+  }
   if (which === "models") {
     html = '<h3>Who wears it</h3><div class="grid-models">' + MODELS.map(function (m) {
       return '<button data-model="' + esc(m.id) + '" aria-pressed="' +
@@ -844,6 +874,23 @@ function upload(need, file) {
       pick[need + "_key"] = null; pick[need + "_url"] = null;
       drawStage(); drawBar();
     });
+}
+
+// ---------------------------------------------------------------- the frame
+// Where the clip is going, said in the names a seller uses rather than in
+// pixels. Every one of these is near a megapixel, so choosing a shape does not
+// quietly choose a price.
+var RATIOS = [
+  ["9:16", "Reels · Stories · TikTok", "9 : 16"],
+  ["4:5", "Instagram feed", "4 : 5"],
+  ["1:1", "Square · catalogue", "1 : 1"],
+  ["16:9", "YouTube · website", "16 : 9"]
+];
+var LENGTHS = [["5", "5 seconds"], ["10", "10 seconds"]];
+
+function ratioName(v) {
+  var r = RATIOS.filter(function (x) { return x[0] === v; })[0];
+  return r ? r[2] : v;
 }
 
 // ------------------------------------------------------------ what is it
@@ -954,6 +1001,8 @@ function run() {
     // has -- but the packshot reads it, and the server remembers it against
     // the photograph so the next tool in the chain does not ask again.
     mode: pick.garment_kind || null,
+    ratio: pick.ratio,
+    seconds: Number(pick.seconds),
     prompt: pick.prompt.trim() || null,
     gender: pick.gender, age: pick.age, build: pick.build, look: pick.look,
     modest: pick.modest === "true",
@@ -1048,6 +1097,11 @@ document.addEventListener("click", function (e) {
     afterKind = null;
     closePop(); return;
   }
+
+  var rt = e.target.closest("[data-ratio]");
+  if (rt) { pick.ratio = rt.dataset.ratio; openPop("frame"); drawBar(); return; }
+  var ln = e.target.closest("[data-len]");
+  if (ln) { pick.seconds = ln.dataset.len; openPop("frame"); drawBar(); return; }
 
   var kd = e.target.closest("[data-kind]");
   if (kd) {

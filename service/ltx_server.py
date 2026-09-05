@@ -86,10 +86,24 @@ UPSAMPLER = os.environ.get(
 OFFLOAD = os.environ.get("LTX_OFFLOAD", "none")
 QUANT = os.environ.get("LTX_QUANT", "fp8-cast")
 
-# Portrait, because these are clothes. Stage one samples at half of this and
-# stage two upsamples, which is why the numbers must stay divisible by 32.
-WIDTH = int(os.environ.get("LTX_WIDTH", "704"))
-HEIGHT = int(os.environ.get("LTX_HEIGHT", "1280"))
+# The shapes an advertisement is actually delivered in, and nothing else.
+#
+# Every number is divisible by 32 -- stage one samples at half the target and
+# stage two upsamples, and anything else fails deep in the sampler -- and they
+# all land near a megapixel, so one ratio does not quietly cost three times
+# another.
+#
+#   9:16  reels, stories, tiktok        4:5   the feed, portrait
+#   1:1   the feed, square, catalogues  16:9  youtube, a website banner
+RATIOS = {
+    "9:16": (704, 1280),
+    "4:5": (768, 960),
+    "1:1": (1024, 1024),
+    "16:9": (1280, 704),
+}
+DEFAULT_RATIO = os.environ.get("LTX_RATIO", "9:16")
+WIDTH = int(os.environ.get("LTX_WIDTH", "0"))
+HEIGHT = int(os.environ.get("LTX_HEIGHT", "0"))
 FPS = int(os.environ.get("LTX_FPS", "24"))
 MAX_SECONDS = float(os.environ.get("LTX_MAX_SECONDS", "10"))
 
@@ -184,6 +198,7 @@ def video(image: UploadFile = File(...),
           prompt: str = Form(""),
           seconds: float = Form(5.0),
           seed: int = Form(42),
+          ratio: str = Form(""),
           width: int = Form(0), height: int = Form(0)):
     """One still in, one mp4 out.
 
@@ -208,12 +223,29 @@ def video(image: UploadFile = File(...),
     except Exception as exc:                                  # noqa: BLE001
         raise HTTPException(400, f"not an image: {exc}") from exc
 
-    w = int(width) or WIDTH
-    h = int(height) or HEIGHT
-    # The conditioning frame has to be the frame the model is generating, or
-    # the first frame of the clip is a resize of the seller's photograph
-    # stitched onto footage of a different shape.
-    still = still.resize((w, h), Image.LANCZOS)
+    if width and height:
+        w, h = int(width), int(height)
+    else:
+        want = (ratio or "").strip() or DEFAULT_RATIO
+        if want not in RATIOS:
+            raise HTTPException(
+                400, f"ratio must be one of {', '.join(RATIOS)}")
+        w, h = RATIOS[want]
+    if WIDTH and HEIGHT:
+        w, h = WIDTH, HEIGHT
+
+    # Fitted and padded, never stretched.
+    #
+    # This was `still.resize((w, h))`, which forces the seller's photograph
+    # into the target shape whatever shape it was: a square packshot asked for
+    # 9:16 came back a garment pulled tall, and a tall photo asked for 16:9
+    # came back pulled wide. Nobody would publish either.
+    #
+    # Padded rather than cropped because the product is the point. A crop that
+    # takes the hem off a dress to make it square is worse than a band down
+    # each side, and for the common case -- a packshot on white -- the band is
+    # white and nobody can see it at all.
+    still = _fit(still, w, h)
 
     secs = max(1.0, min(float(seconds), MAX_SECONDS))
     # 8n+1: the temporal compression works in eights and the pipeline rejects
@@ -296,7 +328,42 @@ def video(image: UploadFile = File(...),
                     headers={"X-Seconds": str(elapsed),
                              "X-Frames": str(frames),
                              "X-Fps": str(FPS),
-                             "X-Width": str(w), "X-Height": str(h)})
+                             "X-Width": str(w), "X-Height": str(h),
+                             "X-Ratio": f"{w}:{h}"})
+
+
+def _fit(im, w, h):
+    """The picture inside a w by h frame, whole, on a matching ground.
+
+    The ground is the median of the picture's own border, so a packshot on
+    white gets white and a photograph on grey gets grey. Sampling the border
+    rather than assuming white is what keeps the bands from being a visible
+    frame around somebody's studio shot.
+    """
+    from PIL import Image as _I
+
+    im = im.convert("RGB")
+    scale = min(w / im.width, h / im.height)
+    new = im.resize((max(1, round(im.width * scale)),
+                     max(1, round(im.height * scale))), _I.LANCZOS)
+    if new.size == (w, h):
+        return new
+
+    px = im.load()
+    edge = []
+    step = max(1, im.width // 32)
+    for x in range(0, im.width, step):
+        edge.append(px[x, 0])
+        edge.append(px[x, im.height - 1])
+    step = max(1, im.height // 32)
+    for y in range(0, im.height, step):
+        edge.append(px[0, y])
+        edge.append(px[im.width - 1, y])
+    ground = tuple(sorted(c[i] for c in edge)[len(edge) // 2] for i in range(3))
+
+    out = _I.new("RGB", (w, h), ground)
+    out.paste(new, ((w - new.width) // 2, (h - new.height) // 2))
+    return out
 
 
 def main():
