@@ -173,7 +173,8 @@ def instruct(person: UploadFile = File(...),
              description: str = Form(""),
              seed: int = Form(42),
              steps: int = Form(0),
-             fast: str = Form("1")):
+             fast: str = Form("1"),
+             pad: str = Form("1")):
     """Try-on as an edit rather than as a composite.
 
     Two images and a sentence, through the same editor the packshot uses, with
@@ -200,7 +201,8 @@ def instruct(person: UploadFile = File(...),
     # Padded, not cropped or stretched: a skirt with its hem cut off is a
     # different skirt, and the ground is taken from the photograph's own border
     # so a packshot on white gets white.
-    garment_img = _match_shape(garment_img, person_img)
+    if str(pad).strip().lower() not in ("0", "false", "no", ""):
+        garment_img = _match_shape(garment_img, person_img)
     prompt = WEAR.get(mode, WEAR["upper"])
     if (description or "").strip():
         prompt += " " + description.strip()
@@ -477,9 +479,24 @@ def editor():
     return _editor
 
 
+# How upright the garment picture is made before it goes into the edit. Not
+# the person's own shape: matching that exactly put a landscape skirt in the
+# top half of a tall canvas with the bottom half empty, and a garment that
+# small in the frame is a garment the model reconstructs rather than copies --
+# a plain navy skirt came back covered in polka dots. This is the gentlest
+# shape that still reads as a portrait.
+GARMENT_ASPECT = float(os.environ.get("GARMENT_ASPECT", str(3 / 4)))
+
+
 def _match_shape(im, like):
-    """`im` on a ground of its own edge colour, in the same shape as `like`."""
-    w, h = like.size
+    """`im` on a ground of its own edge colour, made upright but not tall.
+
+    `like` decides only the width; the height is whatever GARMENT_ASPECT asks
+    for, or the picture's own if it is already at least that upright. A
+    landscape photograph is padded to 3:4 and no further.
+    """
+    w = like.size[0]
+    h = max(round(w / GARMENT_ASPECT), round(im.height * w / im.width))
     scale = min(w / im.width, h / im.height)
     small = im.resize((max(1, round(im.width * scale)),
                        max(1, round(im.height * scale))), Image.LANCZOS)
