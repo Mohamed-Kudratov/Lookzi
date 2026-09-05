@@ -1402,13 +1402,38 @@ def step_ltx_serve(ssh, st):
     # page cache, and the server must not go looking in an empty
     # /dev/shm/ltx-2.5 for weights nobody could fit there.
     models = st.facts.get("ltx_models") or LTX_MODELS
+    # A file that did not fit in memory is still read from the volume, and the
+    # server takes one environment variable per component for exactly this.
+    # Without it a partly-filled /dev/shm means the server looks for the text
+    # encoder in a directory that does not contain it.
+    var_for = {
+        "diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors":
+            "LTX_TRANSFORMER",
+        "text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors":
+            "LTX_TEXT_ENCODER",
+        "vae/ltx-2.5-video-vae-bf16.safetensors": "LTX_VIDEO_VAE",
+        "vae/ltx-2.5-audio-vae-bf16.safetensors": "LTX_AUDIO_VAE",
+        "latent_upscale_models/"
+        "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors":
+            "LTX_UPSAMPLER",
+    }
+    env = [f"export LTX_MODELS={models}"]
+    on_volume = []
+    for line in st.facts.get("ltx_split") or []:
+        where, _, name = line.partition(" ")
+        name = name.strip()
+        if where == "VOL" and name in var_for:
+            env.append(f"export {var_for[name]}={LTX_MODELS}/{name}")
+            on_volume.append(name.split("/")[-1])
+
     ssh.run("pkill -f service.ltx_server || true\nsleep 2\n"
             f"cd {POD_REPO}\n"
-            f"export LTX_MODELS={models}\n"
+            + "\n".join(env) + "\n"
             "setsid nohup /opt/ltx/.venv/bin/python -m service.ltx_server "
             "  > /workspace/ltx_server.log 2>&1 < /dev/null &\n"
             "echo started\n", timeout=180)
-    st.log(f"serving from {models}")
+    st.log(f"serving from {models}"
+           + (f"; from the volume: {', '.join(on_volume)}" if on_volume else ""))
 
     started = time.time()
     while not st.cancelled and time.time() - started < 300:
