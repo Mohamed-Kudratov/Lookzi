@@ -103,7 +103,19 @@ services:
     ports: ["4040:4040"]
     depends_on: [web]
 
+  # Behind a profile, because a real pod exists now.
+  #
+  #   docker compose up                     database, storage, web
+  #   docker compose --profile stub up      ... and the stub worker
+  #
+  # It used to start by default, from when there was no GPU to talk to. Once
+  # the bridge was running they both claimed from the same queue and the stub
+  # won often enough to matter: a seller pressed Product -> Model, waited two
+  # seconds, and was handed a black card reading PLACEHOLDER. Nothing failed,
+  # nothing was logged, and the studio said the job was done -- which is the
+  # worst way for this to go wrong. Start it only when there is no bridge.
   worker:
+    profiles: ["stub"]
     build: { context: ., dockerfile: docker/web.Dockerfile }
     command: python -m service.fake_worker
     environment:
@@ -126,7 +138,7 @@ services:
 
   # Behind a profile, so the rest of the stack comes up without a bot token.
   #
-  #   docker compose up                    database, storage, web, worker
+  #   docker compose up                    database, storage, web
   #   docker compose --profile bot up      ... and the bot
   #
   # It was a required variable, which meant a missing token stopped Postgres
