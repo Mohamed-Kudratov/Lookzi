@@ -174,7 +174,7 @@ def instruct(person: UploadFile = File(...),
              seed: int = Form(42),
              steps: int = Form(0),
              fast: str = Form("1"),
-             pad: str = Form("1")):
+             pad: str = Form("0")):
     """Try-on as an edit rather than as a composite.
 
     Two images and a sentence, through the same editor the packshot uses, with
@@ -201,6 +201,18 @@ def instruct(person: UploadFile = File(...),
     # Padded, not cropped or stretched: a skirt with its hem cut off is a
     # different skirt, and the ground is taken from the photograph's own border
     # so a packshot on white gets white.
+    # Off by default, and it should never have been on.
+    #
+    # Padding the garment to an upright frame does fix the output framing --
+    # three seeds each way, landscape in gives a landscape crop with no head,
+    # padded gives a full-length portrait. But the same measurement showed it
+    # wrecks the garment two times in three: a plain navy skirt came back
+    # orange and floral, because padding leaves the garment filling half the
+    # canvas and a model with half a garment to look at invents the rest.
+    #
+    # It was left on anyway while the better fix was being tried, and a seller
+    # got a pink tulle skirt back as a teal geometric one. A measurement that
+    # says two in three fail is a measurement that says do not ship it.
     if str(pad).strip().lower() not in ("0", "false", "no", ""):
         garment_img = _match_shape(garment_img, person_img)
     prompt = WEAR.get(mode, WEAR["upper"])
