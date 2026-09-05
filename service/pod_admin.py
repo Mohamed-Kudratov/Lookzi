@@ -1243,35 +1243,57 @@ def _bytes(ssh, path):
 
 
 def step_ltx_shm(ssh, st):
-    """Copy the video weights into memory, because they are read on every clip.
+    """Make the video weights fast to read, by whichever means this pod allows.
 
-    LTX does not hold its weights between clips. DistilledPipeline builds in
-    three seconds and loads nothing; each stage builds its transformer, uses it
-    and frees it, which is deliberate -- two stages and a 26 GB text encoder do
-    not fit on one card at once. So every clip reads tens of gigabytes, more
-    than once, and where it reads from is the whole cost of the feature.
+    LTX does not hold its weights between clips: each stage builds its
+    transformer, uses it and frees it, which is deliberate -- two stages and a
+    26 GB text encoder do not fit on one card at once. So every clip re-reads
+    tens of gigabytes and the read speed is the whole cost of the feature. On
+    the volume that was 861 MB/s and a five-second clip took 645 seconds
+    against 8 seconds of sampling.
 
-    The volume reads at 861 MB/s. The transformer alone is 49 seconds of that
-    per read, which is how a five-second clip came to take 645 seconds against
-    8 seconds of sampling. /dev/shm is 110 GB of this machine's 1889 GB of
-    memory and reads at memory speed; the copy takes under two minutes.
+    Two ways to fix it, and which one is available depends on the pod:
 
-    It is memory, so it is gone after every restart -- which is exactly why it
-    is a step here rather than a command somebody remembers to run.
+    * /dev/shm, when it is large enough. Guaranteed resident, nothing can
+      evict it. One pod had 110 GB of it; the next had 55 GB against 68 GB of
+      weights, and `mount -o remount,size=100G` is refused in the container.
+    * The kernel's page cache otherwise. Reading each file once puts it there,
+      and it is nearly as good -- measured on a pod with 715 GB of cache
+      space: 2.0 GB/s cold, 7.5 GB/s warm. It can be evicted under memory
+      pressure, which /dev/shm cannot, but there is far more room than weights.
+
+    So this tries the first and falls back to the second rather than failing on
+    a pod that is merely smaller. Which one it chose is recorded, because
+    step_ltx_serve has to point the server at the right directory.
     """
-    rc, out = ssh.run("df -m /dev/shm | tail -1 | awk '{print $2}'", timeout=120)
-    lines = [ln for ln in out.strip().splitlines() if ln.strip().isdigit()]
-    shm_mb = int(lines[-1]) if lines else 0
-    want_mb = sum(_ltx_sizes(ssh).values()) // (1024 * 1024)
-    if shm_mb < want_mb * 1.05:
-        # Said plainly rather than half-done: a partial copy would leave some
-        # weights fast and some slow, and the clip would still be slow.
-        raise PodError(
-            f"/dev/shm holds {shm_mb} MB and the video weights need "
-            f"{want_mb} MB. Give the pod more shared memory, or set "
-            "LTX_MODELS=/workspace/models/ltx-2.5 to read from the volume "
-            "and accept that every clip takes minutes.")
+    sizes = _ltx_sizes(ssh)
+    need_mb = sum(sizes.values()) // (1024 * 1024)
+    rc, out = ssh.run("df -m /dev/shm | tail -1 | awk '{print $4}'", timeout=120)
+    lines = [ln.strip() for ln in out.strip().splitlines() if ln.strip().isdigit()]
+    free_mb = int(lines[-1]) if lines else 0
 
+    if free_mb >= need_mb * 1.03:
+        st.log(f"/dev/shm has {free_mb // 1024} GB free; copying "
+               f"{need_mb // 1024} GB of weights into memory")
+        _copy_to_shm(ssh, st, sizes)
+        st.facts["ltx_models"] = "/dev/shm/ltx-2.5"
+        rc, out = ssh.run("du -sh /dev/shm/ltx-2.5 | cut -f1", timeout=180)
+        lines = [ln for ln in out.strip().splitlines() if ln.strip()]
+        st.note("ltx_shm", "in memory: " + (lines[-1] if lines else ""))
+        return
+
+    st.log(f"/dev/shm has only {free_mb // 1024} GB free and the weights are "
+           f"{need_mb // 1024} GB; warming the page cache instead")
+    st.warn("the video weights are in the page cache rather than /dev/shm, "
+            "because this pod's shared memory is too small for them. Clips "
+            "will be as fast, unless something else on the pod pushes them "
+            "out of cache.")
+    _warm_cache(ssh, st, sizes)
+    st.facts["ltx_models"] = LTX_MODELS
+    st.note("ltx_shm", f"page cache: {need_mb // 1024} GB")
+
+
+def _copy_to_shm(ssh, st, sizes):
     script = ["set -e", "SRC=" + LTX_MODELS, "DST=/dev/shm/ltx-2.5",
               "mkdir -p $DST/diffusion_models $DST/text_encoders $DST/vae "
               "$DST/latent_upscale_models"]
@@ -1281,30 +1303,47 @@ def step_ltx_shm(ssh, st):
             f'"$(stat -c%s "$SRC/{name}")" ]; then '
             f'cp "$SRC/{name}" "$DST/{name}"; echo "copied {name}"; '
             f'else echo "already in ram: {name}"; fi')
-    script.append("echo SHM_DONE")
-    ssh.run("cat > /workspace/to_shm.sh <<'EOF'\n" + "\n".join(script) + "\nEOF\n"
-            "setsid nohup bash /workspace/to_shm.sh > /workspace/to_shm.log "
-            "2>&1 < /dev/null &\necho started\n", timeout=180)
+    script.append("echo LTX_FAST_DONE")
+    _run_watched(ssh, st, "to_shm", "\n".join(script), 200)
+
+
+def _warm_cache(ssh, st, sizes):
+    # cat rather than cp: the bytes only need to pass through the kernel once
+    # to land in the page cache, and there is nowhere to put a copy.
+    script = ["SRC=" + LTX_MODELS]
+    for name in LTX_FILES:
+        script.append(f'cat "$SRC/{name}" > /dev/null && echo "warmed {name}"')
+    script.append("echo LTX_FAST_DONE")
+    _run_watched(ssh, st, "to_shm", "\n".join(script), 200)
+
+
+def _run_watched(ssh, st, tag, script, expect_seconds):
+    """Run a long script in the background and follow its log.
+
+    In the background because these move tens of gigabytes and an ssh call
+    that waits for them hits its own timeout and reports "the pod did not
+    answer", which says nothing about what was happening.
+    """
+    log = f"/workspace/{tag}.log"
+    ssh.run(f"cat > /workspace/{tag}.sh <<'EOF'\n{script}\nEOF\n"
+            f"setsid nohup bash /workspace/{tag}.sh > {log} 2>&1 < /dev/null &\n"
+            "echo started\n", timeout=180)
 
     started = time.time()
     while not st.cancelled:
         time.sleep(8)
-        rc, out = ssh.run("cat /workspace/to_shm.log", timeout=120)
-        if "SHM_DONE" in out:
-            break
-        rc, alive = ssh.run("pgrep -f to_shm.sh >/dev/null && echo ALIVE "
+        rc, out = ssh.run(f"cat {log}", timeout=120)
+        if "LTX_FAST_DONE" in out:
+            return
+        rc, alive = ssh.run(f"pgrep -f {tag}.sh >/dev/null && echo ALIVE "
                             "|| echo GONE", timeout=120)
         if "GONE" in alive:
-            rc, out = ssh.run("cat /workspace/to_shm.log", timeout=120)
-            if "SHM_DONE" in out:
-                break
-            raise PodError("copying the video weights into memory failed:\n"
-                           + out[-500:])
-        st.step_progress("ltx_shm", min(0.95, (time.time() - started) / 150))
-
-    rc, out = ssh.run("du -sh /dev/shm/ltx-2.5 | cut -f1", timeout=180)
-    lines = [ln for ln in out.strip().splitlines() if ln.strip()]
-    st.note("ltx_shm", ("in memory: " + lines[-1]) if lines else "")
+            rc, out = ssh.run(f"cat {log}", timeout=120)
+            if "LTX_FAST_DONE" in out:
+                return
+            raise PodError("preparing the video weights failed:\n" + out[-500:])
+        st.step_progress("ltx_shm",
+                         min(0.95, (time.time() - started) / expect_seconds))
 
 
 def step_ltx_serve(ssh, st):
@@ -1321,11 +1360,18 @@ def step_ltx_serve(ssh, st):
         st.note("ltx_serve", "already serving")
         return
 
+    # Wherever the previous step put them. On a pod with room that is
+    # /dev/shm; on a smaller one it is the volume with the files already in the
+    # page cache, and the server must not go looking in an empty
+    # /dev/shm/ltx-2.5 for weights nobody could fit there.
+    models = st.facts.get("ltx_models") or LTX_MODELS
     ssh.run("pkill -f service.ltx_server || true\nsleep 2\n"
             f"cd {POD_REPO}\n"
+            f"export LTX_MODELS={models}\n"
             "setsid nohup /opt/ltx/.venv/bin/python -m service.ltx_server "
             "  > /workspace/ltx_server.log 2>&1 < /dev/null &\n"
             "echo started\n", timeout=180)
+    st.log(f"serving from {models}")
 
     started = time.time()
     while not st.cancelled and time.time() - started < 300:
@@ -1376,8 +1422,8 @@ STEPS = [
          "a third interpreter; LTX pins its own torch"),
     Step("ltx_weights", "Get LTX-2.5", 700, step_ltx_weights,
          "71 GB on the volume, skipped when already there"),
-    Step("ltx_shm", "Put the video weights in memory", 90, step_ltx_shm,
-         "they are read on every clip; the volume is too slow for that"),
+    Step("ltx_shm", "Make the video weights fast", 90, step_ltx_shm,
+         "read on every clip: /dev/shm if it fits, page cache if not"),
     Step("ltx_serve", "Start the video server", 60, step_ltx_serve,
          "port 8021, and /health says which model it is"),
 ]
