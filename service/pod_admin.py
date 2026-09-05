@@ -1119,9 +1119,14 @@ def step_ltx_weights(ssh, st):
     -- 401 means there is no token, 403 means the licence was never accepted --
     and one message for both sends them to look in the wrong place. It did.
     """
+    # One byte, not the whole file. This asked for the status code with
+    # `-L -o /dev/null` and no range, which downloads all 365 MB of the audio
+    # VAE to learn a number: 145 seconds on a slow pod, and the step failed on
+    # its own SSH timeout before it had looked at what was on disk at all. A
+    # range request answers 206 and transfers nothing worth counting -- 2.8s.
     rc, out = ssh.run(
         '[ -n "$HF_TOKEN" ] && echo HAVE_TOKEN || echo NO_TOKEN\n'
-        'curl -s -o /dev/null -w "CODE %{http_code}\\n" -L '
+        'curl -s -o /dev/null -w "CODE %{http_code}\\n" -L -r 0-0 '
         '-H "Authorization: Bearer $HF_TOKEN" '
         'https://huggingface.co/Lightricks/LTX-2.5/resolve/main/'
         'vae/ltx-2.5-audio-vae-bf16.safetensors\n', timeout=180)
@@ -1137,7 +1142,8 @@ def step_ltx_weights(ssh, st):
             "https://huggingface.co/Lightricks/LTX-2.5 signed in as the account "
             "that owns HF_TOKEN and press 'Agree and access repository'. It is "
             "granted immediately, with nobody reviewing it.")
-    if "CODE 200" not in out:
+    # 206 is the success here: a range request gets Partial Content.
+    if "CODE 200" not in out and "CODE 206" not in out:
         raise PodError("could not reach the LTX weights:\n" + out[-300:])
 
     want = _ltx_sizes(ssh)
