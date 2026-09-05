@@ -190,6 +190,17 @@ def instruct(person: UploadFile = File(...),
 
     person_img = _read(person, "person")
     garment_img = _read(garment, "garment")
+    # The garment is padded to the person's shape before it goes in.
+    #
+    # Both pictures are inputs to one edit, and the editor decides the output
+    # frame from them: two skirts photographed on a bed, landscape, came back
+    # as landscape crops of a woman from the waist to the knee -- no head. The
+    # same skirts shot upright came back full length. Nothing else differed.
+    #
+    # Padded, not cropped or stretched: a skirt with its hem cut off is a
+    # different skirt, and the ground is taken from the photograph's own border
+    # so a packshot on white gets white.
+    garment_img = _match_shape(garment_img, person_img)
     prompt = WEAR.get(mode, WEAR["upper"])
     if (description or "").strip():
         prompt += " " + description.strip()
@@ -464,6 +475,30 @@ def editor():
                 processor=_pipe.processor, transformer=_pipe.transformer)
             print(f"[pod] editor ready in {time.time() - t:.1f}s", flush=True)
     return _editor
+
+
+def _match_shape(im, like):
+    """`im` on a ground of its own edge colour, in the same shape as `like`."""
+    w, h = like.size
+    scale = min(w / im.width, h / im.height)
+    small = im.resize((max(1, round(im.width * scale)),
+                       max(1, round(im.height * scale))), Image.LANCZOS)
+    if small.size == (w, h):
+        return small
+    px = im.convert("RGB").load()
+    edge = []
+    step = max(1, im.width // 32)
+    for x in range(0, im.width, step):
+        edge.append(px[x, 0])
+        edge.append(px[x, im.height - 1])
+    step = max(1, im.height // 32)
+    for y in range(0, im.height, step):
+        edge.append(px[0, y])
+        edge.append(px[im.width - 1, y])
+    ground = tuple(sorted(c[i] for c in edge)[len(edge) // 2] for i in range(3))
+    out = Image.new("RGB", (w, h), ground)
+    out.paste(small, ((w - small.width) // 2, (h - small.height) // 2))
+    return out
 
 
 # ---------------------------------------------------------------------------
