@@ -321,8 +321,22 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               # So "Bottom" routes itself. The seller answered a question about
               # their garment, not about our engines, and this is what makes
               # that answer count where it matters most.
-              "engine": req.engine or (
-                  "instruct" if req.mode == "lower" else "adapter"),
+              # Back to the adapter for everything, and it should not have
+              # left. Routing bottoms to /instruct was decided on five skirts
+              # that were all navy or polka-dot, where it looked like the
+              # answer: the garment landed on the waist and kept its print.
+              #
+              # On a denim mini skirt it invented a striped rainbow one, and at
+              # twenty-four steps a white floral maxi. Two settings, two
+              # garments that were never sent. Meanwhile the adapter returned
+              # the denim skirt, on the waist, correctly -- so it is not even
+              # reliably wrong in the way that justified replacing it.
+              #
+              # And its failure is the safer one. A skirt tied across the chest
+              # is visibly broken and nobody publishes it; a plausible
+              # photograph of a garment the seller does not sell is a picture
+              # they might.
+              "engine": req.engine or "adapter",
               "ratio": req.ratio or "9:16",
               "seconds": req.seconds or 5,
               "prompt": (req.prompt or "").strip()}
