@@ -1295,11 +1295,25 @@ def step_ltx_shm(ssh, st):
     lines = [ln.strip() for ln in out.strip().splitlines() if ln.strip().isdigit()]
     free_mb = int(lines[-1]) if lines else 0
 
-    if free_mb >= need_mb * 1.03:
-        st.log(f"/dev/shm has {free_mb // 1024} GB free; copying "
-               f"{need_mb // 1024} GB of weights into memory")
+    # Room for the largest file is the threshold, not room for all of them.
+    # The transformer is 42 GB of the 68 and is read on both stages of every
+    # clip; with it in memory and the encoder left on the volume, a clip on the
+    # 55 GB pod went from 230 seconds to 137 -- while also going up to 1080.
+    biggest = max(sizes.values()) // (1024 * 1024)
+    if free_mb >= biggest + 2048:
+        st.log(f"/dev/shm has {free_mb // 1024} GB free of the "
+               f"{need_mb // 1024} GB of weights; filling it with what is "
+               "read most")
         _copy_to_shm(ssh, st, sizes)
         st.facts["ltx_models"] = "/dev/shm/ltx-2.5"
+        # Whatever did not fit stays on the volume, so the server is told
+        # where each file actually is rather than one directory for all.
+        rc, split = ssh.run(
+            "for f in " + " ".join(LTX_FILES) + "; do "
+            "if [ -f /dev/shm/ltx-2.5/$f ]; then echo RAM $f; "
+            "else echo VOL $f; fi; done", timeout=180)
+        st.facts["ltx_split"] = [ln.strip() for ln in split.splitlines()
+                                 if ln.strip().startswith(("RAM ", "VOL "))]
         rc, out = ssh.run("du -sh /dev/shm/ltx-2.5 | cut -f1", timeout=180)
         lines = [ln for ln in out.strip().splitlines() if ln.strip()]
         st.note("ltx_shm", "in memory: " + (lines[-1] if lines else ""))
