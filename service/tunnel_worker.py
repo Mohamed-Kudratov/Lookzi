@@ -381,8 +381,12 @@ def handle_video(job, p):
 
     mp4, headers = _post(f"{VBASE}/video", fields,
                          {"image": ("still.png", storage.get_bytes(key))})
-    out_key = storage.key_for("results", job["user_id"])
-    storage.put_bytes(out_key, mp4)
+    # Named and typed as what it is. Stored with the default png extension and
+    # content type, the clip still played -- browsers sniff -- but Save handed
+    # the seller a .png that no player would open, and the object's own type
+    # said it was a picture to everything that reads types rather than bytes.
+    out_key = storage.key_for("results", job["user_id"], ext="mp4")
+    storage.put_bytes(out_key, mp4, content_type="video/mp4")
     return {"object_key": out_key, "kind": "video",
             "width": int(headers.get("X-Width") or 0) or None,
             "height": int(headers.get("X-Height") or 0) or None,

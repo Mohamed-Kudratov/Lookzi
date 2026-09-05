@@ -41,9 +41,9 @@ header p{margin:0;color:var(--ink-3);font-size:12.5px}
    pictures cycles through all three; one with a single result never moves. */
 .frame{position:relative;aspect-ratio:3/4;background:#0B1120;display:block;
   width:100%;padding:0;border:0;cursor:zoom-in;overflow:hidden}
-.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+.frame img,.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
   opacity:0;transition:opacity .4s ease}
-.frame img.on{opacity:1}
+.frame img.on,.frame video.on{opacity:1}
 .frame .tag{position:absolute;top:6px;left:6px;z-index:2;font-family:var(--mono);
   font-size:10px;padding:2px 6px;border-radius:5px;background:rgba(2,6,23,.72);
   color:var(--ink-2)}
@@ -88,7 +88,7 @@ header p{margin:0;color:var(--ink-3);font-size:12.5px}
 dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
 dialog::backdrop{background:rgba(2,6,23,.9)}
 .view{position:relative;display:grid;place-items:center}
-.view img{max-width:88vw;max-height:84vh;display:block;border-radius:8px}
+.view img,.view video{max-width:88vw;max-height:84vh;display:block;border-radius:8px;background:#000}
 .view .cap{position:fixed;bottom:20px;left:0;right:0;text-align:center;
   font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 .view .cap b{color:var(--ink);font-weight:500}
@@ -124,6 +124,7 @@ dialog::backdrop{background:rgba(2,6,23,.9)}
     <button class="x" id="close">Close</button>
     <button class="go prev" id="prev" aria-label="Previous">‹</button>
     <img id="big" alt="">
+    <video id="bigvid" controls loop playsinline hidden></video>
     <button class="go next" id="next" aria-label="Next">›</button>
     <div class="cap" id="cap"></div>
   </div>
@@ -154,8 +155,20 @@ function framesOf(r){
   if (r.person)  f.push({url: r.person,  label: "your photo"});
   if (r.garment) f.push({url: r.garment, label: "product"});
   if (r.model)   f.push({url: r.model,   label: r.model_id || "model"});
-  if (r.result)  f.push({url: r.result,  label: "result"});
+  if (r.result)  f.push({url: r.result,  label: "result",
+                         video: r.result_kind === "video"});
   return f;
+}
+
+// A small copy for the card, the original for the viewer.
+//
+// The cards are about a hundred pixels wide and were being drawn from
+// full-size PNGs: four hundred and twenty-seven of them at 2.5 MB each on one
+// page, of which three hundred and seventy were still in flight while the
+// cards sat empty. That reads as a broken gallery rather than a slow one.
+function thumb(url, w){
+  if (!url) return url;
+  return url + (url.indexOf("?") < 0 ? "?" : "&") + "w=" + w;
 }
 
 function draw(){
@@ -172,8 +185,16 @@ function draw(){
         (f.length
           ? '<span class="tag">' + esc(f[start].label) + '</span>' +
             f.map(function (x, k) {
-              return '<img src="' + esc(x.url) + '" alt="' + esc(x.label) + '"' +
-                (k === start ? ' class="on"' : '') + ' loading="lazy">';
+              // A clip is played, not shown. Drawn through <img> it is an
+              // empty box, which is what the gallery did with every video.
+              if (x.video) {
+                return '<video src="' + esc(x.url) + '"' +
+                  (k === start ? ' class="on"' : '') +
+                  ' muted loop playsinline preload="metadata"></video>';
+              }
+              return '<img src="' + esc(thumb(x.url, 320)) + '" alt="' +
+                esc(x.label) + '"' + (k === start ? ' class="on"' : '') +
+                ' loading="lazy" decoding="async">';
             }).join("") +
             (f.length > 1 ? '<span class="dots">' + f.map(function (_, k) {
               return '<i' + (k === start ? ' class="on"' : '') + '></i>';
@@ -195,7 +216,9 @@ function draw(){
 
 // ------------------------------------------------------------ the cycling
 function show(frame, i){
-  var imgs = frame.querySelectorAll("img");
+  // img and video together: a card whose result is a clip has one of each, and
+  // counting only the images left it stuck on the first frame for ever.
+  var imgs = frame.querySelectorAll("img, video");
   if (imgs.length < 2) return;
   i = ((i % imgs.length) + imgs.length) % imgs.length;
   frame.dataset.i = i;
@@ -203,7 +226,14 @@ function show(frame, i){
   var dots = frame.querySelectorAll(".dots i");
   for (var d = 0; d < dots.length; d++) dots[d].classList.toggle("on", d === i);
   var tag = frame.querySelector(".tag");
-  if (tag) tag.textContent = imgs[i].alt;
+  if (tag) tag.textContent = imgs[i].alt || "result";
+  // Only the visible one plays, and only while it is visible: a page of
+  // clips all decoding at once is the thing that made this gallery crawl.
+  for (var v = 0; v < imgs.length; v++) {
+    if (imgs[v].tagName !== "VIDEO") continue;
+    if (v === i) { imgs[v].play().catch(function () {}); }
+    else { imgs[v].pause(); }
+  }
 }
 
 setInterval(function () {
@@ -221,7 +251,16 @@ var view = {frames: [], at: 0};
 function paint(){
   var f = view.frames[view.at];
   if (!f) return;
-  document.getElementById("big").src = f.url;
+  // The viewer shows the original, not the thumbnail: this is where somebody
+  // decides whether a result is good enough to sell.
+  var img = document.getElementById("big"), vid = document.getElementById("bigvid");
+  if (f.video) {
+    img.hidden = true; img.removeAttribute("src");
+    vid.hidden = false; vid.src = f.url; vid.play().catch(function () {});
+  } else {
+    vid.hidden = true; vid.pause(); vid.removeAttribute("src");
+    img.hidden = false; img.src = f.url;
+  }
   document.getElementById("cap").innerHTML =
     '<b>' + esc(f.label) + '</b> · ' + (view.at + 1) + " of " + view.frames.length;
   document.getElementById("prev").disabled = view.frames.length < 2;

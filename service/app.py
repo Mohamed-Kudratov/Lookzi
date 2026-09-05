@@ -463,7 +463,7 @@ def review_data(request: Request, conn=Depends(db), limit: int = 60,
         raise HTTPException(404, "not found")
     rows = conn.execute(
         """SELECT j.id, j.tool, j.model_id, j.status, j.created_at,
-                  j.params, r.object_key, r.seconds, r.width, r.height,
+                  j.params, r.object_key, r.kind, r.seconds, r.width, r.height,
                   m.hero_key
              FROM jobs j
              LEFT JOIN results r ON r.job_id = j.id
@@ -492,6 +492,9 @@ def review_data(request: Request, conn=Depends(db), limit: int = 60,
         row["prompt"] = (params.get("prompt") or "").strip() or None
         k = row.pop("object_key", None)
         row["result"] = storage.presigned_get(k) if k else None
+        # image or video. Without it the gallery draws an mp4 through <img>
+        # and shows an empty box where a clip should be.
+        row["result_kind"] = row.pop("kind", None) or "image"
         out.append(row)
     return out
 
@@ -557,10 +560,63 @@ def review_page(request: Request, key: str = ""):
 # is broken and every upload fails. These two routes make the app the address
 # instead, and then there is no address to configure.
 
+# The widths the gallery asks for. A fixed set, because each one is stored:
+# an open parameter would let a crawl fill the bucket with a thumbnail per
+# pixel width.
+THUMB_WIDTHS = (320, 640)
+
+
 @app.get("/files/{key:path}")
-def get_file(key: str):
+def get_file(key: str, w: int = 0):
+    """The object, or a thumbnail of it when `w` is one of THUMB_WIDTHS.
+
+    The gallery is why. It drew two hundred jobs as four hundred and
+    twenty-seven full-size PNGs -- 2.5 MB each, about a gigabyte of pictures
+    for one page -- and displayed them a hundred pixels wide. Three hundred
+    and seventy of them were still pending while the cards sat empty, which
+    reads as a broken page rather than a slow one.
+
+    Made once and stored beside the original, so the second visit is a plain
+    object read. JPEG, because these are photographs and the thumbnail is not
+    the thing anybody edits.
+    """
     if not storage.PROXY:
         raise HTTPException(404, "not found")
+
+    if w in THUMB_WIDTHS and not key.startswith("thumbs/"):
+        thumb = f"thumbs/{w}/{key}"
+        try:
+            obj = storage.client().get_object(Bucket=storage.BUCKET, Key=thumb)
+            return StreamingResponse(
+                obj["Body"], media_type="image/jpeg",
+                headers={"Cache-Control": "private, max-age=86400"})
+        except Exception:                                     # noqa: BLE001
+            pass
+        try:
+            raw = storage.get_bytes(key)
+        except Exception:                                     # noqa: BLE001
+            raise HTTPException(404, "no such file")
+        try:
+            import io as _io
+
+            from PIL import Image as _Image
+            im = _Image.open(_io.BytesIO(raw))
+            im.thumbnail((w, w * 4), _Image.LANCZOS)
+            buf = _io.BytesIO()
+            im.convert("RGB").save(buf, "JPEG", quality=82, optimize=True)
+            data = buf.getvalue()
+            storage.put_bytes(thumb, data, content_type="image/jpeg")
+        except Exception:                                     # noqa: BLE001
+            # Not an image -- a video, most likely. Hand back the original
+            # rather than a 500: the caller asked for a smaller picture of
+            # something that has no smaller picture.
+            return StreamingResponse(
+                _io.BytesIO(raw), media_type="application/octet-stream",
+                headers={"Cache-Control": "private, max-age=3600"})
+        return StreamingResponse(
+            _io.BytesIO(data), media_type="image/jpeg",
+            headers={"Cache-Control": "private, max-age=86400"})
+
     try:
         obj = storage.client().get_object(Bucket=storage.BUCKET, Key=key)
     except Exception:                                         # noqa: BLE001
