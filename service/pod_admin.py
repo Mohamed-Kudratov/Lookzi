@@ -1066,6 +1066,12 @@ def step_ltx_env(ssh, st):
     def usable():
         rc, out = ssh.run(
             LTX_REPO + "/.venv/bin/python -c \"import ltx_core, ltx_pipelines; "
+            # fastapi and its friends are part of the answer, not an
+            # afterthought. They are not LTX dependencies -- `uv sync` does not
+            # bring them -- so a venv that imports ltx_pipelines perfectly can
+            # still fail to start the server, and this probe said "already
+            # built" about exactly that.
+            "import fastapi, uvicorn, multipart; "
             "import torch; assert torch.cuda.is_available(); print('LTX_OK')\" "
             "2>&1 | tail -2", timeout=300)
         return "LTX_OK" in out, out
@@ -1076,12 +1082,29 @@ def step_ltx_env(ssh, st):
         st.note("ltx_env", "already built")
         return
 
+    # The cheap half first: a venv that only lacks the server packages does not
+    # need LTX rebuilt around it, and that is the common case now that the
+    # probe asks about them.
+    rc, has_ltx = ssh.run(
+        LTX_REPO + "/.venv/bin/python -c \"import ltx_pipelines; print('HAS_LTX')\" "
+        "2>&1 | tail -1", timeout=300)
+    if "HAS_LTX" in has_ltx:
+        st.log("the ltx venv is here but has no server packages; adding them")
+        ssh.run(f"cd {LTX_REPO} && uv pip install -q fastapi uvicorn "
+                "python-multipart 2>&1 | tail -3", timeout=600)
+        ok, out = usable()
+        if ok:
+            st.note("ltx_env", "server packages added")
+            return
+        st.log("that was not enough; building the venv from scratch")
+
     st.log("cloning and building the ltx venv (about five minutes, once per pod)")
     ssh.run("rm -rf " + LTX_REPO + "\n"
             "git clone -q --depth 1 https://github.com/Lightricks/LTX-2.git "
             + LTX_REPO + "\n"
             "cd " + LTX_REPO + "\n"
-            "setsid nohup bash -c 'uv sync --extra natten' "
+            "setsid nohup bash -c 'uv sync --extra natten && "
+            "uv pip install fastapi uvicorn python-multipart' "
             "  > /workspace/ltx_sync.log 2>&1 < /dev/null &\n"
             "echo started\n", timeout=300)
 
