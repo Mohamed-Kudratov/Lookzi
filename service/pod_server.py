@@ -207,7 +207,13 @@ def instruct(person: UploadFile = File(...),
         toggled = None
         try:
             scale = getattr(_pipe, "lightning_scale", 1.0)
-            if fast and getattr(_pipe, "lightning", 0) and hasattr(
+            # Read as a word, not as a truthy object. A form field arrives as
+            # a string, so "0" and "false" are both non-empty and both were
+            # taken as yes -- the slow path could not be reached at all and two
+            # runs that were meant to differ came back identical. /retouch got
+            # this right and this did not copy it.
+            want_fast = str(fast).strip().lower() not in ("0", "false", "no", "")
+            if want_fast and getattr(_pipe, "lightning", 0) and hasattr(
                     pipe.transformer, "set_adapters"):
                 pipe.transformer.set_adapters(["lightning"], [scale])
                 toggled = "lightning"
