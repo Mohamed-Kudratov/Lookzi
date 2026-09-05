@@ -523,11 +523,15 @@ function drawBar() {
       '<path d="M20 6 9 17l-5-5"/></svg>' + esc(kindLabel(pick.garment_kind)) +
       '</button>');
   }
+  // One shape, and it is not a choice. A seller posting a clip is posting it
+  // to reels, stories or tiktok, and all three are 9:16 -- so offering four
+  // shapes was offering three ways to make a video that has to be re-cropped
+  // before it can be used. The length is still theirs.
   if (t.id === "short-video") {
     extras.push('<button class="mini" data-open="frame" aria-pressed="true">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
       '<rect x="4" y="3" width="16" height="18" rx="2"/></svg>' +
-      esc(ratioName(pick.ratio)) + ' · ' + esc(pick.seconds) + 's</button>');
+      '9:16 · ' + esc(pick.seconds) + 's</button>');
   }
   if (t.id === "product-in-scene" || t.id === "model-creation") {
     extras.push('<button class="mini" data-example="1">' +
@@ -803,16 +807,12 @@ function openPop(which) {
   if (which === "kind") { askKind(null); return; }
   if (which === "frame") {
     $("pop").innerHTML =
-      '<h3>What is the clip for?</h3>' +
-      '<p class="pop-sub">The shape it is delivered in. Nothing is stretched ' +
-      'or cropped to fit — the picture is fitted whole and the rest is filled ' +
-      'in to match its own background.</p>' +
-      '<div class="kinds">' + RATIOS.map(function (r) {
-        return '<button data-ratio="' + esc(r[0]) + '"' +
-          (pick.ratio === r[0] ? ' aria-pressed="true"' : '') + '>' +
-          '<b>' + esc(r[2]) + '</b><span>' + esc(r[1]) + '</span></button>';
-      }).join("") + '</div>' +
-      '<div class="look-row" style="margin-top:12px"><span>Length</span>' +
+      '<h3>How long?</h3>' +
+      '<p class="pop-sub">Clips come out 9:16 at 1080 — the shape and size ' +
+      'reels, stories and tiktok all want. Nothing is stretched or cropped to ' +
+      'fit: the picture is fitted whole and the rest is filled in to match ' +
+      'its own background.</p>' +
+      '<div class="look-row"><span>Length</span>' +
       '<div class="seg">' + LENGTHS.map(function (l) {
         return '<button data-len="' + esc(l[0]) + '" aria-pressed="' +
           (pick.seconds === l[0]) + '">' + esc(l[1]) + '</button>';

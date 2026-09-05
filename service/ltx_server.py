@@ -95,11 +95,19 @@ QUANT = os.environ.get("LTX_QUANT", "fp8-cast")
 #
 #   9:16  reels, stories, tiktok        4:5   the feed, portrait
 #   1:1   the feed, square, catalogues  16:9  youtube, a website banner
+# 1088 x 1920, and 1080 is what the world calls it. The true social number is
+# 1080 x 1920 and 1080 is not divisible by 32, which the sampler requires; 1088
+# is the next one up and eight pixels wider than anybody will notice.
+#
+# The other shapes stay because the endpoint can still make them and somebody
+# will ask. The product does not offer them: a seller posting a clip is posting
+# it to reels, stories or tiktok, all three are 9:16, and four choices was
+# three ways to make a video that has to be re-cropped before it can be used.
 RATIOS = {
-    "9:16": (704, 1280),
-    "4:5": (768, 960),
-    "1:1": (1024, 1024),
-    "16:9": (1280, 704),
+    "9:16": (1088, 1920),
+    "4:5": (1024, 1280),
+    "1:1": (1280, 1280),
+    "16:9": (1920, 1088),
 }
 DEFAULT_RATIO = os.environ.get("LTX_RATIO", "9:16")
 WIDTH = int(os.environ.get("LTX_WIDTH", "0"))
