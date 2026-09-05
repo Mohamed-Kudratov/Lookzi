@@ -416,6 +416,13 @@ def handle(job):
                 "seconds": seconds}
 
     path, wants = ROUTES.get(job["tool"], DEFAULT_ROUTE)
+    # The same two pictures can go to either engine. /generate is the try-on
+    # adapter, which copies a garment faithfully and wears everything on the
+    # torso; /instruct is the same weights with the adapter off, which listens
+    # to where the garment goes and may not hold its identity as well. Which is
+    # better is a question about garments, not about code, so both are here.
+    if path == "/generate" and p.get("engine") == "instruct":
+        path = "/instruct"
     files = {}
     for name in wants:
         key = p.get(f"{name}_key")
@@ -432,7 +439,11 @@ def handle(job):
     # it as what it is.
 
     fields = {}
-    if path.endswith("/prompt"):
+    if path.endswith("/instruct"):
+        fields = {"mode": p.get("mode") or "upper",
+                  "description": p.get("description") or "",
+                  "seed": int(p.get("seed", 42))}
+    elif path.endswith("/prompt"):
         fields = {"prompt": p["prompt"].strip(), "seed": int(p.get("seed", 0))}
     elif path.endswith("/create"):
         # The choices a seller has an opinion about. Everything else varies by

@@ -233,6 +233,10 @@ class JobRequest(BaseModel):
     build: str | None = Field(None, pattern="^(slim|average|fuller)$")
     look: str | None = Field(None, pattern="^(uzbek|kazakh|tajik|slavic)$")
     modest: bool = False
+    # Which engine dresses the model. Not a customer-facing choice yet: it is
+    # here so the two can be compared on the same garment, in the gallery,
+    # rather than argued about.
+    engine: str | None = Field(None, pattern="^(adapter|instruct)$")
     # The shape the clip is delivered in. A seller posting to reels and a
     # seller filling a catalogue tile want different frames, and forcing one
     # on both is how a garment ends up stretched.
@@ -302,6 +306,7 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "gender": req.gender or "woman", "age": req.age or "20s",
               "build": req.build or "average", "look": req.look or "uzbek",
               "modest": "true" if req.modest else "false",
+              "engine": req.engine or "adapter",
               "ratio": req.ratio or "9:16",
               "seconds": req.seconds or 5,
               "prompt": (req.prompt or "").strip()}

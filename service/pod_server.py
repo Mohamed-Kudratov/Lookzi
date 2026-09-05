@@ -132,6 +132,96 @@ def _read(upload: UploadFile, name: str) -> Image.Image:
         raise HTTPException(400, f"{name} is not an image: {exc}")
 
 
+# What to say when the adapter is off and the model is listening.
+#
+# The try-on adapter is what makes this model deaf: with it loaded the picture
+# is everything and the words are ignored, measured five ways. With it off the
+# same weights follow an instruction closely -- that is the whole reason the
+# packshot works. So the second engine is not a second model. It is the same
+# one, asked rather than steered.
+#
+# Where the garment goes is named, because that is the thing the adapter
+# cannot be told: it wears everything on the torso, and a skirt comes back as
+# a top. Here it can simply be said.
+WEAR = {
+    "upper": "Put the garment from the second image on the person in the "
+             "first image, worn on the upper body over the torso and arms, "
+             "replacing what they are wearing there.",
+    "lower": "Put the garment from the second image on the person in the "
+             "first image, worn on the lower body from the waist down, "
+             "replacing the trousers or skirt they are wearing.",
+    "overall": "Put the garment from the second image on the person in the "
+               "first image, worn as a single piece from shoulders to hem, "
+               "replacing what they are wearing.",
+}
+INSTRUCT_TAIL = (
+    " Keep the person's face, hair, body, pose and the background exactly as "
+    "they are. Keep the garment's colour, pattern, length and every detail "
+    "exactly as in the second image. Photographic, sharp focus.")
+INSTRUCT_STEPS = int(os.environ.get("INSTRUCT_STEPS", "8"))
+INSTRUCT_CFG = float(os.environ.get("INSTRUCT_CFG", "4.0"))
+
+
+@app.post("/instruct")
+def instruct(person: UploadFile = File(...),
+             garment: UploadFile = File(...),
+             mode: str = Form("upper"),
+             description: str = Form(""),
+             seed: int = Form(42),
+             steps: int = Form(0)):
+    """Try-on as an edit rather than as a composite.
+
+    Two images and a sentence, through the same editor the packshot uses, with
+    the try-on adapter off. Whether it holds the garment's identity as well as
+    the adapter does is the open question -- the adapter exists precisely to
+    copy a garment faithfully, and this gives that up in exchange for being
+    able to say where the garment goes.
+    """
+    if _error:
+        raise HTTPException(503, f"the model did not load: {_error}")
+    if _pipe is None:
+        raise HTTPException(503, "the model is still loading")
+    import torch
+
+    person_img = _read(person, "person")
+    garment_img = _read(garment, "garment")
+    prompt = WEAR.get(mode, WEAR["upper"])
+    if (description or "").strip():
+        prompt += " " + description.strip()
+    prompt += INSTRUCT_TAIL
+
+    pipe = editor()
+    started = time.time()
+    with _gpu:
+        toggled = None
+        try:
+            if hasattr(pipe.transformer, "disable_adapters"):
+                pipe.transformer.disable_adapters()
+                toggled = "all"
+            out = pipe(image=[person_img, garment_img], prompt=prompt,
+                       num_inference_steps=int(steps) or INSTRUCT_STEPS,
+                       true_cfg_scale=INSTRUCT_CFG,
+                       generator=torch.Generator(device="cuda").manual_seed(
+                           int(seed))).images[0]
+        except Exception as exc:                              # noqa: BLE001
+            _stats["failed"] += 1
+            raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+        finally:
+            if toggled == "all" and hasattr(pipe.transformer, "enable_adapters"):
+                pipe.transformer.enable_adapters()
+
+    elapsed = round(time.time() - started, 2)
+    _stats["served"] += 1
+    _stats["seconds"] += elapsed
+    buf = io.BytesIO()
+    out.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"X-Seconds": str(elapsed),
+                             "X-Width": str(out.width),
+                             "X-Height": str(out.height),
+                             "X-Engine": "instruct"})
+
+
 @app.post("/generate")
 def generate(person: UploadFile = File(...),
              garment: UploadFile = File(...),
