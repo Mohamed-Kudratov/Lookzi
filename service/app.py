@@ -306,7 +306,23 @@ def create_job(req: JobRequest, conn=Depends(db), user=Depends(current_user)):
               "gender": req.gender or "woman", "age": req.age or "20s",
               "build": req.build or "average", "look": req.look or "uzbek",
               "modest": "true" if req.modest else "false",
-              "engine": req.engine or "adapter",
+              # Which engine dresses the model, decided by the seller's own
+              # answer rather than by a switch they would have to understand.
+              #
+              # The layering adapter wears everything on the torso: a skirt
+              # comes back tied across the chest, and no wording changes it --
+              # the adapter is deaf to text, measured five ways. Taking it off
+              # gives up some of its fidelity and buys the one thing it cannot
+              # do, which is being told where the garment goes. For a bottom
+              # that trade is obviously worth making; for a top it is not,
+              # because the adapter already puts tops where they belong and
+              # copies them better.
+              #
+              # So "Bottom" routes itself. The seller answered a question about
+              # their garment, not about our engines, and this is what makes
+              # that answer count where it matters most.
+              "engine": req.engine or (
+                  "instruct" if req.mode == "lower" else "adapter"),
               "ratio": req.ratio or "9:16",
               "seconds": req.seconds or 5,
               "prompt": (req.prompt or "").strip()}
