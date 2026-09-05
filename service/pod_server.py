@@ -158,7 +158,11 @@ INSTRUCT_TAIL = (
     " Keep the person's face, hair, body, pose and the background exactly as "
     "they are. Keep the garment's colour, pattern, length and every detail "
     "exactly as in the second image. Photographic, sharp focus.")
-INSTRUCT_STEPS = int(os.environ.get("INSTRUCT_STEPS", "8"))
+INSTRUCT_STEPS = int(os.environ.get("INSTRUCT_STEPS", "24"))
+# With Lightning on. Eight is its design point; the packshot found
+# three indistinguishable there, but this has two images to reconcile
+# rather than one to tidy, so it starts at the design point.
+INSTRUCT_FAST_STEPS = int(os.environ.get("INSTRUCT_FAST_STEPS", "8"))
 INSTRUCT_CFG = float(os.environ.get("INSTRUCT_CFG", "4.0"))
 
 
@@ -168,7 +172,8 @@ def instruct(person: UploadFile = File(...),
              mode: str = Form("upper"),
              description: str = Form(""),
              seed: int = Form(42),
-             steps: int = Form(0)):
+             steps: int = Form(0),
+             fast: str = Form("1")):
     """Try-on as an edit rather than as a composite.
 
     Two images and a sentence, through the same editor the packshot uses, with
@@ -193,21 +198,38 @@ def instruct(person: UploadFile = File(...),
     pipe = editor()
     started = time.time()
     with _gpu:
+        # Only the try-on adapter comes off. disable_adapters() takes
+        # Lightning with it -- they are the same mechanism -- and the first
+        # version of this did exactly that and then asked for eight steps, so
+        # the garment came back soft and washed out. Lightning is what makes
+        # eight steps enough; without it eight steps is a smear. The packshot
+        # already knew this and this endpoint did not.
         toggled = None
         try:
-            if hasattr(pipe.transformer, "disable_adapters"):
+            scale = getattr(_pipe, "lightning_scale", 1.0)
+            if fast and getattr(_pipe, "lightning", 0) and hasattr(
+                    pipe.transformer, "set_adapters"):
+                pipe.transformer.set_adapters(["lightning"], [scale])
+                toggled = "lightning"
+                cfg, n = 1.0, int(steps) or INSTRUCT_FAST_STEPS
+            elif hasattr(pipe.transformer, "disable_adapters"):
                 pipe.transformer.disable_adapters()
                 toggled = "all"
+                cfg, n = INSTRUCT_CFG, int(steps) or INSTRUCT_STEPS
             out = pipe(image=[person_img, garment_img], prompt=prompt,
-                       num_inference_steps=int(steps) or INSTRUCT_STEPS,
-                       true_cfg_scale=INSTRUCT_CFG,
+                       num_inference_steps=n,
+                       true_cfg_scale=cfg,
                        generator=torch.Generator(device="cuda").manual_seed(
                            int(seed))).images[0]
         except Exception as exc:                              # noqa: BLE001
             _stats["failed"] += 1
             raise HTTPException(500, f"{type(exc).__name__}: {exc}")
         finally:
-            if toggled == "all" and hasattr(pipe.transformer, "enable_adapters"):
+            if toggled == "lightning":
+                pipe.transformer.set_adapters(["default", "lightning"],
+                                              [1.0, scale])
+            elif toggled == "all" and hasattr(pipe.transformer,
+                                              "enable_adapters"):
                 pipe.transformer.enable_adapters()
 
     elapsed = round(time.time() - started, 2)
@@ -219,6 +241,7 @@ def instruct(person: UploadFile = File(...),
                     headers={"X-Seconds": str(elapsed),
                              "X-Width": str(out.width),
                              "X-Height": str(out.height),
+                             "X-Steps": str(n), "X-Cfg": str(cfg),
                              "X-Engine": "instruct"})
 
 
