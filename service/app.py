@@ -693,6 +693,20 @@ def me(user=Depends(current_user)):
 
 # ---------------------------------------------------------------------------
 
+@app.get("/studio", response_class=HTMLResponse)
+def studio_preview():
+    """The rewritten studio, served beside the old one until it replaces it.
+
+    Two pages rather than a swap, because the old one works and the seller is
+    using it: a redesign that lands half-finished costs more than it gains.
+    """
+    p = os.path.join(HERE, "static", "studio.html")
+    if not os.path.exists(p):
+        raise HTTPException(404, "not built yet")
+    with open(p, encoding="utf-8") as fh:
+        return HTMLResponse(fh.read())
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     p = os.path.join(HERE, "static", "index.html")

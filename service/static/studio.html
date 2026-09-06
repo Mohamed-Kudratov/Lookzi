@@ -1,0 +1,987 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lookzi Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------------------
+   Lookzi Studio.
+
+   The ground is black and the only accent is white, because everything with a
+   colour in this product is a photograph of somebody's clothes. A purple
+   button next to a navy skirt is the interface telling the seller about
+   itself. See design-system/lookzi-studio/MASTER.md.
+
+   The canvas keeps a neutral card behind results rather than pure black: a
+   garment judged against black reads darker than it is, which matters when the
+   whole job is deciding whether the colour came out right.
+--------------------------------------------------------------------------- */
+:root{
+  --bg:#000; --surface:#0C0C0C; --raised:#18181B; --sunken:#050505;
+  --line:#27272A; --line-2:#3F3F46;
+  --ink:#FAFAFA; --ink-2:#A1A1AA; --ink-3:#71717A;
+  --on-accent:#0A0A0A;
+  --danger:#EF4444;
+  /* Neutral, not black: the ground a photograph is judged against. */
+  --plate:#171717;
+  --rail:56px; --tools:224px; --panel:304px;
+  --r:12px; --r-lg:16px;
+  --shadow:0 1px 2px rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.45);
+  --t:180ms cubic-bezier(.2,.6,.3,1);
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+svg{width:18px;height:18px;flex:none;stroke-width:1.7;fill:none;
+  stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;
+    animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* ------------------------------------------------------------------ shell */
+.app{display:grid;height:100dvh;
+  grid-template-columns:var(--rail) var(--tools) minmax(0,1fr) var(--panel);
+  grid-template-rows:52px minmax(0,1fr)}
+
+/* the rail: where you are in the product, never what you are making */
+.rail{grid-row:1/3;background:var(--sunken);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);
+  padding:var(--sp-2) 0}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--ink);
+  color:var(--on-accent);display:grid;place-items:center;margin-bottom:var(--sp-3)}
+.mark svg{width:18px;height:18px;stroke-width:2}
+.rail a{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+  color:var(--ink-3);transition:color var(--t),background var(--t);
+  text-decoration:none;position:relative}
+.rail a:hover{color:var(--ink-2);background:var(--raised)}
+.rail a[aria-current="page"]{color:var(--ink);background:var(--raised)}
+.rail a[aria-current="page"]::before{content:"";position:absolute;left:-8px;
+  width:2px;height:18px;border-radius:2px;background:var(--ink)}
+.rail .spacer{flex:1}
+
+/* the header: what this is and whether it can run */
+.top{grid-column:2/5;display:flex;align-items:center;gap:var(--sp-3);
+  padding:0 var(--sp-5);border-bottom:1px solid var(--line);background:var(--bg)}
+.top h1{margin:0;font-size:14px;font-weight:600;letter-spacing:-.01em}
+.top .sub{color:var(--ink-3);font-size:12.5px}
+.top .grow{flex:1}
+.stat{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;
+  border:1px solid var(--line);border-radius:999px;font-size:12.5px;
+  color:var(--ink-2);background:var(--surface)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ink-3)}
+.dot.on{background:#22C55E;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.dot.off{background:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+
+/* ------------------------------------------------------------- tool column
+   The first decision, so it is the first column -- not seven pills under the
+   canvas, which is where it lived and where nobody looks first. */
+.tools{background:var(--sunken);border-right:1px solid var(--line);
+  overflow-y:auto;padding:var(--sp-4) var(--sp-3);display:flex;
+  flex-direction:column;gap:2px}
+.tools .mono{padding:0 var(--sp-2) var(--sp-2)}
+.tool{display:grid;grid-template-columns:28px 1fr;gap:var(--sp-3);
+  align-items:start;width:100%;text-align:left;padding:10px;border-radius:var(--r);
+  color:var(--ink-2);transition:background var(--t),color var(--t);
+  border:1px solid transparent}
+.tool:hover{background:var(--raised);color:var(--ink)}
+.tool[aria-pressed="true"]{background:var(--raised);color:var(--ink);
+  border-color:var(--line-2)}
+.tool .ico{width:28px;height:28px;border-radius:8px;background:var(--surface);
+  display:grid;place-items:center;border:1px solid var(--line)}
+.tool[aria-pressed="true"] .ico{background:var(--ink);color:var(--on-accent);
+  border-color:transparent}
+.tool b{display:block;font-size:13.5px;font-weight:550;line-height:1.35}
+.tool span{display:block;font-size:11.5px;line-height:1.4;color:var(--ink-3);
+  margin-top:2px}
+.tool[disabled]{opacity:.4;cursor:not-allowed}
+.tool .soon{font-size:10px;border:1px solid var(--line-2);border-radius:4px;
+  padding:0 4px;color:var(--ink-3)}
+
+/* ------------------------------------------------------------------ canvas */
+.canvas{position:relative;overflow:auto;padding:var(--sp-5);
+  display:grid;place-items:center;background:
+    radial-gradient(120% 90% at 50% 0%, #0B0B0B 0%, #000 62%)}
+.slots{display:flex;gap:var(--sp-4);align-items:stretch;justify-content:center;
+  flex-wrap:wrap;width:100%;max-width:760px}
+.slot{position:relative;flex:1 1 260px;min-width:220px;max-width:340px;
+  aspect-ratio:3/4;border-radius:var(--r-lg);background:var(--surface);
+  border:1px solid var(--line);overflow:hidden;display:grid;
+  transition:border-color var(--t),transform var(--t);cursor:pointer}
+.slot:hover{border-color:var(--line-2)}
+.slot.want{border-style:dashed}
+.slot.drag{border-color:var(--ink);transform:scale(1.01)}
+.slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slot .tag{position:absolute;top:10px;left:10px;z-index:2}
+.slot .kill{position:absolute;top:8px;right:8px;z-index:3;width:26px;height:26px;
+  border-radius:7px;background:rgba(0,0,0,.65);border:1px solid var(--line-2);
+  display:grid;place-items:center;color:var(--ink-2)}
+.slot .kill:hover{color:var(--ink);background:rgba(0,0,0,.85)}
+.slot img{width:100%;height:100%;object-fit:contain;background:var(--plate);
+  grid-area:1/1}
+.slot .empty{grid-area:1/1;display:grid;place-items:center;align-content:center;
+  gap:6px;padding:var(--sp-4);text-align:center;color:var(--ink-3)}
+.slot .empty svg{width:22px;height:22px;margin:0 auto 4px}
+.slot .empty b{color:var(--ink-2);font-size:13.5px;font-weight:500}
+.slot .empty small{font-size:11.5px}
+
+/* the result */
+.result{display:grid;gap:var(--sp-4);width:100%;max-width:900px;
+  grid-template-columns:104px minmax(0,1fr)}
+.result .ins{display:flex;flex-direction:column;gap:var(--sp-2)}
+.result .ins figure{margin:0}
+.result .ins figcaption{font-size:10px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:3px}
+.result .ins img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:9px;
+  border:1px solid var(--line);background:var(--plate)}
+.plate{position:relative;border-radius:var(--r-lg);border:1px solid var(--line);
+  background:var(--plate);overflow:hidden;display:grid;place-items:center;
+  min-height:0}
+.plate img,.plate video{max-width:100%;max-height:calc(100dvh - 250px);
+  display:block;object-fit:contain}
+.plate img{cursor:zoom-in}
+.plate .act{position:absolute;bottom:12px;right:12px;display:flex;gap:var(--sp-2)}
+
+/* while it runs: the seller's own picture, turned slowly.
+   Not a spinner -- a spinner says "something is happening"; this says "we are
+   working on your photograph", which is the true and more reassuring thing.
+   CSS 3D rather than a WebGL library: this must not cost a frame on the
+   machine that is also uploading a 20 MB photo. */
+.working{display:grid;place-items:center;gap:var(--sp-5);text-align:center}
+.stage3d{perspective:900px;width:min(300px,60vw);aspect-ratio:3/4}
+.stage3d .card{width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--line-2);background:var(--plate);
+  transform-style:preserve-3d;animation:turn 7s cubic-bezier(.45,0,.55,1) infinite;
+  box-shadow:0 30px 60px rgba(0,0,0,.6)}
+.stage3d img{width:100%;height:100%;object-fit:contain;opacity:.8}
+@keyframes turn{
+  0%   {transform:rotateY(-16deg) rotateX(3deg)}
+  50%  {transform:rotateY( 16deg) rotateX(-3deg)}
+  100% {transform:rotateY(-16deg) rotateX(3deg)}
+}
+.sweep{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,transparent 38%,rgba(255,255,255,.09) 50%,
+    transparent 62%);animation:sweep 2.6s linear infinite}
+@keyframes sweep{from{transform:translateX(-60%)}to{transform:translateX(60%)}}
+.meter{width:min(300px,60vw)}
+.meter .num{font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:500}
+.meter .say{color:var(--ink-3);font-size:12.5px;margin-top:2px}
+.meter .track{height:3px;border-radius:3px;background:var(--raised);
+  margin-top:var(--sp-4);overflow:hidden}
+.meter .track i{display:block;height:100%;background:var(--ink);
+  transition:width .6s linear}
+
+/* ------------------------------------------------------------------- panel */
+.panel{background:var(--sunken);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden}
+.panel .body{flex:1;overflow-y:auto;padding:var(--sp-5);display:flex;
+  flex-direction:column;gap:var(--sp-5)}
+.field{display:flex;flex-direction:column;gap:var(--sp-2)}
+.field > label{font-size:12px;font-weight:550;color:var(--ink-2)}
+.field .help{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+.pick{display:flex;align-items:center;gap:var(--sp-3);width:100%;padding:9px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface);
+  color:var(--ink);transition:border-color var(--t)}
+.pick:hover{border-color:var(--line-2)}
+.pick img{width:30px;height:38px;object-fit:cover;border-radius:6px;
+  background:var(--plate)}
+.pick .grow{flex:1;text-align:left;font-size:13px}
+.pick .grow small{display:block;color:var(--ink-3);font-size:11px}
+.seg{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:3px}
+.seg button{flex:1;padding:7px 6px;border-radius:7px;font-size:12.5px;
+  color:var(--ink-3);transition:background var(--t),color var(--t)}
+.seg button:hover{color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+textarea{width:100%;min-height:74px;resize:vertical;padding:10px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface);
+  font-size:13px;line-height:1.5}
+textarea::placeholder{color:var(--ink-3)}
+textarea:focus{outline:none;border-color:var(--line-2)}
+
+.foot{border-top:1px solid var(--line);padding:var(--sp-4) var(--sp-5);
+  display:flex;flex-direction:column;gap:var(--sp-3);background:var(--sunken)}
+.why{font-size:11.5px;color:var(--ink-3);min-height:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:500;
+  transition:background var(--t),border-color var(--t),opacity var(--t)}
+.btn:hover{background:var(--raised)}
+.btn.primary{background:var(--ink);color:var(--on-accent);border-color:var(--ink);
+  font-weight:600;width:100%;height:44px}
+.btn.primary:hover{opacity:.9;background:var(--ink)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.small{height:32px;padding:0 12px;font-size:12.5px}
+.btn.ghost{border-color:transparent;background:rgba(0,0,0,.55)}
+
+/* onward */
+.onward{grid-column:1/-1;display:flex;gap:var(--sp-2);align-items:center;
+  flex-wrap:wrap;padding-top:var(--sp-2)}
+.onward .mono{margin-right:2px}
+
+/* ------------------------------------------------------------------- sheet */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(2px)}
+.sheet{position:fixed;z-index:41;inset:auto 0 0 0;margin:0 auto;
+  width:min(560px,94vw);max-height:80dvh;overflow:auto;background:var(--surface);
+  border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;
+  padding:var(--sp-5);box-shadow:var(--shadow);
+  animation:rise 220ms cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.sheet h2{margin:0 0 6px;font-size:15px;font-weight:600}
+.sheet p{margin:0 0 var(--sp-4);font-size:12.5px;color:var(--ink-3);line-height:1.5;
+  max-width:46ch}
+.sheet .x{position:absolute;top:14px;right:16px}
+.grid-models{display:grid;gap:10px;
+  grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.grid-models button{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+  text-align:left;background:var(--surface);transition:border-color var(--t)}
+.grid-models button:hover{border-color:var(--line-2)}
+.grid-models button[aria-pressed="true"]{border-color:var(--ink);border-width:2px}
+.grid-models button[disabled]{opacity:.45;cursor:not-allowed}
+.grid-models img,.grid-models .ph{width:100%;aspect-ratio:3/4;object-fit:cover;
+  display:block;background:var(--plate)}
+.grid-models .meta{padding:7px 9px}
+.grid-models b{display:block;font-size:12.5px;font-weight:500}
+.grid-models small{color:var(--ink-3);font-size:10.5px}
+.choices{display:grid;gap:8px}
+.choices button{text-align:left;padding:11px 13px;border-radius:11px;
+  border:1px solid var(--line);background:var(--surface);display:grid;gap:2px;
+  transition:border-color var(--t)}
+.choices button:hover{border-color:var(--line-2)}
+.choices button[aria-pressed="true"]{border-color:var(--ink);border-width:2px;
+  padding:10px 12px}
+.choices b{font-size:13.5px;font-weight:600}
+.choices small{font-size:11.5px;color:var(--ink-3)}
+
+dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh}
+dialog::backdrop{background:rgba(0,0,0,.92)}
+.viewer img,.viewer video{max-width:90vw;max-height:88vh;border-radius:10px;
+  display:block}
+.viewer .x{position:fixed;top:18px;right:20px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;
+  background:var(--raised);border:1px solid var(--line-2);border-radius:10px;
+  padding:10px 15px;font-size:13px;box-shadow:var(--shadow);
+  animation:rise 200ms cubic-bezier(.2,.7,.3,1)}
+.toast.bad{border-color:var(--danger);color:#FCA5A5}
+
+/* --------------------------------------------------------------- responsive
+   The panel is the first thing to go: on a laptop the canvas matters more than
+   having every setting visible at once. */
+@media (max-width:1180px){
+  .app{grid-template-columns:var(--rail) var(--tools) minmax(0,1fr)}
+  .top{grid-column:2/4}
+  .panel{position:fixed;z-index:41;inset:auto 0 0 0;border-left:0;
+    border-top:1px solid var(--line);max-height:72dvh;
+    border-radius:16px 16px 0 0}
+  .panel:not(.open){transform:translateY(calc(100% - 76px))}
+  .panel{transition:transform var(--t)}
+  .panel .body{padding-top:var(--sp-4)}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:var(--rail) minmax(0,1fr);
+    grid-template-rows:52px auto minmax(0,1fr)}
+  .top{grid-column:2/3}
+  .tools{grid-column:2/3;grid-row:2;flex-direction:row;overflow-x:auto;
+    border-right:0;border-bottom:1px solid var(--line);padding:10px;
+    scrollbar-width:none}
+  .tools::-webkit-scrollbar{display:none}
+  .tools .mono{display:none}
+  .tool{grid-template-columns:auto;width:auto;flex:none;padding:8px 12px}
+  .tool .ico,.tool span{display:none}
+  .tool b{white-space:nowrap;font-size:13px}
+  .canvas{grid-column:2/3;grid-row:3;padding:var(--sp-4)}
+  .result{grid-template-columns:minmax(0,1fr)}
+  .result .ins{flex-direction:row;order:2}
+  .result .ins figure{flex:1;max-width:88px}
+}
+</style>
+
+<div class="app">
+  <nav class="rail" aria-label="Sections">
+    <div class="mark" title="Lookzi">
+      <svg viewBox="0 0 24 24"><path d="M7 4h10l2 5-7 11L5 9z"/></svg>
+    </div>
+    <a href="/" aria-current="page" title="Studio" aria-label="Studio">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+    </a>
+    <a href="/review" title="Gallery" aria-label="Gallery">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m4 16 4.5-4.5 3 3L15 11l5 5"/><circle cx="9" cy="9" r="1.4"/></svg>
+    </a>
+    <a href="#models" id="nav-models" title="Models" aria-label="Models">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>
+    </a>
+    <div class="spacer"></div>
+  </nav>
+
+  <header class="top">
+    <h1 id="tool-name">Product → Model</h1>
+    <span class="sub" id="tool-blurb"></span>
+    <div class="grow"></div>
+    <span class="stat" id="worker"><i class="dot"></i><span>checking</span></span>
+    <span class="stat" id="credits">— credits</span>
+  </header>
+
+  <section class="tools" id="tools" aria-label="What to make">
+    <div class="mono">Make</div>
+  </section>
+
+  <main class="canvas" id="canvas"></main>
+
+  <aside class="panel" id="panel">
+    <div class="body" id="panel-body"></div>
+    <div class="foot">
+      <div class="why" id="why"></div>
+      <button class="btn primary" id="run" disabled>
+        <svg viewBox="0 0 24 24"><path d="M6 4.5 19 12 6 19.5z"/></svg>
+        <span id="run-label">Create</span>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
+<dialog id="viewer"><div class="viewer" id="viewer-body"></div></dialog>
+
+<script>
+"use strict";
+var $ = function (id) { return document.getElementById(id); };
+var esc = function (s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+};
+
+// The identity is minted here and kept in local storage. Not authentication and
+// not pretending to be -- see docs/AUTH.md.
+var CLIENT = localStorage.getItem("lookzi-client");
+if (!CLIENT) {
+  CLIENT = "web-" + (crypto.randomUUID ? crypto.randomUUID()
+                     : Date.now() + "-" + Math.random().toString(16).slice(2));
+  localStorage.setItem("lookzi-client", CLIENT);
+}
+
+function api(path, opts) {
+  opts = opts || {};
+  var head = {"X-Client-Id": CLIENT};
+  if (opts.body) head["Content-Type"] = "application/json";
+  return fetch(path, {method: opts.method || "GET", headers: head,
+                      body: opts.body ? JSON.stringify(opts.body) : undefined})
+    .then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.detail || ("failed (" + r.status + ")"));
+        return d;
+      });
+    });
+}
+
+var ICON = {
+  "product-to-model": '<rect x="3" y="4" width="7" height="7" rx="1"/><path d="M17 4v4M15 6h4"/><path d="M7 15v5M14 20v-5a3 3 0 0 1 6 0v5"/>',
+  "virtual-try-on": '<circle cx="12" cy="6" r="3"/><path d="M6 21v-6l-2-1 3-5h10l3 5-2 1v6z"/>',
+  "model-swap": '<circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M14 6h5v5M10 18H5v-5"/>',
+  "product-in-scene": '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 16 4-4 3 3 4-5 5 6"/>',
+  "packshot": '<path d="M8 4h8l3 4-7 12L5 8z"/><path d="M8 4l4 4 4-4"/>',
+  "model-creation": '<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/><path d="M19 3v4M17 5h4"/>',
+  "short-video": '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/>'
+};
+
+var SLOT = {
+  garment: {label: "Garment", hint: "the item, laid flat"},
+  person:  {label: "Your photo", hint: "full body, facing the camera"}
+};
+
+// Where a finished picture can go next, and into which slot. "Change the model"
+// takes it as the garment: what it reads from that photograph is the clothes.
+var ONWARD = {
+  "packshot": [["virtual-try-on","garment"],["product-to-model","garment"],
+               ["product-in-scene","garment"],["short-video","garment"]],
+  "product-to-model": [["model-swap","garment"],["short-video","garment"]],
+  "virtual-try-on": [["model-swap","garment"],["short-video","garment"]],
+  "product-in-scene": [["model-swap","garment"],["short-video","garment"]],
+  "model-swap": [["virtual-try-on","person"],["short-video","garment"]],
+  "model-creation": [["virtual-try-on","person"]]
+};
+
+var KINDS = [["upper","Top","shirt, jacket, blouse, sweater"],
+             ["lower","Bottom","trousers, jeans, skirt, shorts"],
+             ["overall","Full-piece","dress, jumpsuit, gown"]];
+var ASKS_KIND = {"packshot":1,"product-to-model":1,"virtual-try-on":1,
+                 "product-in-scene":1};
+var TORSO_ONLY = {"product-to-model":1,"virtual-try-on":1,"product-in-scene":1};
+var LOOK = [
+  ["gender","Who",[["woman","Woman"],["man","Man"]]],
+  ["age","Age",[["20s","20s"],["30s","30s"],["40s","40s"],["50s","50s"]]],
+  ["build","Build",[["slim","Slim"],["average","Average"],["fuller","Fuller"]]],
+  ["look","From",[["uzbek","Uzbek"],["kazakh","Kazakh"],["tajik","Tajik"],["slavic","Slavic"]]],
+  ["modest","Dress",[["false","Everyday"],["true","Modest"]]]
+];
+var LENGTHS = [["5","5 seconds"],["10","10 seconds"]];
+var EXAMPLES = [
+  "a rooftop in Tashkent at golden hour, city behind her",
+  "a quiet studio, soft window light from the left",
+  "a market street in the morning, warm light, shallow depth"
+];
+
+var TOOLS = [], MODELS = [], job = null, poll = null, result = null;
+var afterKind = null, sheetKind = null;
+var pick = {tool: null, prompt: "",
+            garment_key: null, garment_url: null, garment_kind: null,
+            bottom_ok: null, person_key: null, person_url: null, model_id: null,
+            seconds: "5",
+            gender: "woman", age: "20s", build: "average", look: "uzbek",
+            modest: "false"};
+
+function tool() { return TOOLS.filter(function (t) { return t.id === pick.tool; })[0]; }
+function needs() { return (tool() || {needs: []}).needs; }
+function wants(n) { return needs().some(function (x) { return x.replace("?","") === n; }); }
+function model() { return MODELS.filter(function (m) { return m.id === pick.model_id; })[0]; }
+function kindLabel(v) {
+  var r = KINDS.filter(function (k) { return k[0] === v; })[0];
+  return r ? r[1] : null;
+}
+
+/* ------------------------------------------------------------------ chrome */
+function drawTools() {
+  $("tools").innerHTML = '<div class="mono">Make</div>' + TOOLS.map(function (t) {
+    return '<button class="tool" data-tool="' + esc(t.id) + '"' +
+      (t.ready ? "" : " disabled") +
+      ' aria-pressed="' + (t.id === pick.tool) + '">' +
+      '<span class="ico"><svg viewBox="0 0 24 24">' + (ICON[t.id] || "") +
+      '</svg></span><span><b>' + esc(t.label) +
+      (t.ready ? "" : ' <i class="soon">soon</i>') + '</b>' +
+      '<span>' + esc(t.blurb) + '</span></span></button>';
+  }).join("");
+}
+
+function drawHeader() {
+  var t = tool();
+  if (!t) return;
+  $("tool-name").textContent = t.label;
+  $("tool-blurb").textContent = t.cost + (t.cost === 1 ? " credit" : " credits") +
+    (t.typical_seconds ? " · about " + Math.round(t.typical_seconds) + "s" : "");
+}
+
+/* ------------------------------------------------------------------ canvas */
+function slotCard(need) {
+  var spec = SLOT[need], url = pick[need + "_url"];
+  return '<label class="slot' + (url ? "" : " want") + '" data-need="' + esc(need) + '">' +
+    '<span class="tag mono">' + esc(spec.label) + '</span>' +
+    '<input type="file" accept="image/*" data-need="' + esc(need) + '">' +
+    (url
+      ? '<img src="' + esc(url) + '" alt="">' +
+        '<button class="kill" data-clear="' + esc(need) + '" aria-label="Remove">' +
+        '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
+      : '<span class="empty">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' +
+        '<b>Drop a photo</b><small>' + esc(spec.hint) + '</small></span>') +
+    '</label>';
+}
+
+function drawCanvas() {
+  if (job) return;
+  if (result) return drawResult();
+  var slots = needs().filter(function (n) {
+    return SLOT[n.replace("?","")];
+  }).map(function (n) { return slotCard(n.replace("?","")); });
+  $("canvas").innerHTML = slots.length
+    ? '<div class="slots">' + slots.join("") + '</div>'
+    : '<div class="slots"><div class="slot" style="cursor:default">' +
+      '<span class="empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/>' +
+      '<path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
+      '<b>Nothing to upload</b><small>set the look on the right</small></span>' +
+      '</div></div>';
+}
+
+function shown() {
+  var v = result.variants || [];
+  return (v.length && v[result.at || 0] && v[result.at || 0].url) || result.url;
+}
+function shownKey() {
+  var v = result.variants || [];
+  return (v.length && v[result.at || 0] && v[result.at || 0].key) ||
+         (v[0] && v[0].key) || null;
+}
+function isVideo() {
+  var v = (result.variants || [])[result.at || 0] || (result.variants || [])[0];
+  return (v && v.kind === "video") || result.tool === "short-video";
+}
+
+function drawResult() {
+  var ins = [];
+  if (result.inputs.garment) ins.push(["Garment", result.inputs.garment]);
+  if (result.inputs.person) ins.push(["Your photo", result.inputs.person]);
+  if (result.inputs.model) ins.push(["Model", result.inputs.model]);
+  var next = (ONWARD[result.tool] || []).filter(function (n) {
+    return TOOLS.some(function (t) { return t.id === n[0] && t.ready; });
+  });
+  $("canvas").innerHTML =
+    '<div class="result">' +
+      '<div class="ins">' +
+        '<button class="btn small" id="back">' +
+        '<svg viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>Back</button>' +
+        ins.map(function (p) {
+          return '<figure><figcaption>' + esc(p[0]) + '</figcaption>' +
+            '<img src="' + esc(p[1]) + '" alt=""></figure>';
+        }).join("") +
+      '</div>' +
+      '<div class="plate">' +
+        (isVideo()
+          ? '<video src="' + esc(shown()) + '" controls autoplay loop muted playsinline></video>'
+          : '<img src="' + esc(shown()) + '" alt="The finished image" id="big">') +
+        '<div class="act">' +
+          (result.tool === "model-creation"
+            ? '<button class="btn small ghost" id="keep"' +
+              (result.kept ? " disabled" : "") + '>' +
+              '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>' +
+              (result.kept ? "In your models" : "Keep as my model") + '</button>'
+            : "") +
+          '<button class="btn small ghost" id="save">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 4v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></svg>Save</button>' +
+        '</div>' +
+      '</div>' +
+      (next.length
+        ? '<div class="onward"><span class="mono">Use this in</span>' +
+          next.map(function (n) {
+            var t = TOOLS.filter(function (x) { return x.id === n[0]; })[0];
+            return '<button class="btn small" data-onward="' + esc(n[0]) +
+              '" data-slot="' + esc(n[1]) + '"><svg viewBox="0 0 24 24">' +
+              (ICON[n[0]] || "") + '</svg>' + esc(t.label) + '</button>';
+          }).join("") + '</div>'
+        : "") +
+    '</div>';
+}
+
+function drawWorking(secs, state, typical) {
+  var over = typical && secs > typical * 1.4;
+  var still = pick.garment_url || pick.person_url ||
+              (model() || {}).preview || "";
+  $("canvas").innerHTML =
+    '<div class="working">' +
+      '<div class="stage3d"><div class="card">' +
+        (still ? '<img src="' + esc(still) + '" alt="">' : "") +
+        '<span class="sweep"></span>' +
+      '</div></div>' +
+      '<div class="meter">' +
+        '<div class="num">' + secs.toFixed(1) + 's</div>' +
+        '<div class="say">' + esc(state) +
+          (typical ? (over ? " · longer than usual"
+                           : " · usually about " + Math.round(typical) + "s") : "") +
+        '</div>' +
+        '<div class="track"><i style="width:' +
+          (typical ? Math.min(96, (secs / typical) * 100) : 8) + '%"></i></div>' +
+        '<button class="btn small" id="cancel" style="margin-top:16px">Cancel</button>' +
+      '</div>' +
+    '</div>';
+}
+
+/* ------------------------------------------------------------------- panel */
+function drawPanel() {
+  var t = tool();
+  if (!t) return;
+  var out = [];
+
+  if (wants("model")) {
+    var m = model();
+    out.push('<div class="field"><label>Who wears it</label>' +
+      '<button class="pick" data-open="models">' +
+      (m && m.preview ? '<img src="' + esc(m.preview) + '" alt="">' : "") +
+      '<span class="grow">' + (m ? esc(m.display_name) : "Choose a model") +
+      '<small>' + (m ? (m.mine ? "yours" : esc(m.age) + " · " + esc(m.look || ""))
+                     : "from your roster") + '</small></span>' +
+      '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>');
+  }
+
+  if (ASKS_KIND[t.id]) {
+    out.push('<div class="field"><label>What is this garment</label>' +
+      '<button class="pick" data-open="kind"><span class="grow">' +
+      (pick.garment_kind ? esc(kindLabel(pick.garment_kind)) : "Asked when you create") +
+      '<small>' + (pick.garment_kind
+        ? "so the packshot names it correctly"
+        : "one question, once per photo") + '</small></span>' +
+      '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>');
+  }
+
+  if (t.id === "short-video") {
+    out.push('<div class="field"><label>Length</label><div class="seg">' +
+      LENGTHS.map(function (l) {
+        return '<button data-len="' + esc(l[0]) + '" aria-pressed="' +
+          (pick.seconds === l[0]) + '">' + esc(l[1]) + '</button>';
+      }).join("") + '</div>' +
+      '<div class="help">Clips come out 9:16 at 1080 — the shape reels, ' +
+      'stories and tiktok all want. Nothing is stretched to fit.</div></div>');
+  }
+
+  if (wants("look")) {
+    out.push(LOOK.map(function (r) {
+      return '<div class="field"><label>' + esc(r[1]) + '</label><div class="seg">' +
+        r[2].map(function (o) {
+          return '<button data-look="' + esc(r[0]) + '" data-v="' + esc(o[0]) +
+            '" aria-pressed="' + (String(pick[r[0]]) === o[0]) + '">' +
+            esc(o[1]) + '</button>';
+        }).join("") + '</div></div>';
+    }).join(""));
+  }
+
+  var needsPrompt = needs().some(function (n) { return n.indexOf("prompt") === 0; });
+  if (needsPrompt) {
+    var required = needs().indexOf("prompt") >= 0;
+    out.push('<div class="field"><label>' +
+      (required ? "Describe the shot" : "Anything to add") + '</label>' +
+      '<textarea id="prompt" placeholder="' +
+      (required ? esc(EXAMPLES[0]) : "optional") + '">' + esc(pick.prompt) +
+      '</textarea>' +
+      (required ? '<button class="btn small" id="example" style="align-self:start">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>Example</button>' : "") +
+      '</div>');
+  }
+
+  $("panel-body").innerHTML = out.join("") ||
+    '<div class="help">Nothing to set for this one.</div>';
+
+  var missing = [];
+  needs().forEach(function (n) {
+    if (n.slice(-1) === "?") return;
+    if (n === "garment" && !pick.garment_key) missing.push("a garment photo");
+    if (n === "person" && !pick.person_key) missing.push("your photo");
+    if (n === "model" && !pick.model_id) missing.push("a model");
+    if (n === "prompt" && !pick.prompt.trim()) missing.push("a description");
+  });
+  $("why").textContent = job ? "Working…"
+    : missing.length ? "Needs " + missing.join(" and ") : "";
+  $("run").disabled = missing.length > 0 || !!job;
+  $("run-label").textContent = "Create · " + (tool().cost) +
+    (tool().cost === 1 ? " credit" : " credits");
+}
+
+function draw() { drawTools(); drawHeader(); drawCanvas(); drawPanel(); }
+
+/* ------------------------------------------------------------------ sheets */
+function openSheet(which) {
+  sheetKind = which;
+  var html = "";
+  if (which === "models") {
+    html = '<h2>Who wears it</h2><p>Your own models sit alongside the roster. ' +
+      'One without a photograph cannot be used yet.</p>' +
+      '<div class="grid-models">' + MODELS.map(function (m) {
+        return '<button data-model="' + esc(m.id) + '"' +
+          (m.preview ? "" : " disabled") + ' aria-pressed="' +
+          (m.id === pick.model_id) + '">' +
+          (m.preview ? '<img src="' + esc(m.preview) + '" alt="">' : '<span class="ph"></span>') +
+          '<span class="meta"><b>' + esc(m.display_name) + '</b><small>' +
+          (m.preview ? (m.mine ? "yours" : esc(m.age)) : "photo missing") +
+          '</small></span></button>';
+      }).join("") + '</div>';
+  } else if (which === "kind") {
+    html = '<h2>What is this garment?</h2>' +
+      '<p>So the packshot names it correctly, and so we can tell you up front ' +
+      'where it works. Asked once per photo.</p>' +
+      '<div class="choices">' + KINDS.map(function (k) {
+        return '<button data-kind="' + esc(k[0]) + '" aria-pressed="' +
+          (pick.garment_kind === k[0]) + '"><b>' + esc(k[1]) + '</b><small>' +
+          esc(k[2]) + '</small></button>';
+      }).join("") + '</div>';
+  } else if (which === "warn") {
+    html = '<h2>A bottom comes out worn on top</h2>' +
+      '<p>This tool dresses a body, and the model it uses puts every garment ' +
+      'on the torso — a skirt comes back looking like a top. We cannot steer ' +
+      'it, so this is what you would get. <b>Packshot</b> works on bottoms.</p>' +
+      '<div class="onward" style="padding:0">' +
+      '<button class="btn small" data-go="anyway">Run it anyway</button>' +
+      '<button class="btn small primary" style="width:auto;height:32px" ' +
+      'data-go="packshot">Use Packshot</button></div>';
+  }
+  $("sheet").innerHTML = html +
+    '<button class="btn small x" data-close="1" aria-label="Close">' +
+    '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  $("sheet").hidden = false;
+  $("scrim").hidden = false;
+}
+function closeSheet() {
+  $("sheet").hidden = true; $("scrim").hidden = true; sheetKind = null;
+}
+
+/* ---------------------------------------------------------------- uploading */
+function upload(need, file) {
+  var type = file.type || "image/jpeg";
+  pick[need + "_url"] = URL.createObjectURL(file);
+  if (need === "garment") { pick.garment_kind = null; pick.bottom_ok = null; }
+  result = null;
+  draw();
+  api("/uploads", {method: "POST", body: {kind: need, content_type: type}})
+    .then(function (u) {
+      return fetch(u.url, {method: "PUT", body: file,
+                           headers: {"Content-Type": type}})
+        .then(function (r) {
+          if (!r.ok) throw new Error("upload failed (" + r.status + ")");
+          pick[need + "_key"] = u.key;
+          draw();
+        });
+    })
+    .catch(function (e) {
+      toast(e.message, true);
+      pick[need + "_key"] = null; pick[need + "_url"] = null;
+      draw();
+    });
+}
+
+/* ------------------------------------------------------------------ running */
+function run() {
+  var t = tool();
+  if (!t) return;
+  if (ASKS_KIND[t.id] && pick.garment_key && !pick.garment_kind) {
+    afterKind = run; return openSheet("kind");
+  }
+  // Checked here rather than inside the question: the common way to reach a
+  // tool with a bottom is to carry a packshot forward, where the answer is
+  // already known and nothing is asked.
+  if (TORSO_ONLY[t.id] && pick.garment_kind === "lower" && pick.bottom_ok !== t.id) {
+    return openSheet("warn");
+  }
+  job = "pending";
+  draw();
+  api("/jobs", {method: "POST", body: {
+    tool: t.id,
+    garment_key: pick.garment_key || (wants("person") ? pick.person_key : null),
+    person_key: wants("model") ? null : (pick.person_key || null),
+    model_id: pick.model_id || null,
+    mode: pick.garment_kind || null,
+    seconds: Number(pick.seconds),
+    prompt: pick.prompt.trim() || null,
+    gender: pick.gender, age: pick.age, build: pick.build, look: pick.look,
+    modest: pick.modest === "true",
+    idem_key: "web-" + Date.now() + "-" + Math.random().toString(16).slice(2)
+  }}).then(function (j) { watch(j.job_id); })
+    .catch(function (e) { job = null; toast(e.message, true); draw(); });
+}
+
+function watch(id) {
+  job = id; result = null;
+  var t0 = Date.now(), typical = (tool() || {}).typical_seconds;
+  var inputs = {
+    garment: wants("garment") ? pick.garment_url : null,
+    person: pick.person_url,
+    model: (model() || {}).preview || null
+  };
+  drawWorking(0, "queued", typical);
+  drawPanel();
+  clearInterval(poll);
+  poll = setInterval(function () {
+    api("/jobs/" + id).then(function (j) {
+      var secs = (Date.now() - t0) / 1000;
+      if (j.status === "done") {
+        clearInterval(poll); job = null;
+        result = {url: j.result_url, seconds: j.seconds, inputs: inputs,
+                  tool: pick.tool, job_id: id, kept: false, at: 0,
+                  variants: (j.results || []).filter(function (r) { return r.url; })};
+        toast("Done in " + (j.seconds != null ? j.seconds : secs.toFixed(1)) + "s");
+        refresh(); draw();
+        return;
+      }
+      if (j.status === "failed" || j.status === "cancelled") {
+        clearInterval(poll); job = null;
+        toast(j.status === "failed" ? "That one failed — the credit came back."
+                                    : "Cancelled.", j.status === "failed");
+        refresh(); draw();
+        return;
+      }
+      drawWorking(secs, j.status === "queued"
+        ? (j.position ? j.position + " in the queue" : "queued") : j.status, typical);
+    }).catch(function (e) {
+      clearInterval(poll); job = null; toast(e.message, true); draw();
+    });
+  }, 1500);
+}
+
+function save(url) {
+  fetch(url).then(function (r) { return r.blob(); }).then(function (b) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = "lookzi-" + Date.now() + (isVideo() ? ".mp4" : ".png");
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+  }).catch(function () { toast("Could not save that one.", true); });
+}
+
+function toast(text, bad) {
+  var el = document.createElement("div");
+  el.className = "toast" + (bad ? " bad" : "");
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(function () { el.remove(); }, bad ? 5200 : 2600);
+}
+
+/* ------------------------------------------------------------------- events */
+document.addEventListener("change", function (e) {
+  var f = e.target.closest("input[type=file]");
+  if (f && f.files && f.files[0]) upload(f.dataset.need, f.files[0]);
+});
+document.addEventListener("input", function (e) {
+  if (e.target.id === "prompt") { pick.prompt = e.target.value; drawPanel(); }
+});
+
+["dragenter","dragover"].forEach(function (ev) {
+  document.addEventListener(ev, function (e) {
+    var s = e.target.closest(".slot");
+    if (!s) return;
+    e.preventDefault(); s.classList.add("drag");
+  });
+});
+["dragleave","drop"].forEach(function (ev) {
+  document.addEventListener(ev, function (e) {
+    var s = e.target.closest(".slot");
+    if (s) s.classList.remove("drag");
+  });
+});
+document.addEventListener("drop", function (e) {
+  var s = e.target.closest(".slot");
+  if (!s) return;
+  e.preventDefault();
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) upload(s.dataset.need, f);
+});
+
+document.addEventListener("click", function (e) {
+  var kill = e.target.closest("[data-clear]");
+  if (kill) {
+    e.preventDefault(); e.stopPropagation();
+    var n = kill.dataset.clear;
+    pick[n + "_key"] = null; pick[n + "_url"] = null;
+    if (n === "garment") { pick.garment_kind = null; pick.bottom_ok = null; }
+    draw(); return;
+  }
+
+  if (e.target.closest("[data-close]") || e.target.id === "scrim") {
+    afterKind = null; closeSheet(); return;
+  }
+
+  var t = e.target.closest("[data-tool]");
+  if (t && !t.disabled) {
+    pick.tool = t.dataset.tool; result = null; draw(); return;
+  }
+
+  var m = e.target.closest("[data-model]");
+  if (m && !m.disabled) {
+    pick.model_id = m.dataset.model; closeSheet(); draw(); return;
+  }
+
+  var kd = e.target.closest("[data-kind]");
+  if (kd) {
+    pick.garment_kind = kd.dataset.kind; pick.bottom_ok = null;
+    closeSheet(); drawPanel();
+    var then = afterKind; afterKind = null;
+    if (then) then();
+    return;
+  }
+
+  var go = e.target.closest("[data-go]");
+  if (go) {
+    closeSheet();
+    if (go.dataset.go === "packshot") {
+      pick.tool = "packshot"; draw();
+      toast("Switched to Packshot — press Create when you are ready.");
+    } else { pick.bottom_ok = pick.tool; run(); }
+    return;
+  }
+
+  var lk = e.target.closest("[data-look]");
+  if (lk) { pick[lk.dataset.look] = lk.dataset.v; drawPanel(); return; }
+
+  var ln = e.target.closest("[data-len]");
+  if (ln) { pick.seconds = ln.dataset.len; drawPanel(); return; }
+
+  var open = e.target.closest("[data-open]");
+  if (open) { openSheet(open.dataset.open); return; }
+
+  var on = e.target.closest("[data-onward]");
+  if (on && result) {
+    var slot = on.dataset.slot;
+    pick[slot + "_key"] = shownKey();
+    pick[slot + "_url"] = shown();
+    if (slot === "garment") {
+      pick.person_key = null; pick.person_url = null;
+      var v = (result.variants || [])[result.at || 0] || (result.variants || [])[0];
+      pick.garment_kind = (v && v.garment_kind) || null;
+      pick.bottom_ok = null;
+    }
+    pick.tool = on.dataset.onward; result = null; draw();
+    toast("Carried over — add whatever else it needs.");
+    return;
+  }
+
+  if (e.target.closest("#example")) {
+    pick.prompt = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)];
+    drawPanel(); $("prompt") && $("prompt").focus(); return;
+  }
+  if (e.target.closest("#back")) { result = null; draw(); return; }
+  if (e.target.closest("#save") && result) { save(shown()); return; }
+  if (e.target.closest("#keep") && result) {
+    api("/models/keep", {method: "POST", body: {job_id: result.job_id}})
+      .then(function () {
+        result.kept = true; toast("Kept — it is in your models now.");
+        return api("/models").then(function (m) { MODELS = m; draw(); });
+      })
+      .catch(function (err) { toast(err.message, true); });
+    return;
+  }
+  if (e.target.closest("#cancel") && job) {
+    api("/jobs/" + job + "/cancel", {method: "POST"}).catch(function () {});
+    return;
+  }
+  if (e.target.closest("#big") && result) {
+    $("viewer-body").innerHTML = '<img src="' + esc(shown()) + '" alt="">' +
+      '<button class="btn small x" id="vclose">Close</button>';
+    $("viewer").showModal(); return;
+  }
+  if (e.target.closest("#vclose")) { $("viewer").close(); return; }
+  if (e.target.closest("#nav-models")) { e.preventDefault(); openSheet("models"); }
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !$("sheet").hidden) { afterKind = null; closeSheet(); }
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !$("run").disabled) run();
+});
+$("run").addEventListener("click", run);
+
+/* --------------------------------------------------------------------- boot */
+function refresh() {
+  return api("/me").then(function (me) {
+    $("credits").textContent = (me.credits == null ? "—" : me.credits) + " credits";
+  }).catch(function () {});
+}
+
+function health() {
+  api("/health").then(function (h) {
+    var n = h.workers || 0, el = $("worker");
+    el.innerHTML = '<i class="dot ' + (n ? "on" : "off") + '"></i><span>' +
+      (n ? (n + " worker" + (n > 1 ? "s" : "") + " ready") : "no worker") +
+      '</span>';
+  }).catch(function () {});
+}
+
+Promise.all([api("/tools"), api("/models"), refresh()])
+  .then(function (r) {
+    TOOLS = r[0].filter(function (t) { return t.ready || t.id === "short-video"; });
+    MODELS = r[1];
+    pick.tool = (TOOLS.filter(function (t) { return t.ready; })[0] || TOOLS[0]).id;
+    draw();
+  })
+  .catch(function (e) {
+    $("canvas").innerHTML = '<div class="slots"><div class="slot" ' +
+      'style="cursor:default"><span class="empty"><b>Could not reach the ' +
+      'service</b><small>' + esc(e.message) + '</small></span></div></div>';
+  });
+health();
+setInterval(health, 15000);
+</script>

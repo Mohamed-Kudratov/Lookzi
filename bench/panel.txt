@@ -1,0 +1,12 @@
+tops	test products\man/upper\1d0b7c61-dbeb-4830-9012-fc6034d92d22.jpg
+tops	test products\man/upper\0b7f4987-34e4-4c85-9f28-35e04ae78ece.jpg
+tops	test products\Woman/Upper\2a064fe6-224b-4146-abfe-97e9d292a61d.jpg
+tops	test products\Woman/Upper\04b42565-23ce-47d9-8f11-e3f1fb0d5051.jpg
+bottoms	test products\Woman/lower\574a2370-af89-4c9a-bbb9-9acfd31489f3.jpg
+bottoms	test products\man/lower\1d407629-87e5-4702-b9fc-e3b19de93570.jpg
+bottoms	test products\man/lower\2d6fce79-1631-43b6-974d-b246247e3249.jpg
+bottoms	test products\man/lower\1c9a6bc0-d29e-4e2b-8d00-d19e4d77a380.jpg
+one-pieces	test products\Woman/overall\8b366b95-1958-4b76-a9c3-f8195f589499.jpg
+one-pieces	test products\Woman/overall\6ccb3f12-7087-4303-a522-3a76d3db8ce6.jpg
+one-pieces	test products\Woman/overall\08e1576e-1a7c-4a80-813d-f6914b010a8a.jpg
+one-pieces	test products\Woman/overall\6a41c325-3fda-46db-974d-bf9e62668a6b.jpg

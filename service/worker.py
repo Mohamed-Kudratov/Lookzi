@@ -109,11 +109,26 @@ class Worker:
         try:
             out = self.handler(job)
             elapsed = round(time.time() - started, 2)
+            # The worker's own clock, not the pod's.
+            #
+            # The pod reports how long it sampled for, and that number was
+            # being stored as the job's duration and then used to tell the
+            # seller how long to expect. It leaves out queueing, the two
+            # uploads, the download and the pod's own loading -- so the studio
+            # promised "about 6 seconds" for a packshot that takes eighty, and
+            # was wrong in the direction that makes people think it has hung.
+            #
+            # What the pod measured is still worth keeping; it goes in notes,
+            # where it is a diagnostic rather than a promise.
+            notes = out.get("notes")
+            if out.get("seconds") is not None and out["seconds"] != elapsed:
+                notes = dict(notes or {})
+                notes["generation_seconds"] = out["seconds"]
             q.finish(conn, job["id"], out["object_key"],
                      kind=out.get("kind", "image"),
                      width=out.get("width"), height=out.get("height"),
-                     seconds=out.get("seconds", elapsed),
-                     variant=out.get("variant"), notes=out.get("notes"),
+                     seconds=elapsed,
+                     variant=out.get("variant"), notes=notes,
                      # A tool that makes more than one picture and lets the
                      # customer choose. The packshot is the case: a retouched
                      # version and the plain cut-out of the same garment.
