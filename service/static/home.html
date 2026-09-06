@@ -4,6 +4,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lookzi — kiyimingiz uchun model suratlari</title>
 <meta name="description" content="Kiyimning yassi suratini yuboring — modelda kiyilgan katalog surati qaytadi. Studiya, fotograf va model shart emas.">
+<!-- The audience is not named anywhere on this page on purpose. Writing "for
+     clothing sellers" over the headline told a designer, a brand, a person
+     selling on Telegram and a photographer that this was not for them -- and
+     it is. -->
 <meta property="og:title" content="Lookzi — kiyimingiz uchun model suratlari">
 <meta property="og:description" content="Yassi surat kiradi, modeldagi katalog surati chiqadi.">
 <meta property="og:image" content="/static/marketing/model-hero.jpg">
@@ -157,7 +161,11 @@ section{padding:clamp(60px,8vw,110px) 0}
 .tools{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .card{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
   background:var(--surface);transition:border-color var(--t),transform var(--t)}
+.card{display:block}
 .card:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.card .more{display:inline-flex;align-items:center;gap:6px;font-size:13px;
+  color:var(--ink-3);margin-top:4px}
+.card:hover .more{color:var(--ink-2)}
 .card img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--plate)}
 .card .body{padding:18px 18px 20px;display:grid;gap:6px}
 .card p{font-size:14px;line-height:1.55}
@@ -209,13 +217,14 @@ footer a:hover{color:var(--ink-2)}
 <section class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow rise">Kiyim sotuvchilar uchun</div>
+      <div class="eyebrow rise">Suratga olishning yangi usuli</div>
       <h1 class="rise" style="margin:16px 0 20px">
         Kiyimingiz. Modelda.
       </h1>
       <p class="lede rise">
         Kiyimning yassi suratini yuboring — u modelda kiyilgan katalog surati
         bo‘lib qaytadi. Studiya ijarasi, fotograf va model shart emas.
+        Bitta do‘kon uchun ham, yuzta mahsulot uchun ham.
       </p>
       <div class="cta rise">
         <a class="btn primary" href="/studio">
@@ -240,7 +249,7 @@ footer a:hover{color:var(--ink-2)}
   <div class="cap">
     <span class="eyebrow rise">Hammasi shu yerda yasalgan</span>
     <span class="rise" style="font-size:13.5px;color:var(--ink-3)">
-      Har bir surat — sotuvchi yuborgan yassi rasmdan chiqqan natija
+      Har biri yassi rasmdan chiqqan natija
     </span>
   </div>
   <div class="lane" id="lane"></div>
@@ -283,41 +292,41 @@ footer a:hover{color:var(--ink-2)}
       <h2 class="rise">Bitta rasmdan — butun kampaniya</h2>
     </div>
     <div class="tools">
-      <article class="card rise">
+      <a class="card rise" href="/tool/packshot">
         <img src="/static/marketing/packshot-1-after.jpg" alt="Qora futbolkaning katalog surati">
         <div class="body"><h3>Katalog surati</h3>
           <p>Ilgich, devor va soya ketadi. Oq fon, tekislangan kiyim, bitta
-             standart o‘lcham — marketpleyslar talab qiladigan ko‘rinish.</p></div>
-      </article>
-      <article class="card rise">
+             standart o‘lcham — marketpleyslar talab qiladigan ko‘rinish.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
+      <a class="card rise" href="/tool/product-to-model">
         <img src="/static/marketing/model-d.jpg" alt="Jinsi kurtkadagi model">
         <div class="body"><h3>Modelga kiydirish</h3>
           <p>O‘zbek, qozoq, tojik va slavyan ko‘rinishidagi modellar. O‘z
-             modelingizni yasab, butun katalogda ishlatishingiz mumkin.</p></div>
-      </article>
-      <article class="card rise">
+             modelingizni yasab, butun katalogda ishlatishingiz mumkin.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
+      <a class="card rise" href="/tool/product-in-scene">
         <img src="/static/marketing/product-in-scene-1-after.jpg" alt="Kuzgi bog‘dagi model">
         <div class="body"><h3>Sahnaga qo‘yish</h3>
           <p>Qanday kadr kerakligini yozing — kuzgi bog‘, tomdan shahar
-             manzarasi, tinch studiya. Odam ham, joy ham yasaladi.</p></div>
-      </article>
-      <article class="card rise">
+             manzarasi, tinch studiya. Odam ham, joy ham yasaladi.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
+      <a class="card rise" href="/tool/packshot">
         <img src="/static/marketing/model-e.jpg" alt="Bosma naqshli futbolkadagi model">
         <div class="body"><h3>Naqsh joyida qoladi</h3>
           <p>Bosma, yozuv va gul — kiyimning o‘z naqshi ko‘chiriladi, qaytadan
-             chizilmaydi.</p></div>
-      </article>
-      <article class="card rise">
+             chizilmaydi.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
+      <a class="card rise" href="/tool/model-creation">
         <img src="/static/marketing/model-i.jpg" alt="Erkak model">
         <div class="body"><h3>Erkak kiyimi ham</h3>
-          <p>Ustki, pastki va to‘liq to‘plam. Yopiq kiyinish varianti ham bor.</p></div>
-      </article>
-      <article class="card rise">
+          <p>Ustki, pastki va to‘liq to‘plam. Yopiq kiyinish varianti ham bor.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
+      <a class="card rise" href="/tool/short-video">
         <img src="/static/marketing/model-g.jpg" alt="Yubkadagi model">
         <div class="body"><h3>Qisqa video</h3>
           <p>Tayyor suratdan 5 yoki 10 soniyalik klip — 9:16, 1080. Reels,
-             Stories va TikTok uchun.</p></div>
-      </article>
+             Stories va TikTok uchun.</p><span class="more">Batafsil<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      </a>
     </div>
   </div>
 </section>

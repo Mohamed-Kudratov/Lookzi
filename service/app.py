@@ -702,6 +702,23 @@ app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")),
           name="static")
 
 
+@app.get("/tool/{name}", response_class=HTMLResponse)
+def tool_page(name: str):
+    """One page per tool, from one file.
+
+    The page reads its own URL and renders from a table at the bottom of it.
+    Six pages that share a shape do not need six files -- they need one shape
+    and six entries, or they drift apart the first time somebody edits five.
+    """
+    if name not in tool_registry.TOOLS:
+        raise HTTPException(404, "no such tool")
+    p = os.path.join(HERE, "static", "tool.html")
+    if not os.path.exists(p):
+        raise HTTPException(404, "not built yet")
+    with open(p, encoding="utf-8") as fh:
+        return HTMLResponse(fh.read())
+
+
 @app.get("/home", response_class=HTMLResponse)
 def home():
     """The page that has to make a seller believe this works.

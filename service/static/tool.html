@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="uz">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lookzi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>document.documentElement.className+=" js";</script>
+<style>
+/* ---------------------------------------------------------------------------
+   One page per tool, from one file.
+
+   Six tools, six URLs, and the same layout for all of them -- somebody who has
+   read one of these should be able to read the next without learning anything
+   new. The differences between the tools are in the content, and the content
+   is data at the bottom of this file rather than six pages to keep in step.
+--------------------------------------------------------------------------- */
+:root{
+  --bg:#000; --surface:#0B0B0C; --raised:#151517;
+  --line:#232326; --line-2:#3A3A3F;
+  --ink:#FAFAFA; --ink-2:#A1A1AA; --ink-3:#71717A;
+  --on-accent:#0A0A0A; --plate:#171717;
+  --r:14px; --r-lg:22px;
+  --t:200ms cubic-bezier(.2,.6,.3,1);
+  --pad:clamp(20px,5vw,64px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:8px}
+svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.wrap{max-width:1140px;margin:0 auto;padding-inline:var(--pad)}
+.eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600}
+h1,h2,h3{margin:0;letter-spacing:-.03em;line-height:1.06;font-weight:700}
+h1{font-size:clamp(36px,5.6vw,62px);font-weight:800;text-wrap:balance;
+   max-inline-size:15ch}
+h2{font-size:clamp(24px,3vw,34px);text-wrap:balance;max-inline-size:20ch}
+h3{font-size:16.5px;font-weight:600;line-height:1.35;letter-spacing:-.01em}
+p{margin:0;color:var(--ink-2)}
+.lede{font-size:clamp(16px,1.5vw,19px);max-inline-size:50ch}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  height:50px;padding:0 24px;border-radius:12px;font-weight:600;font-size:15px;
+  border:1px solid var(--line-2);transition:background var(--t),
+  border-color var(--t),transform var(--t)}
+.btn:hover{background:var(--raised);transform:translateY(-1px)}
+.btn.primary{background:var(--ink);color:var(--on-accent);border-color:var(--ink)}
+.btn.primary:hover{background:#fff}
+
+header{position:sticky;top:0;z-index:30;backdrop-filter:blur(14px);
+  background:rgba(0,0,0,.72);border-bottom:1px solid transparent;
+  transition:border-color var(--t)}
+header.stuck{border-color:var(--line)}
+header .wrap{display:flex;align-items:center;gap:20px;height:66px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16.5px;
+  letter-spacing:-.02em}
+.logo i{width:28px;height:28px;border-radius:8px;background:var(--ink);
+  color:var(--on-accent);display:grid;place-items:center}
+.logo svg{width:16px;height:16px;stroke-width:2.2}
+nav{display:flex;gap:6px;margin-left:auto;align-items:center}
+nav a{padding:8px 12px;border-radius:9px;font-size:14px;color:var(--ink-2);
+  transition:color var(--t),background var(--t)}
+nav a:hover{color:var(--ink);background:var(--raised)}
+
+/* -------------------------------------------------------------------- hero */
+.hero{padding:clamp(36px,5vw,64px) 0 clamp(30px,4vw,52px);position:relative}
+.hero::before{content:"";position:absolute;inset:-40% 0 40%;z-index:-1;
+  background:radial-gradient(50% 45% at 40% 0%, #141416 0%, transparent 72%)}
+.crumbs{display:flex;gap:8px;align-items:center;font-size:13px;
+  color:var(--ink-3);margin-bottom:22px}
+.crumbs a:hover{color:var(--ink-2)}
+.hero .wrap{display:grid;gap:clamp(32px,5vw,60px);align-items:center;
+  grid-template-columns:minmax(0,1fr) minmax(0,.86fr)}
+@media (max-width:940px){.hero .wrap{grid-template-columns:minmax(0,1fr)}}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:26px;
+  padding-top:22px;border-top:1px solid var(--line)}
+.meta div b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.meta div span{font-size:12.5px;color:var(--ink-3)}
+
+/* the example: two frames, labelled, never stretched */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pair.one{grid-template-columns:1fr;max-width:420px}
+.pair figure{margin:0;position:relative;border-radius:var(--r);overflow:hidden;
+  border:1px solid var(--line);background:var(--plate);
+  box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.pair img{width:100%;aspect-ratio:4/6;object-fit:cover}
+.pair figcaption{position:absolute;top:9px;left:9px;font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+  padding:4px 8px;border-radius:6px;background:rgba(0,0,0,.66);
+  border:1px solid var(--line-2);color:var(--ink-2)}
+
+section{padding:clamp(52px,7vw,92px) 0}
+.head{display:grid;gap:12px;margin-bottom:clamp(28px,4vw,44px)}
+
+.grid3{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.point{display:grid;gap:8px;padding-top:20px;border-top:1px solid var(--line)}
+.point p{font-size:14px}
+
+.gallery{display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fill,minmax(min(160px,45vw),1fr))}
+.gallery figure{margin:0;border-radius:12px;overflow:hidden;
+  border:1px solid var(--line);background:var(--plate)}
+.gallery img{width:100%;aspect-ratio:4/6;object-fit:cover}
+
+.rows{display:grid;gap:2px;border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;background:var(--line)}
+.row{background:var(--surface);padding:16px 20px;display:grid;gap:4px;
+  grid-template-columns:180px minmax(0,1fr)}
+@media (max-width:640px){.row{grid-template-columns:minmax(0,1fr)}}
+.row b{font-size:14px;font-weight:600}
+.row span{font-size:14px;color:var(--ink-2)}
+
+.others{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.others a{border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+  display:grid;gap:3px;background:var(--surface);
+  transition:border-color var(--t),transform var(--t)}
+.others a:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.others b{font-size:14.5px;font-weight:600}
+.others span{font-size:12.5px;color:var(--ink-3)}
+
+.final{border:1px solid var(--line);border-radius:var(--r-lg);
+  background:linear-gradient(180deg,var(--raised),var(--surface));
+  padding:clamp(32px,5vw,56px);text-align:center;display:grid;gap:16px;
+  justify-items:center}
+
+footer{border-top:1px solid var(--line);padding:32px 0;font-size:13px;
+  color:var(--ink-3)}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer a:hover{color:var(--ink-2)}
+
+.js .rise{opacity:0;transform:translateY(14px);
+  transition:opacity 460ms cubic-bezier(.2,.6,.3,1),
+             transform 460ms cubic-bezier(.2,.6,.3,1)}
+.js .rise.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .js .rise{opacity:1;transform:none;transition:none}
+  *,*::before,*::after{transition-duration:.01ms!important;
+    animation-duration:.01ms!important}
+}
+</style>
+
+<header id="top">
+  <div class="wrap">
+    <a class="logo" href="/home">
+      <i><svg viewBox="0 0 24 24"><path d="M7 4h10l2 5-7 11L5 9z"/></svg></i>Lookzi
+    </a>
+    <nav>
+      <a href="/home">Bosh sahifa</a>
+      <a href="/studio" class="btn primary" style="height:40px;padding:0 18px">
+        Bepul boshlash
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<footer>
+  <div class="wrap">
+    <span>Lookzi</span><span style="color:var(--line-2)">·</span>
+    <a href="/home">Bosh sahifa</a><a href="/studio">Studiya</a>
+    <span style="margin-left:auto">Toshkent</span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+var esc = function (s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+};
+
+/* Each tool's own page, as data. Six pages that share a shape do not need six
+   files -- they need one shape and six entries, or they drift apart the first
+   time somebody edits five of them. */
+var TOOLS = {
+  "packshot": {
+    name: "Katalog surati",
+    lede: "Kiyimning suratini qayerda olganingizning ahamiyati yo‘q. Ilgich, " +
+          "devor, parket va soya olib tashlanadi; kiyim tekislanadi va oq " +
+          "fonda, bitta standart o‘lchamda qaytadi.",
+    cost: "1 kredit", time: "~16 soniya", out: "1536 × 2048",
+    pair: [["packshot-2-before", "Siz olgan rasm"], ["packshot-2-after", "Natija"]],
+    points: [
+      ["Fon butunlay ketadi", "To‘shak, gilam, parket, ola-chalpoq devor — " +
+       "hammasi. Oq fon marketpleyslar talab qiladigan ko‘rinish."],
+      ["Kiyim tekislanadi", "Ilgichda osilgan kiyim g‘ijim va qiyshiq bo‘ladi. " +
+       "Natijada u tik turadi va burmalar joyiga tushadi."],
+      ["Bitta o‘lcham", "Uzoqdan olingan kiyim kichik, yaqindan olingani " +
+       "kadrni to‘ldiradi. Ikkalasi ham bir xil kadrga solinadi, shunda " +
+       "katalog bir butun ko‘rinadi."]
+    ],
+    gallery: ["packshot-1-after", "packshot-2-after", "packshot-3-after"],
+    when: [
+      ["Qachon kerak", "Marketpleysga yoki saytga qo‘yish uchun. Bu boshqa " +
+       "hamma narsaning boshlanishi."],
+      ["Nima yuborish kerak", "Kiyimni yassi yoyib yoki ilgichda oling. Butun " +
+       "kiyim kadrga sig‘sin."],
+      ["Nimaga e’tibor bering", "Juda qorong‘i yoki juda qiyshiq suratdan " +
+       "yaxshi natija chiqmaydi. Yorug‘lik tekis bo‘lsa yetadi."]
+    ]
+  },
+
+  "product-to-model": {
+    name: "Modelga kiydirish",
+    lede: "Kiyimning yassi suratini bering — uni modellarimizdan biri kiyib " +
+          "chiqadi. O‘zbek, qozoq, tojik va slavyan ko‘rinishlari, turli yosh " +
+          "va gavda.",
+    cost: "1 kredit", time: "~25 soniya", out: "modelda, to‘liq gavda",
+    pair: [["product-to-model-3-before", "Kiyim"], ["model-a", "Modelda"]],
+    points: [
+      ["Model tanlanadi", "Ro‘yxatdan yoki o‘zingiz yasagan modeldan. Bitta " +
+       "modelni butun katalogda ishlatish mumkin — shunda do‘kon bir butun " +
+       "ko‘rinadi."],
+      ["Naqsh ko‘chiriladi", "Bosma, yozuv va gul qaytadan chizilmaydi — " +
+       "kiyimning o‘z naqshi olinadi."],
+      ["Avval katalog surati", "Kiyimni avval packshotdan o‘tkazsangiz natija " +
+       "sezilarli yaxshi bo‘ladi: modelga toza, tik rasm boradi."]
+    ],
+    gallery: ["model-hero", "model-a", "model-b", "model-c", "model-e", "model-g"],
+    when: [
+      ["Qachon kerak", "Kiyim qanday o‘tirishini ko‘rsatish uchun. Yassi " +
+       "surat o‘lchamni ham, ko‘rinishni ham aytmaydi."],
+      ["Nima yuborish kerak", "Kiyimning yassi surati va model tanlovi."],
+      ["Nimaga e’tibor bering", "Yubka va shim ba’zan gavdaga tushadi. Avval " +
+       "katalog surati yasasangiz, bu ancha kamayadi."]
+    ]
+  },
+
+  "virtual-try-on": {
+    name: "O‘zingizga kiydirish",
+    lede: "O‘z suratingizni yuboring — kiyim sizga kiydiriladi. Poza, fon va " +
+          "yuz o‘zgarmaydi.",
+    cost: "1 kredit", time: "~25 soniya", out: "sizning suratingiz",
+    pair: [["product-to-model-3-before", "Kiyim"], ["model-f", "Sizda"]],
+    points: [
+      ["Sizning suratingiz qoladi", "Yuz, soch va turgan joyingiz o‘sha " +
+       "bo‘ladi — faqat kiyim almashadi."],
+      ["To‘liq gavda kerak", "Bosh va oyoq kadrga sig‘sin, kamera ro‘parada " +
+       "bo‘lsin."],
+      ["Kiyimni ham yuborasiz", "Yassi surat yoki tayyor katalog surati."]
+    ],
+    gallery: ["model-f", "model-d", "model-h"],
+    when: [
+      ["Qachon kerak", "Sotuvchi o‘zi modellik qilmoqchi bo‘lsa yoki mijozga " +
+       "kiyim qanday turishini ko‘rsatish uchun."],
+      ["Nima yuborish kerak", "Sizning to‘liq bo‘yli suratingiz va kiyim."],
+      ["Nimaga e’tibor bering", "Yonbosh yoki o‘tirgan pozada natija " +
+       "yomonlashadi."]
+    ]
+  },
+
+  "model-swap": {
+    name: "Modelni almashtirish",
+    lede: "Suratdagi odamni boshqasiga almashtiring. Kiyim, poza va fon " +
+          "o‘zgarmaydi — faqat kim kiyib turgani o‘zgaradi.",
+    cost: "1 kredit", time: "~25 soniya", out: "yangi model, o‘sha kadr",
+    pair: [["swap-b", "Ayol model"], ["swap-a", "Erkak model"]],
+    points: [
+      ["Kadr o‘zgarmaydi", "Bir xil poza va bir xil fon — ya’ni bitta " +
+       "suratdan bir necha model varianti chiqadi."],
+      ["Bitta kiyim, ko‘p auditoriya", "Bir xil mahsulotni turli yosh va " +
+       "ko‘rinishdagi odamlarda ko‘rsatish."],
+      ["Tayyor suratdan", "Modelga kiydirishdan chiqqan natijani shu yerda " +
+       "davom ettirish mumkin."]
+    ],
+    gallery: ["swap-a", "swap-b"],
+    when: [
+      ["Qachon kerak", "Bitta suratni turli auditoriyaga moslashtirish uchun."],
+      ["Nima yuborish kerak", "Odam kiyim kiygan surat va yangi model."],
+      ["Nimaga e’tibor bering", "Kiyimning mayda detallari biroz " +
+       "o‘zgarishi mumkin."]
+    ]
+  },
+
+  "product-in-scene": {
+    name: "Sahnaga qo‘yish",
+    lede: "Qanday kadr kerakligini yozing — kuzgi bog‘, tomdan shahar " +
+          "manzarasi, tinch studiya. Odam ham, joy ham yasaladi va kiyim " +
+          "unga kiydiriladi.",
+    cost: "2 kredit", time: "~35 soniya", out: "to‘liq kadr",
+    pair: [["product-in-scene-1-before", "Kiyim"],
+           ["product-in-scene-1-after", "Sahnada"]],
+    points: [
+      ["O‘z so‘zingiz bilan", "“Kuzgi bog‘, oltin yorug‘lik” yoki “tomda, " +
+       "orqada shahar” — qanday yozsangiz, shunday quriladi."],
+      ["Reklama uchun", "Katalog surati sotadi, sahna esa e’tibor tortadi. " +
+       "Ikkalasi turli ish qiladi."],
+      ["Odam ham yasaladi", "Model tanlash shart emas — matndan chiqadi."]
+    ],
+    gallery: ["product-in-scene-1-after", "product-in-scene-2-after"],
+    when: [
+      ["Qachon kerak", "Ijtimoiy tarmoq uchun, e’lon va banner uchun."],
+      ["Nima yuborish kerak", "Kiyimning surati va bir-ikki gap tavsif."],
+      ["Nimaga e’tibor bering", "Bu eng “ijodiy” vosita — natija har safar " +
+       "boshqacha chiqadi. Bir necha marta yurgizib ko‘ring."]
+    ]
+  },
+
+  "model-creation": {
+    name: "O‘z modelingiz",
+    lede: "Sizga tegishli model yasang: jinsi, yoshi, gavdasi va ko‘rinishi " +
+          "sizniki. Keyin uni butun katalogda ishlating.",
+    cost: "4 kredit", time: "~30 soniya", out: "saqlanadigan model",
+    pair: [["person-1", "Yosh, oriq"], ["person-6", "Kattaroq yosh"]],
+    points: [
+      ["Do‘koningizning yuzi", "Bitta model butun katalogda takrorlansa, " +
+       "do‘kon bir butun ko‘rinadi — bu brend hissi beradi."],
+      ["Sizniki bo‘lib qoladi", "Yaratilgan model modellar ro‘yxatingizga " +
+       "qo‘shiladi va har safar qayta yasalmaydi."],
+      ["Yopiq kiyinish ham", "Bozorga mos variant tanlanadi."]
+    ],
+    gallery: ["person-1", "person-2", "person-3", "person-4",
+              "person-5", "person-6", "person-7", "person-8"],
+    when: [
+      ["Qachon kerak", "Katalogingiz bir uslubda bo‘lishini xohlasangiz."],
+      ["Nima yuborish kerak", "Hech narsa — faqat tanlovlar. Xohlasangiz " +
+       "o‘z so‘zingiz bilan tasvirlaysiz."],
+      ["Nimaga e’tibor bering", "Bir necha marta yurgizing — har safar " +
+       "boshqa odam chiqadi, yoqqanini saqlaysiz."]
+    ]
+  },
+
+  "short-video": {
+    name: "Qisqa video",
+    lede: "Tayyor suratdan 5 yoki 10 soniyalik klip. 9:16, 1080 — Reels, " +
+          "Stories va TikTok talab qiladigan shakl.",
+    cost: "3 kredit", time: "~140 soniya", out: "9:16 · 1080 · mp4",
+    pair: [["model-a", "Surat"], ["model-g", "Klipdan kadr"]],
+    points: [
+      ["To‘g‘ri shakl", "9:16, cho‘zilmagan va kesilmagan. Rasm butunligicha " +
+       "joylashadi, qolgan joy o‘z fon rangi bilan to‘ldiriladi."],
+      ["Tayyor suratdan", "Katalog surati yoki modeldagi natija — qaysi " +
+       "biridan bo‘lsa ham."],
+      ["Hali sinovda", "Uch soniyadan keyin kiyim shaklini o‘zgartirib " +
+       "yuborishi mumkin. Shuning uchun uni sinov sifatida taklif qilamiz."]
+    ],
+    gallery: ["model-a", "model-b", "model-g"],
+    when: [
+      ["Qachon kerak", "Reels va Stories uchun, e’tibor tortish uchun."],
+      ["Nima yuborish kerak", "Tayyor surat va uzunlik tanlovi."],
+      ["Nimaga e’tibor bering", "Eng uzun kutish shu yerda — taxminan ikki " +
+       "yarim daqiqa."]
+    ]
+  }
+};
+
+var ORDER = ["packshot", "product-to-model", "virtual-try-on", "model-swap",
+             "product-in-scene", "model-creation", "short-video"];
+
+function img(name, alt) {
+  return '<img src="/static/marketing/' + esc(name) + '.jpg" alt="' +
+    esc(alt || "") + '" loading="lazy" decoding="async">';
+}
+
+function render(id) {
+  var t = TOOLS[id];
+  if (!t) { location.replace("/home"); return; }
+  document.title = t.name + " — Lookzi";
+  var others = ORDER.filter(function (x) { return x !== id; }).slice(0, 4);
+
+  document.getElementById("main").innerHTML =
+    '<section class="hero"><div class="wrap">' +
+      '<div>' +
+        '<div class="crumbs rise"><a href="/home">Bosh sahifa</a>' +
+        '<span>/</span><span>' + esc(t.name) + '</span></div>' +
+        '<h1 class="rise">' + esc(t.name) + '</h1>' +
+        '<p class="lede rise" style="margin-top:18px">' + esc(t.lede) + '</p>' +
+        '<div class="cta rise"><a class="btn primary" href="/studio">' +
+          'Shu vositani ochish' +
+          '<svg viewBox="0 0 24 24"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>' +
+        '</a></div>' +
+        '<div class="meta rise">' +
+          '<div><b>' + esc(t.cost) + '</b><span>narxi</span></div>' +
+          '<div><b>' + esc(t.time) + '</b><span>kutish</span></div>' +
+          '<div><b>' + esc(t.out) + '</b><span>natija</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pair rise">' + t.pair.map(function (p) {
+        return '<figure>' + img(p[0], p[1]) +
+          '<figcaption>' + esc(p[1]) + '</figcaption></figure>';
+      }).join("") + '</div>' +
+    '</div></section>' +
+
+    '<section style="background:var(--surface);border-block:1px solid var(--line)">' +
+      '<div class="wrap"><div class="head">' +
+        '<div class="eyebrow rise">Nima qiladi</div>' +
+        '<h2 class="rise">Uchta narsa</h2></div>' +
+      '<div class="grid3">' + t.points.map(function (p) {
+        return '<div class="point rise"><h3>' + esc(p[0]) + '</h3><p>' +
+          esc(p[1]) + '</p></div>';
+      }).join("") + '</div></div>' +
+    '</section>' +
+
+    '<section><div class="wrap"><div class="head">' +
+      '<div class="eyebrow rise">Natijalar</div>' +
+      '<h2 class="rise">Shu vosita bilan yasalgan</h2></div>' +
+      '<div class="gallery">' + t.gallery.map(function (g) {
+        return '<figure class="rise">' + img(g, t.name) + '</figure>';
+      }).join("") + '</div></div></section>' +
+
+    '<section style="padding-top:0"><div class="wrap">' +
+      '<div class="rows">' + t.when.map(function (w) {
+        return '<div class="row rise"><b>' + esc(w[0]) + '</b><span>' +
+          esc(w[1]) + '</span></div>';
+      }).join("") + '</div></div></section>' +
+
+    '<section style="padding-top:0"><div class="wrap">' +
+      '<div class="head"><div class="eyebrow rise">Boshqa vositalar</div></div>' +
+      '<div class="others">' + others.map(function (o) {
+        return '<a class="rise" href="/tool/' + esc(o) + '"><b>' +
+          esc(TOOLS[o].name) + '</b><span>' + esc(TOOLS[o].cost) +
+          '</span></a>';
+      }).join("") + '</div></div></section>' +
+
+    '<section style="padding-top:0"><div class="wrap"><div class="final rise">' +
+      '<h2 style="max-inline-size:16ch">Bitta rasm bilan sinab ko‘ring</h2>' +
+      '<p class="lede" style="text-align:center;max-inline-size:38ch">' +
+        'Ro‘yxatdan o‘tish yo‘q, karta yo‘q. Birinchi 20 ta surat bepul.</p>' +
+      '<a class="btn primary" href="/studio">Studiyani ochish' +
+      '<svg viewBox="0 0 24 24"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg></a>' +
+    '</div></div></section>';
+
+  reveal();
+}
+
+function reveal() {
+  var items = [].slice.call(document.querySelectorAll(".rise"));
+  var showAll = function () {
+    items.forEach(function (el) { el.classList.add("in"); });
+  };
+  if (!("IntersectionObserver" in window) ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches) return showAll();
+  var seen = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en, i) {
+      if (!en.isIntersecting) return;
+      setTimeout(function () { en.target.classList.add("in"); }, i * 50);
+      seen.unobserve(en.target);
+    });
+  }, {threshold: 0});
+  items.forEach(function (el) { seen.observe(el); });
+  // Whatever the observer decides, the page is readable after four seconds.
+  setTimeout(showAll, 4000);
+}
+
+(function () {
+  var h = document.getElementById("top");
+  var on = function () { h.classList.toggle("stuck", scrollY > 8); };
+  addEventListener("scroll", on, {passive: true});
+  on();
+})();
+
+render(location.pathname.split("/").filter(Boolean).pop());
+</script>
+</html>
