@@ -22,6 +22,7 @@ import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import (HTMLResponse, JSONResponse, RedirectResponse,
                                StreamingResponse)
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import accounts
@@ -692,6 +693,29 @@ def me(user=Depends(current_user)):
 
 
 # ---------------------------------------------------------------------------
+
+# The marketing page's own pictures. Everything else this service hands out is
+# an object from storage; these are files in the repository, because a landing
+# page that goes blank when somebody tidies the gallery is worse than no
+# landing page.
+app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")),
+          name="static")
+
+
+@app.get("/home", response_class=HTMLResponse)
+def home():
+    """The page that has to make a seller believe this works.
+
+    Separate from `/` while the old studio still lives there. Every picture on
+    it came out of the product and is served from static/marketing rather than
+    from a job, so deleting work from the gallery cannot empty the page.
+    """
+    p = os.path.join(HERE, "static", "home.html")
+    if not os.path.exists(p):
+        raise HTTPException(404, "not built yet")
+    with open(p, encoding="utf-8") as fh:
+        return HTMLResponse(fh.read())
+
 
 @app.get("/studio", response_class=HTMLResponse)
 def studio_preview():

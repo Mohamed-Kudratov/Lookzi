@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="uz">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lookzi — kiyimingizning suratini sotiladigan qiling</title>
+<meta name="description" content="Telefonda olingan rasmni katalog suratiga aylantiring, kiyimni modelga kiydiring va reels uchun klip yasang. Studiya, fotograf va model shart emas.">
+<meta property="og:title" content="Lookzi — kiyimingizning suratini sotiladigan qiling">
+<meta property="og:description" content="Telefonda olingan rasm kiradi, katalog surati chiqadi.">
+<meta property="og:image" content="/static/marketing/packshot-2-after.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>document.documentElement.className+=" js";</script>
+<style>
+/* ---------------------------------------------------------------------------
+   The page that has to make a seller believe this works.
+
+   Black, like the studio, and for the same reason: everything with a colour
+   here is a photograph of somebody's clothes. It also happens to be how
+   clothes are shown in print.
+
+   There are no testimonials and no customer logos on this page. The pattern
+   asks for them and we have no customers yet; inventing either would be the
+   one thing that makes the rest of the page worthless. The proof is the work,
+   and every picture below came out of the product.
+--------------------------------------------------------------------------- */
+:root{
+  --bg:#000; --surface:#0B0B0C; --raised:#151517;
+  --line:#232326; --line-2:#3A3A3F;
+  --ink:#FAFAFA; --ink-2:#A1A1AA; --ink-3:#71717A;
+  --on-accent:#0A0A0A;
+  --plate:#171717;
+  --r:14px; --r-lg:20px;
+  --t:200ms cubic-bezier(.2,.6,.3,1);
+  --pad:clamp(20px, 5vw, 64px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:8px}
+svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:var(--pad)}
+.eyebrow{font-size:12px;letter-spacing:.10em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600}
+h1,h2,h3{margin:0;letter-spacing:-.025em;line-height:1.08;font-weight:700}
+h1{font-size:clamp(34px,6vw,64px);font-weight:800;text-wrap:balance;
+   max-inline-size:16ch}
+h2{font-size:clamp(26px,3.6vw,40px);text-wrap:balance;max-inline-size:20ch}
+h3{font-size:17px;line-height:1.3;font-weight:600}
+p{margin:0;color:var(--ink-2)}
+.lede{font-size:clamp(16px,1.5vw,19px);max-inline-size:52ch;color:var(--ink-2)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  height:50px;padding:0 24px;border-radius:12px;font-weight:600;font-size:15px;
+  border:1px solid var(--line-2);transition:background var(--t),
+  border-color var(--t),transform var(--t);text-decoration:none}
+.btn:hover{background:var(--raised);transform:translateY(-1px)}
+.btn.primary{background:var(--ink);color:var(--on-accent);border-color:var(--ink)}
+.btn.primary:hover{background:#fff}
+
+/* --------------------------------------------------------------------- nav */
+header{position:sticky;top:0;z-index:30;backdrop-filter:blur(12px);
+  background:rgba(0,0,0,.72);border-bottom:1px solid transparent;
+  transition:border-color var(--t)}
+header.stuck{border-color:var(--line)}
+header .wrap{display:flex;align-items:center;gap:22px;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;
+  letter-spacing:-.02em;text-decoration:none}
+.logo i{width:28px;height:28px;border-radius:8px;background:var(--ink);
+  color:var(--on-accent);display:grid;place-items:center}
+.logo svg{width:16px;height:16px;stroke-width:2.2}
+nav{display:flex;gap:6px;margin-left:auto}
+nav a{padding:8px 12px;border-radius:9px;font-size:14px;color:var(--ink-2);
+  text-decoration:none;transition:color var(--t),background var(--t)}
+nav a:hover{color:var(--ink);background:var(--raised)}
+@media (max-width:760px){nav a.hide-sm{display:none}}
+
+/* -------------------------------------------------------------------- hero */
+.hero{padding:clamp(48px,8vw,96px) 0 clamp(40px,6vw,72px);position:relative}
+.hero::before{content:"";position:absolute;inset:-20% 0 40%;z-index:-1;
+  background:radial-gradient(60% 50% at 50% 0%, #131315 0%, transparent 70%)}
+.hero .wrap{display:grid;gap:clamp(32px,5vw,64px);
+  grid-template-columns:minmax(0,1fr) minmax(0,.92fr);align-items:center}
+@media (max-width:900px){.hero .wrap{grid-template-columns:minmax(0,1fr)}}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.hero .note{margin-top:16px;font-size:13px;color:var(--ink-3)}
+
+/* the compare slider: the most persuasive thing on the page, so it is the
+   thing you can put your hands on */
+.compare{position:relative;border-radius:var(--r-lg);overflow:hidden;
+  border:1px solid var(--line);background:var(--plate);aspect-ratio:4/5;
+  touch-action:none;cursor:ew-resize;user-select:none;
+  box-shadow:0 40px 80px rgba(0,0,0,.6)}
+.compare img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.compare .after{clip-path:inset(0 0 0 var(--x,50%))}
+.compare .bar{position:absolute;top:0;bottom:0;left:var(--x,50%);width:2px;
+  background:rgba(250,250,250,.9);transform:translateX(-1px)}
+.compare .knob{position:absolute;top:50%;left:var(--x,50%);width:40px;height:40px;
+  margin:-20px 0 0 -20px;border-radius:50%;background:var(--ink);
+  color:var(--on-accent);display:grid;place-items:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.compare .lab{position:absolute;bottom:12px;font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;padding:5px 10px;border-radius:7px;
+  background:rgba(0,0,0,.6);border:1px solid var(--line-2);color:var(--ink-2)}
+.compare .lab.l{left:12px} .compare .lab.r{right:12px}
+
+/* ------------------------------------------------------------------ strip */
+.strip{border-block:1px solid var(--line);background:var(--surface)}
+.strip .wrap{display:grid;gap:28px;padding-block:34px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.strip b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.strip span{font-size:13.5px;color:var(--ink-3)}
+
+/* ---------------------------------------------------------------- sections */
+section{padding:clamp(56px,8vw,104px) 0}
+.head{display:grid;gap:14px;margin-bottom:clamp(32px,4vw,52px)}
+
+.tools{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(268px,1fr))}
+.card{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
+  background:var(--surface);transition:border-color var(--t),transform var(--t)}
+.card:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.card .shot{aspect-ratio:4/3;background:var(--plate);position:relative;
+  display:grid;grid-template-columns:1fr 1fr;gap:1px}
+.card .shot img{width:100%;height:100%;object-fit:cover}
+.card .shot .mark{position:absolute;top:9px;left:9px;font-size:10px;
+  letter-spacing:.07em;text-transform:uppercase;font-weight:600;
+  padding:3px 7px;border-radius:5px;background:rgba(0,0,0,.65);color:var(--ink-2)}
+.card .shot .mark.r{left:auto;right:9px}
+.card .body{padding:18px 18px 20px;display:grid;gap:7px}
+.card p{font-size:14px;line-height:1.55}
+.card .price{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+
+.steps{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.step{display:grid;gap:9px;padding-top:20px;border-top:1px solid var(--line)}
+.step .n{font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.08em}
+.step p{font-size:14px}
+
+/* pricing */
+.plans{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.plan{border:1px solid var(--line);border-radius:var(--r-lg);padding:26px;
+  background:var(--surface);display:grid;gap:6px;align-content:start}
+.plan.pick{border-color:var(--ink)}
+.plan .amt{font-size:34px;font-weight:700;letter-spacing:-.03em;margin:6px 0 2px}
+.plan .amt small{font-size:14px;font-weight:500;color:var(--ink-3)}
+.plan ul{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:9px}
+.plan li{display:flex;gap:9px;font-size:14px;color:var(--ink-2);line-height:1.45}
+.plan li svg{width:16px;height:16px;margin-top:4px;color:var(--ink)}
+.plan .btn{margin-top:20px;width:100%}
+.todo{border:1px dashed var(--line-2);border-radius:12px;padding:14px 16px;
+  font-size:13px;color:var(--ink-3);margin-top:22px;line-height:1.55}
+
+/* honesty block: what it cannot do yet */
+.limits{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.limit{border-left:2px solid var(--line-2);padding:2px 0 2px 16px}
+.limit b{display:block;font-size:14.5px;margin-bottom:3px}
+.limit span{font-size:13.5px;color:var(--ink-3);line-height:1.55}
+
+.final{border:1px solid var(--line);border-radius:var(--r-lg);
+  background:linear-gradient(180deg,var(--raised),var(--surface));
+  padding:clamp(32px,5vw,56px);text-align:center;display:grid;gap:18px;
+  justify-items:center}
+
+footer{border-top:1px solid var(--line);padding:32px 0;font-size:13px;
+  color:var(--ink-3)}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer a{text-decoration:none;color:var(--ink-3)}
+footer a:hover{color:var(--ink-2)}
+
+/* Motion: things arrive once, then stay put.
+   Hidden only when the script that reveals them is running. This started as a
+   plain `.rise{opacity:0}` and two thirds of the page stayed invisible when
+   the observer did not fire for the sections below the fold -- a landing page
+   whose text depends on JavaScript to exist is a landing page that sometimes
+   does not. */
+.js .rise{opacity:0;transform:translateY(14px);
+  transition:opacity 480ms cubic-bezier(.2,.6,.3,1),
+             transform 480ms cubic-bezier(.2,.6,.3,1)}
+.js .rise.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .js .rise{opacity:1;transform:none;transition:none}
+  *,*::before,*::after{animation-duration:.01ms!important;
+    transition-duration:.01ms!important}
+}
+</style>
+
+<header id="top">
+  <div class="wrap">
+    <a class="logo" href="/home">
+      <i><svg viewBox="0 0 24 24"><path d="M7 4h10l2 5-7 11L5 9z"/></svg></i>
+      Lookzi
+    </a>
+    <nav>
+      <a href="#nima" class="hide-sm">Nima qiladi</a>
+      <a href="#qanday" class="hide-sm">Qanday ishlaydi</a>
+      <a href="#narx">Narx</a>
+      <a href="/studio" class="btn primary" style="height:38px;padding:0 16px">
+        Studiyani ochish
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow rise">Kiyim sotuvchilar uchun</div>
+      <h1 class="rise" style="margin:14px 0 18px">
+        Telefondagi rasm. Katalogdagi surat.
+      </h1>
+      <p class="lede rise">
+        Kiyimni ilgichda, to‘shakda yoki parketda suratga oling — biz uni
+        toza, tik, oq fondagi katalog suratiga aylantiramiz. Keyin uni
+        modelga kiydiring, sahnaga qo‘ying yoki reels uchun klip yasang.
+        Studiya ham, fotograf ham, model ham shart emas.
+      </p>
+      <div class="cta rise">
+        <a class="btn primary" href="/studio">
+          Bepul boshlash
+          <svg viewBox="0 0 24 24"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+        </a>
+        <a class="btn" href="#nima">Natijalarni ko‘rish</a>
+      </div>
+      <p class="note rise">
+        Kartani so‘ramaymiz. Birinchi 20 ta surat bepul.
+      </p>
+    </div>
+
+    <div class="compare rise" id="cmp" role="group"
+         aria-label="Oldin va keyin, solishtirish">
+      <img src="/static/marketing/packshot-2-before.jpg"
+           alt="To‘shakda yotgan kulrang ko‘ylakning telefonda olingan surati">
+      <img class="after" src="/static/marketing/packshot-2-after.jpg"
+           alt="O‘sha ko‘ylakning oq fondagi katalog surati">
+      <span class="bar"></span>
+      <span class="knob"><svg viewBox="0 0 24 24"><path d="m9 6-4 6 4 6M15 6l4 6-4 6"/></svg></span>
+      <span class="lab l">Siz olgan rasm</span>
+      <span class="lab r">Lookzi</span>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap">
+    <div class="rise"><b>~16 s</b><span>bitta katalog surati</span></div>
+    <div class="rise"><b>1536×2048</b><span>bosmaga yetadigan o‘lcham</span></div>
+    <div class="rise"><b>9:16 · 1080</b><span>reels uchun klip</span></div>
+    <div class="rise"><b>6 ta</b><span>vosita, bitta oynada</span></div>
+  </div>
+</div>
+
+<section id="nima">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rise">Nima qiladi</div>
+      <h2 class="rise">Har bir rasm shu yerda yasalgan</h2>
+      <p class="lede rise">
+        Quyidagilarning hammasi mahsulotning o‘zidan chiqqan. Chapda —
+        yuborilgan rasm, o‘ngda — natija.
+      </p>
+    </div>
+
+    <div class="tools">
+      <article class="card rise">
+        <div class="shot">
+          <span class="mark">Oldin</span><span class="mark r">Keyin</span>
+          <img src="/static/marketing/packshot-1-before.jpg" alt="Ko‘chada olingan surat">
+          <img src="/static/marketing/packshot-1-after.jpg" alt="Qora futbolkaning katalog surati">
+        </div>
+        <div class="body">
+          <h3>Katalog surati</h3>
+          <p>Ilgich, devor, parket va soya ketadi. Kiyim tekislanadi, oq fonda,
+             soyasi bilan, bitta standart o‘lchamda.</p>
+          <div class="price">1 kredit</div>
+        </div>
+      </article>
+
+      <article class="card rise">
+        <div class="shot">
+          <span class="mark">Oldin</span><span class="mark r">Keyin</span>
+          <img src="/static/marketing/product-to-model-3-before.jpg" alt="Nuqtali yubka">
+          <img src="/static/marketing/product-to-model-3-after.jpg" alt="Yubkani kiygan model">
+        </div>
+        <div class="body">
+          <h3>Modelga kiydirish</h3>
+          <p>Kiyimning yassi suratini oling — uni bizning modellarimizdan biri
+             kiyib chiqadi. O‘z modelingizni ham yasashingiz mumkin.</p>
+          <div class="price">1 kredit</div>
+        </div>
+      </article>
+
+      <article class="card rise">
+        <div class="shot">
+          <span class="mark">Oldin</span><span class="mark r">Keyin</span>
+          <img src="/static/marketing/product-in-scene-1-before.jpg" alt="Yassi kozok surati">
+          <img src="/static/marketing/product-in-scene-1-after.jpg" alt="Kuzgi bog‘da kiygan model">
+        </div>
+        <div class="body">
+          <h3>Sahnaga qo‘yish</h3>
+          <p>Qanday kadr kerakligini yozing — kuzgi bog‘, tomdagi shahar
+             manzarasi, tinch studiya. Odam ham, joy ham yasaladi.</p>
+          <div class="price">2 kredit</div>
+        </div>
+      </article>
+
+      <article class="card rise">
+        <div class="shot">
+          <span class="mark">Oldin</span><span class="mark r">Keyin</span>
+          <img src="/static/marketing/packshot-3-before.jpg" alt="Xonada olingan surat">
+          <img src="/static/marketing/packshot-3-after.jpg" alt="Qora kofta katalog surati">
+        </div>
+        <div class="body">
+          <h3>Yomon yorug‘lik ham bo‘ladi</h3>
+          <p>Sariq lampa, ola-chalpoq fon, qiyshiq kadr — biz shunday rasmlarda
+             sinaymiz, chunki sotuvchi shunday suratga oladi.</p>
+          <div class="price">1 kredit</div>
+        </div>
+      </article>
+
+      <article class="card rise">
+        <div class="shot">
+          <span class="mark">Oldin</span><span class="mark r">Keyin</span>
+          <img src="/static/marketing/product-in-scene-2-before.jpg" alt="Yassi kozok">
+          <img src="/static/marketing/product-in-scene-2-after.jpg" alt="Erkak model kuzgi bog‘da">
+        </div>
+        <div class="body">
+          <h3>Erkak ham, ayol ham</h3>
+          <p>Modellar ro‘yxati o‘zbek, qozoq, tojik va slavyan ko‘rinishlarini
+             qamrab oladi. Yopiq kiyinish varianti ham bor.</p>
+          <div class="price">1 kredit</div>
+        </div>
+      </article>
+
+      <article class="card rise">
+        <div class="shot" style="grid-template-columns:1fr">
+          <span class="mark">Klip</span>
+          <img src="/static/marketing/packshot-2-after.jpg" alt="Klipdan kadr"
+               style="object-fit:contain;background:var(--plate)">
+        </div>
+        <div class="body">
+          <h3>Qisqa video</h3>
+          <p>Tayyor suratdan 5 yoki 10 soniyalik klip — 9:16, 1080. Reels,
+             Stories va TikTok talab qiladigan shakl.</p>
+          <div class="price">3 kredit · sinovda</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="qanday" style="background:var(--surface);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rise">Qanday ishlaydi</div>
+      <h2 class="rise">Uch qadam, o‘rganish shart emas</h2>
+    </div>
+    <div class="steps">
+      <div class="step rise"><span class="n">01</span>
+        <h3>Rasmni tashlang</h3>
+        <p>Kiyimni yassi qo‘yib telefonda oling. Fon qanday bo‘lishining
+           ahamiyati yo‘q — biz uni olib tashlaymiz.</p>
+      </div>
+      <div class="step rise"><span class="n">02</span>
+        <h3>Nima kerakligini tanlang</h3>
+        <p>Katalog surati, modelda, sahnada yoki klip. Bitta savol
+           beriladi — bu ustki kiyimmi, pastkimi yoki ko‘ylak.</p>
+      </div>
+      <div class="step rise"><span class="n">03</span>
+        <h3>Yuklab oling</h3>
+        <p>Natija bir necha soniyada tayyor. Uni o‘sha yerda boshqa
+           vositaga ham berish mumkin — qayta yuklamasdan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="narx">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rise">Narx</div>
+      <h2 class="rise">Har surat uchun, oylik to‘lovsiz</h2>
+      <p class="lede rise">Kredit — bu bitta surat. Ishlamay qolgan surat uchun
+        kredit qaytariladi.</p>
+    </div>
+    <div class="plans">
+      <div class="plan rise">
+        <div class="eyebrow">Sinov</div>
+        <div class="amt">0 <small>so‘m</small></div>
+        <p style="font-size:14px">Kartasiz, ro‘yxatdan o‘tmasdan.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>20 kredit</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Hamma vositalar</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>To‘liq o‘lchamda yuklab olish</li>
+        </ul>
+        <a class="btn" href="/studio">Boshlash</a>
+      </div>
+      <div class="plan pick rise">
+        <div class="eyebrow">Do‘kon</div>
+        <div class="amt">— <small>/ 100 kredit</small></div>
+        <p style="font-size:14px">Kichik do‘kon uchun, oyiga bir marta.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>100 kredit</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>O‘z modelingiz</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Navbatda ustunlik</li>
+        </ul>
+        <a class="btn primary" href="/studio">Tanlash</a>
+      </div>
+      <div class="plan rise">
+        <div class="eyebrow">Ulgurji</div>
+        <div class="amt">— <small>/ 1000 kredit</small></div>
+        <p style="font-size:14px">Katta katalog yoki agentlik uchun.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>1000 kredit</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Ko‘p suratni birdan</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>To‘g‘ridan-to‘g‘ri yordam</li>
+        </ul>
+        <a class="btn" href="/studio">Bog‘lanish</a>
+      </div>
+    </div>
+    <div class="todo">
+      Narxlar hali qo‘yilmagan. Ular GPU vaqtiga solishtirib hisoblanishi kerak:
+      bitta katalog surati ~16 soniya, klip esa ~140 soniya kartada turadi —
+      ya’ni klip suratdan sakkiz barobar qimmatga tushadi va hozirgi 3 kredit
+      buni qoplamaydi.
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--surface);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rise">Rostini aytganda</div>
+      <h2 class="rise">Nimani hali uddalay olmaydi</h2>
+      <p class="lede rise">Bu yerda yozilgani — o‘lchangan, taxmin qilingan
+        emas. Sotuvchi buni bizdan emas, birinchi suratdan bilib olishi
+        yomonroq bo‘lardi.</p>
+    </div>
+    <div class="limits">
+      <div class="limit rise"><b>Yubka va shim</b><span>Modelga kiydirishda
+        pastki kiyim ba’zan gavdaga tushadi. Avval katalog suratini yasasangiz
+        bu ancha kamayadi.</span></div>
+      <div class="limit rise"><b>Klipdagi harakat</b><span>Uch soniyadan
+        keyin kiyim shaklini o‘zgartirib yuborishi mumkin. Shuning uchun video
+        hali sinovda.</span></div>
+      <div class="limit rise"><b>Mo‘jiza emas</b><span>Natija yuborilgan
+        rasmning imkoni darajasida bo‘ladi. Juda qorong‘i yoki juda qiyshiq
+        suratdan yaxshi katalog surati chiqmaydi.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="final rise">
+      <h2 style="max-inline-size:18ch">Bitta rasm bilan sinab ko‘ring</h2>
+      <p class="lede" style="text-align:center">
+        Ro‘yxatdan o‘tish yo‘q, karta yo‘q. Yoqmasa — yopib ketasiz.
+      </p>
+      <a class="btn primary" href="/studio">
+        Studiyani ochish
+        <svg viewBox="0 0 24 24"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Lookzi</span>
+    <span style="color:var(--line-2)">·</span>
+    <a href="/studio">Studiya</a>
+    <a href="#narx">Narx</a>
+    <span style="margin-left:auto">Toshkent</span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* the compare slider — pointer, touch and keyboard */
+(function () {
+  var box = document.getElementById("cmp");
+  if (!box) return;
+  var knob = box.querySelector(".knob");
+  var set = function (pct) {
+    pct = Math.max(0, Math.min(100, pct));
+    box.style.setProperty("--x", pct + "%");
+    knob.setAttribute("aria-valuenow", Math.round(pct));
+  };
+  var at = function (e) {
+    var r = box.getBoundingClientRect();
+    set(((e.clientX - r.left) / r.width) * 100);
+  };
+  var down = false;
+  box.addEventListener("pointerdown", function (e) {
+    down = true; box.setPointerCapture(e.pointerId); at(e);
+  });
+  box.addEventListener("pointermove", function (e) { if (down) at(e); });
+  ["pointerup", "pointercancel"].forEach(function (ev) {
+    box.addEventListener(ev, function () { down = false; });
+  });
+  // Keyboard: the slider is the proof, so it cannot be mouse-only.
+  knob.tabIndex = 0;
+  knob.setAttribute("role", "slider");
+  knob.setAttribute("aria-label", "Oldin va keyin");
+  knob.setAttribute("aria-valuemin", "0");
+  knob.setAttribute("aria-valuemax", "100");
+  set(50);
+  knob.addEventListener("keydown", function (e) {
+    var cur = parseFloat(box.style.getPropertyValue("--x")) || 50;
+    if (e.key === "ArrowLeft") { set(cur - 4); e.preventDefault(); }
+    if (e.key === "ArrowRight") { set(cur + 4); e.preventDefault(); }
+    if (e.key === "Home") { set(0); e.preventDefault(); }
+    if (e.key === "End") { set(100); e.preventDefault(); }
+  });
+})();
+
+/* Things arrive once, then stay put.
+   threshold 0 and no negative root margin: asking for 12% of an element that
+   is taller than the space it is being measured in never resolves, and the
+   whole lower half of the page stayed hidden. And a timer shows everything
+   after four seconds whatever the observer decides -- the animation is worth
+   having and never worth losing the page to. */
+(function () {
+  var items = [].slice.call(document.querySelectorAll(".rise"));
+  var showAll = function () {
+    items.forEach(function (el) { el.classList.add("in"); });
+  };
+  if (!("IntersectionObserver" in window) ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return showAll();
+  }
+  var seen = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en, i) {
+      if (!en.isIntersecting) return;
+      // A small stagger inside one group reads as a wave rather than a jolt.
+      setTimeout(function () { en.target.classList.add("in"); }, i * 55);
+      seen.unobserve(en.target);
+    });
+  }, {threshold: 0});
+  items.forEach(function (el) { seen.observe(el); });
+  setTimeout(showAll, 4000);
+})();
+
+/* the header only grows a line once you have left the top */
+(function () {
+  var h = document.getElementById("top");
+  var onScroll = function () { h.classList.toggle("stuck", scrollY > 8); };
+  addEventListener("scroll", onScroll, {passive: true});
+  onScroll();
+})();
+</script>
+</html>
